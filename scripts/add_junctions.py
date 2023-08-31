@@ -1,5 +1,6 @@
 import gfautils
 from Bio import SeqIO
+import sys
 
 def debug_align(s1, s2):
     print("Sequence len:", len(s1))
@@ -30,10 +31,10 @@ def main(args):
     gfa = gfautils.GFA(args.GFA)
 
     for record in SeqIO.parse(args.GFFW, "fasta"):
-        # print(record.name)
-        if args.debug:
-            debug_align(gfa.pseq(f'{record.name}_R1'), record.seq)
-        assert(gfa.pseq(f'{record.name}_R1') == record.seq)
+        if not args.IS:
+            if args.debug:
+                debug_align(gfa.pseq(f'{record.name}_R1'), record.seq)
+            assert(gfa.pseq(f'{record.name}_R1') == record.seq)
         
         desc = record.description.split()
         segs = desc[[desc.index(l) for l in desc if l.startswith("segs:")][0]].split(':')[1].split(',')
@@ -75,6 +76,8 @@ if __name__ == "__main__":
                         help='Path to gffread out')
     parser.add_argument('--debug', action="store_true",
                        help='Print alignment debug')
+    parser.add_argument('--IS', action="store_true",
+                       help='Ignore sequence check. Assume they are correct.')
     args = parser.parse_args()
 
     main(args)

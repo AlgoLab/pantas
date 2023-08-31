@@ -15,7 +15,6 @@ vg rna --progress --threads 4 --add-ref-paths --transcripts chr21.pcg.gtf pcg.vg
 vg ids --sort pcg.spliced.vg  > pcg.spliced.sorted.vg
 vg view pcg.spliced.sorted.vg  > pcg.spliced.sorted.gfa
 python3 prune.py -w 0 -t ENST pcg.spliced.sorted.gfa > pcg.spliced.pruned.gfa
-python3 add_haplotypes.py pcg.spliced.sorted.gfa > pcg.spliced.pruned.gfa
-python3 add_haplotypes.py pcg.spliced.pruned.gfa chr21.pcg.vcf.gz > pcg.spliced.pruned.whaps.gfa
+python3 add_haplotypes.py -t ENST pcg.spliced.pruned.gfa chr21.pcg.vcf.gz > pcg.spliced.pruned.whaps.gfa
 vg index --progress --threads 4 --xg-name pcg.index.xg --xg-alts --gcsa-out pcg.index.gcsa pcg.spliced.pruned.whaps.gfa
 ```

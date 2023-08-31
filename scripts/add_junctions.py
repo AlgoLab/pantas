@@ -31,6 +31,9 @@ def main(args):
     gfa = gfautils.GFA(args.GFA)
 
     for record in SeqIO.parse(args.GFFW, "fasta"):
+        if not f'{record.name}_R1' in gfa.paths:
+            print(f'Skipping {record.name}. Missing from GFA', file=sys.stderr)
+            continue
         if not args.IS:
             if args.debug:
                 debug_align(gfa.pseq(f'{record.name}_R1'), record.seq)

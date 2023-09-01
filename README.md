@@ -7,19 +7,8 @@ Dependencies:
 * snakemake
 
 ``` sh
-# Construct and index graph
-vg construct --alt-paths-plain --reference chr21.fa --vcf chr21.pcg.vcf.gz --flat-alts --no-trim-indels --progress > pcg.vg
-vg rna --progress --threads 4 --add-ref-paths --transcripts chr21.pcg.gtf pcg.vg > pcg.spliced.vg
-vg ids --sort pcg.spliced.vg  > pcg.spliced.sorted.vg
-vg view pcg.spliced.sorted.vg  > pcg.spliced.sorted.gfa
-python3 prune.py -w 0 -t ENST pcg.spliced.sorted.gfa > pcg.spliced.pruned.gfa
-python3 add_haplotypes.py -t ENST pcg.spliced.pruned.gfa chr21.pcg.vcf.gz > pcg.spliced.pruned.whaps.gfa
-vg index --progress --threads 4 --xg-name pcg.index.xg --xg-alts --gcsa-out pcg.index.gcsa pcg.spliced.pruned.whaps.gfa
-
-# Annotate GFA with Exons, Transcripts and Junctions 
-# (these commands apply to the provided test files)
-gffread -g test/reference.fa test/gene.gtf -w test/genes.spliced.fa -W
-python scripts/add_junctions.py test/graph.spliced.pruned.whaps.gfa test/genes.spliced.fa > test/graph.spliced.pruned.whaps.annotated.gfa
+# Construct, index, and annotate extended splicing graphs
+snakemake -s index.smk -c {threads} --config fa=/path/to/reference.fa gtf=/path/to/gene/annotation.gtf vcf=/path/to/phased/variants.vcf.gz odir=/path/to/output/directory
 ```
 
 ## New GFA fields

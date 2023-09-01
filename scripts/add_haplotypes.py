@@ -17,7 +17,7 @@ def main(args):
             _, idx, nodes, _ = line.split("\t")
             nodes = [int(x[:-1]) for x in nodes.split(",")]
             if idx.startswith("_alt_"):
-                vidx = idx.split("_")[2]
+                vidx = "_".join(idx.split("_")[2:-1])
                 a = int(idx.split("_")[-1])
                 if vidx not in variants:
                     variants[vidx] = {}
@@ -43,6 +43,8 @@ def main(args):
             if name not in samples:
                 samples[name] = [{}, {}]
             h1, h2 = gt.allele_indices
+            h1 = h1 if h1 != None else 0
+            h2 = h2 if h2 != None else 0
             if h1 != 0 or h2 != 0:
                 assert rec.id in variants
             # We store for each reference node that is not used by the haplotype, how we have to replace it
@@ -69,7 +71,7 @@ def main(args):
                 for node in ref_path_nodes:
                     if node in samples[sample][0]:
                         alt_nodes = samples[sample][0][node]
-                        if new_path[-1] == alt_nodes[-1]:
+                        if new_path != [] and new_path[-1] == alt_nodes[-1]:
                             # reference allele was split in multiple nodes and we already added the alternative nodes
                             continue
                         new_path += alt_nodes
@@ -85,7 +87,7 @@ def main(args):
                 for node in ref_path_nodes:
                     if node in samples[sample][1]:
                         alt_nodes = samples[sample][1][node]
-                        if new_path[-1] == alt_nodes[-1]:
+                        if new_path != [] and new_path[-1] == alt_nodes[-1]:
                             # reference allele was split in multiple nodes and we already added the alternative nodes
                             continue
                         new_path += alt_nodes
@@ -93,14 +95,25 @@ def main(args):
                         new_path += [node]
                 haplotypes.append((f"{sample}_2.{ref_path_name}", new_path))
 
+    print(f"Merging {len(haplotypes)} paths..", file=sys.stderr)
+    inv_haplotypes = {}
+    for hname, hpath in haplotypes:
+        gfa_path = ",".join(f"{x}+" for x in hpath)
+        if gfa_path not in inv_haplotypes:
+            inv_haplotypes[gfa_path] = []
+        inv_haplotypes[gfa_path].append(hname)
+
+    print(f"Unique paths: {len(inv_haplotypes)}", file=sys.stderr)
+    print(f"Writing GFA..", file=sys.stderr)
     for line in open(args.GFA):
         if line.startswith("P"):
             _, idx, nodes, _ = line.split("\t")
             if idx.startswith("_alt_"):
                 continue
         print(line, end="")
-    for h in haplotypes:
-        print("P", h[0], ",".join(f"{x}+" for x in h[1]), "*", sep="\t")
+    for hpath, names in inv_haplotypes.items():
+        name = "|".join(names)
+        print("P", name, hpath, "*", sep="\t")
 
 
 if __name__ == "__main__":

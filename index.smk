@@ -32,18 +32,53 @@ for line in open(GTF):
 
 rule run:
     input:
-        pjoin(ODIR, "index.xg"),
-        pjoin(ODIR, "spliced-pangenome.pruned.whaps.annotated.gfa"),
+        pjoin(ODIR, "spliced-pangenome.xg"),
+        pjoin(ODIR, "spliced-pangenome.annotated.gfa"),
+
+
+rule extract_chrom_fa:
+    input:
+        FA,
+    output:
+        pjoin(ODIR, "chroms", "{c}.fa"),
+    shell:
+        """
+        samtools faidx {input} {wildcards.c} > {output}
+        samtools faidx {output}
+        """
+
+
+rule extract_chrom_gtf:
+    input:
+        GTF,
+    output:
+        pjoin(ODIR, "chroms", "{c}.gtf"),
+    shell:
+        """
+        grep -P "^{wildcards.c}\t" {input} > {output}
+        """
+
+
+rule extract_chrom_vcf:
+    input:
+        VCF,
+    output:
+        pjoin(ODIR, "chroms", "{c}.vcf.gz"),
+    shell:
+        """
+        bcftools view -Oz {input} {wildcards.c} > {output}
+        tabix -p vcf {output}
+        """
 
 
 rule construct:
     input:
-        fa=FA,
-        vcf=VCF,
+        fa=pjoin(ODIR, "chroms", "{c}.fa"),
+        vcf=pjoin(ODIR, "chroms", "{c}.vcf.gz"),
     output:
-        vg=pjoin(ODIR, "pangenome.vg"),
+        vg=pjoin(ODIR, "{c}", "pangenome.vg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "1-construct.txt")
+        pjoin(ODIR, "benchmarks", "{c}", "1-construct.txt")
     shell:
         """
         vg construct --alt-paths-plain --flat-alts --no-trim-indels --progress --reference {input.fa} --vcf {input.vcf} > {output.vg}
@@ -53,11 +88,11 @@ rule construct:
 rule rna:
     input:
         vg=rules.construct.output.vg,
-        gtf=GTF,
+        gtf=pjoin(ODIR, "chroms", "{c}.gtf"),
     output:
-        vg=pjoin(ODIR, "spliced-pangenome.vg"),
+        vg=pjoin(ODIR, "{c}", "spliced-pangenome.vg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "2-rna.txt")
+        pjoin(ODIR, "benchmarks", "{c}", "2-rna.txt")
     threads: workflow.cores
     shell:
         """
@@ -69,9 +104,9 @@ rule sort_and_convert:
     input:
         vg=rules.rna.output.vg,
     output:
-        gfa=pjoin(ODIR, "spliced-pangenome.sorted.gfa"),
+        gfa=pjoin(ODIR, "{c}", "spliced-pangenome.sorted.gfa"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "3-sort.txt")
+        pjoin(ODIR, "benchmarks", "{c}", "3-sort.txt")
     shell:
         """
         vg ids --sort {input.vg} | vg view - > {output.gfa}
@@ -86,9 +121,9 @@ rule prune:
     input:
         gfa=rules.sort_and_convert.output.gfa,
     output:
-        gfa=pjoin(ODIR, "spliced-pangenome.pruned.gfa"),
+        gfa=pjoin(ODIR, "{c}", "spliced-pangenome.pruned.gfa"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "4-prune.txt")
+        pjoin(ODIR, "benchmarks", "{c}", "4-prune.txt")
     shell:
         """
         python3 scripts/prune_gfa.py -w 3 -t {tprefix} {input.gfa} > {output.gfa}
@@ -98,30 +133,57 @@ rule prune:
 rule add_haplo:
     input:
         gfa=rules.prune.output.gfa,
-        vcf=VCF,
+        vcf=pjoin(ODIR, "chroms", "{c}.vcf.gz"),
     output:
-        gfa=pjoin(ODIR, "spliced-pangenome.pruned.whaps.gfa"),
+        vg=pjoin(ODIR, "{c}", "spliced-pangenome.pruned.whaps.vg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "5-addhaplotypes.txt")
+        pjoin(ODIR, "benchmarks", "{c}", "5-addhaplotypes.txt")
+    threads: workflow.cores / 2
     shell:
         """
-        python3 scripts/add_haplotypes.py -t {tprefix} {input.gfa} {input.vcf} > {output.gfa}
+        python3 scripts/add_haplotypes.py -t {tprefix} {input.gfa} {input.vcf} | vg convert --gfa-in - > {output.vg}
+        """
+
+
+rule merge:
+    input:
+        expand(pjoin(ODIR, "{c}", "spliced-pangenome.pruned.whaps.vg"), c=chroms),
+    output:
+        vg=pjoin(ODIR, "spliced-pangenome.vg"),
+    benchmark:
+        pjoin(ODIR, "benchmarks", "6-combine.txt")
+    shell:
+        """
+        vg combine {input} > {output}
         """
 
 
 rule index:
     input:
-        gfa=rules.add_haplo.output.gfa,
+        vg=rules.merge.output.vg,
     output:
-        xg=pjoin(ODIR, "index.xg"),
-        gcsa2=pjoin(ODIR, "index.gcsa"),
-        lcp=pjoin(ODIR, "index.gcsa.lcp"),
+        xg=pjoin(ODIR, "spliced-pangenome.xg"),
+        gcsa2=pjoin(ODIR, "spliced-pangenome.gcsa"),
+        lcp=pjoin(ODIR, "spliced-pangenome.gcsa.lcp"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "6-index.txt")
+        pjoin(ODIR, "benchmarks", "7-index.txt")
     threads: workflow.cores
     shell:
         """
-        vg index --progress --threads {threads} --xg-name {output.xg} --xg-alts --gcsa-out {output.gcsa2} {input.gfa}
+        vg index --progress --threads {threads} --xg-name {output.xg} --xg-alts --gcsa-out {output.gcsa2} {input.vg}
+        """
+
+
+rule vg2gfa:
+    input:
+        vg=rules.merge.output.vg,
+    output:
+        gfa=pjoin(ODIR, "spliced-pangenome.gfa"),
+    benchmark:
+        pjoin(ODIR, "benchmarks", "8-view.txt")
+    shell:
+        """
+        vg view {input.vg} > {output.gfa}
         """
 
 
@@ -129,12 +191,12 @@ rule annotate:
     input:
         fa=FA,
         gtf=GTF,
-        gfa=rules.add_haplo.output.gfa,
+        gfa=rules.vg2gfa.output.gfa,
     output:
         fa=pjoin(ODIR, "genes.spliced.fa"),
-        gfa=pjoin(ODIR, "spliced-pangenome.pruned.whaps.annotated.gfa"),
+        gfa=pjoin(ODIR, "spliced-pangenome.annotated.gfa"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "7-annotate.txt")
+        pjoin(ODIR, "benchmarks", "9-annotate.txt")
     shell:
         """
         gffread -g {input.fa} {input.gtf} -w {output.fa} -W

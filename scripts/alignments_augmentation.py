@@ -118,7 +118,7 @@ def main(argv):
                 print(line)
             else:
                 if len(line) == 1:
-                    print(line)
+                    #print(line)
                     continue
                 tokens = line.split()
                 # print("line:", line)

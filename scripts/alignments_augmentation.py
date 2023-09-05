@@ -126,7 +126,7 @@ def main(argv):
                 # print(tokens[1], tokens[3])
                 w = weights.get((tokens[1], tokens[3]), 0)
                 # print(w)
-                print(f"{line}\t{w}")
+                print(f"{line}\tRC:i:{w}")
                 # out.write(f"{line}\t{w}\n")
 
 

@@ -137,9 +137,10 @@ def main(argv):
         if revs[k[0], k[1]]:
             print(f"L\t{k[0]}\t-\t{k[1]}\t-\t*\tRC:i:{v}")
         else:
-            print(f"L\t{k[0]}\t+\t{k[1]}\t+\t*\tRC:i:{v}")
+            print(f"L\t{k[0]}\t+\t{k[1]}\t+\t*\tRC:i:{v},ID:Z:N")
 
 
 if __name__ == "__main__":
     main(sys.argv[1:])
+
 

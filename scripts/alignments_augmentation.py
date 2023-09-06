@@ -152,9 +152,10 @@ def main(argv):
                 print(f"{line}\tRC:i:{w}")
                 # out.write(f"{line}\t{w}\n")
 
+    ## TODO fix the direction
     for k, v in weights.items():
-        if revs[k[0], k[1]]:
-            print(f"L\t{k[0]}\t-\t{k[1]}\t-\t*\tRC:i:{v}")
+        if revs.get(k[0], k[1]) or not revs.get(k[1], k[0]):
+            print(f"L\t{k[1]}\t+\t{k[0]}\t+\t*\tRC:i:{v}")
         else:
             print(f"L\t{k[0]}\t+\t{k[1]}\t+\t*\tRC:i:{v},ID:Z:N")
 

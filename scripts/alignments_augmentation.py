@@ -27,6 +27,7 @@ def main(argv):
     gfa_file = argv[2]
     # gfa_file_out = argv[3]
     weights = {}
+    revs = {}
     print("Building paths and weights", file=sys.stderr)
     with open(json_file) as f, open(output_file, "w") as out:
         for line in f:
@@ -39,7 +40,6 @@ def main(argv):
                 continue
             paths_list = [[]] * len(data["subpath"])
             next_list = [[]] * len(data["subpath"])
-
             for i, subpaths in enumerate(data["subpath"]):
                 if "next" in subpaths.keys():
                     next_list[i] = subpaths["next"]
@@ -94,14 +94,16 @@ def main(argv):
                     # print(s, t)
                     if p[1] == "+":
                         key = (s, t)
+                        revs[(s, t)] = False
                     else:
                         key = (t, s)
+                        revs[(s, t)] = True
                     if key in weights.keys():
                         weights[key] = weights[key] + 1
                     else:
                         weights[key] = 1
             # for k, v in weights.items():
-            #     print(k, v)
+            #    print(k, v, file=sys.stderr)
             out.write(f">{read_name}\n")
             for p in paths_final:
                 if p[1] == "+":
@@ -112,23 +114,32 @@ def main(argv):
                 out.write(f"{path_str}\n")
     print("Annotating GFA", file=sys.stderr)
     with open(gfa_file, "r") as f:
+
         for line in f:
             line = line.strip()
             if not line.startswith("L"):
                 print(line)
             else:
                 if len(line) == 1:
-                    #print(line)
+                    # print(line)
                     continue
                 tokens = line.split()
                 # print("line:", line)
                 # print(tokens)
                 # print(tokens[1], tokens[3])
-                w = weights.get((tokens[1], tokens[3]), 0)
+                w = weights.pop((tokens[1], tokens[3]), 0)
+
                 # print(w)
                 print(f"{line}\tRC:i:{w}")
                 # out.write(f"{line}\t{w}\n")
 
+    for k, v in weights.items():
+        if revs[k[0], k[1]]:
+            print(f"L\t{k[0]}\t-\t{k[1]}\t-\t*\tRC:i:{v}")
+        else:
+            print(f"L\t{k[0]}\t+\t{k[1]}\t+\t*\tRC:i:{v}")
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
+

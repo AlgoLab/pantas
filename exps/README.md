@@ -48,3 +48,24 @@ STAR --runThreadN 16 --genomeDir dm6.genome-STAR \
 #         --outSAMtype BAM SortedByCoordinate --outSAMattributes All
 
 ```
+
+### Human
+
+``` sh
+wget https://ftp.ensembl.org/pub/release-109/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+gunzip Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+samtools faidx Homo_sapiens.GRCh38.dna.primary_assembly.fa $(seq 1 22) X Y > reference.chroms.fa
+
+wget https://ftp.ensembl.org/pub/release-109/gtf/homo_sapiens/Homo_sapiens.GRCh38.109.gtf.gz
+for c in $(seq 1 22) X Y ; do zgrep -P "^$c\t" Homo_sapiens.GRCh38.109.gtf.gz ; done > annotation.chroms.gtf
+
+mkdir 1kgp-GRCh38
+cd 1kgp-GRCh38
+# get all VCF from ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV/
+mv 1kGP_high_coverage_Illumina.chrX.filtered.SNV_INDEL_SV_phased_panel.v2.vcf.gz 1kGP_high_coverage_Illumina.chrX.filtered.SNV_INDEL_SV_phased_panel.vcf.gz
+mv 1kGP_high_coverage_Illumina.chrX.filtered.SNV_INDEL_SV_phased_panel.v2.vcf.gz.tbi 1kGP_high_coverage_Illumina.chrX.filtered.SNV_INDEL_SV_phased_panel.vcf.gz.tbi
+
+for chr in $(seq 1 22) X ; do bcftools view -c 1 -q 0.001 1kGP_high_coverage_Illumina.chr$c.filtered.SNV_INDEL_SV_phased_panel.vcf.gz -Oz | python3 ~/code/pantas2/exps/fix_vidx.py | bcftools norm -d all -Oz -f ../reference.chroms.fa > $c-mod.vcf.gz ; tabix -p vcf $c-mod.vcf.gz ; done
+bcftools concat -Oz *-mod.vcf.gz > ../1kgp-GRCh38.vcf.gz
+tabix -p vcf ../1kgp-GRCh38.vcf.gz
+```

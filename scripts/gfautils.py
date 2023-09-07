@@ -159,9 +159,12 @@ class GFA:
     def pseq(self, pid: str) -> str:
         return self.paths[pid].seq(self.nodes)
 
-    def pnodes(self, pid: str) -> str:
+    def pnodes_iter(self, pid: str) -> str:
         for n in self.paths[pid].nodes:
             yield n
+
+    def pnodes_list(self, pid: str) -> str:
+        return self.paths[pid].nodes
 
     def nlen(self, nid: str) -> int:
         return self.nodes[nid].len

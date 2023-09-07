@@ -10,9 +10,18 @@ Dependencies:
 # Construct and index
 vg construct --progress --threads 4 --reference example/4.fa --vcf example/4.vcf.gz > example/graph.pg
 vg rna --progress --threads 4 --add-ref-paths --transcripts example/4.gtf example/graph.pg > example/spliced_graph.pg
-vg view example/spliced_graph.pg | grep -v -P "_R1\t" | vg convert --threads 4 --gfa-in -x - > example/spliced_graph.notr.xg
-# TODO: add haplotyoes? prune graph?
-vg index --progress --threads 4 --gcsa-out example/spliced_graph.notr.gcsa --dist-name example/spliced_graph.notr.dist example/spliced_graph.notr.xg
+vg prune --progress --threads 4 --restore-paths example/spliced_graph.pg > example/spliced_graph.pruned.pg
+# --restore-paths : restore the edges on non-alt paths
+# it should prune the graph and then restore the edges. Not the paths!
+# what is a non-alt paths? Those starting with _alt? Are transcripts non-alt paths?
+# Here the assumption is: we have the reference paths in the graph, but not the P lines
+cat <(vg view example/spliced_graph.pruned.pg) <(vg view example/spliced_graph.pg | grep "^P" | grep -v -P "_R1\t") > example/spliced_graph.pruned.wpath.gfa
+# to work properly, mpmap needs **only** the reference path
+vg convert --threads 4 -x example/spliced_graph.pruned.wpath.gfa > example/spliced_graph.pruned.wpath.xg
+
+# TODO: add haplotyoes?
+
+vg index --progress --threads 4 --gcsa-out example/spliced_graph.pruned.wpath.gcsa --dist-name example/spliced_graph.pruned.wpath.dist example/spliced_graph.pruned.wpath.xg
 vg view example/spliced_graph.pg > example/spliced_graph.gfa
 
 # Annotate graph
@@ -20,7 +29,7 @@ gffread -g example/4.fa example/4.gtf -w example/4.cdna.fa -W
 python3 ./scripts/add_junctions.py example/spliced_graph.gfa example/4.cdna.fa > example/spliced_graph.anno.gfa
 
 # Align sample
-vg mpmap -x example/spliced_graph.notr.xg -g example/spliced_graph.notr.gcsa -d example/spliced_graph.notr.dist -f example/reads_1.fq -f example/reads_2.fq -F GAF > example/reads.gaf
+vg mpmap -x example/spliced_graph.pruned.wpath.xg -g example/spliced_graph.pruned.wpath.gcsa -d example/spliced_graph.pruned.wpath.dist -f example/reads_1.fq -f example/reads_2.fq -F GAF > example/reads.gaf
 #vg view -K -j example/reads.gamp > example/reads.json
 #python3 ./scripts/alignments_augmentation.py example/reads.json x example/4-graph.anno.gfa > example/4-graph.anno.weighted.gfa
 ```

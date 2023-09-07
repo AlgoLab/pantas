@@ -7,8 +7,18 @@ Dependencies:
 * snakemake
 
 ``` sh
-# Construct, index, and annotate extended splicing graphs
-snakemake -s index.smk -c {threads} --config fa=/path/to/reference.fa gtf=/path/to/gene/annotation.gtf vcf=/path/to/phased/variants.vcf.gz odir=/path/to/output/directory
+# Construct and index
+vg autoindex --workflow mpmap --prefix example/4-index --ref-fasta example/4.fa --vcf example/4.vcf.gz --tx-gff example/4.gtf --tmp-dir . --threads 4 --verbosity 2
+# Extract graph with transcripts as paths
+vg convert --packed-out example/4-index.spliced.xg | vg rna --progress --threads 16 --add-ref-paths --transcripts example/4.gtf - | vg view - > example/4-graph.gfa
+# Annotate graph
+gffread -g example/4.fa example/4.gtf -w example/4.genes-spliced.fa -W
+python3 ./scripts/add_junctions.py example/4-graph.gfa example/4.genes-spliced.fa > example/4-graph.anno.gfa
+
+# Align sample
+vg mpmap -x example/4-index.spliced.xg -g example/4-index.spliced.gcsa -d example/4-index.spliced.dist -f example/reads_1.fq -f example/reads_2.fq -F GAMP > example/reads.gamp
+vg view -K -j example/reads.gamp > example/reads.json
+python3 ./scripts/alignments_augmentation.py example/reads.json x example/4-graph.anno.gfa > example/4-graph.anno.weighted.gfa
 ```
 
 ## New GFA fields

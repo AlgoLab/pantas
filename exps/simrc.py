@@ -80,7 +80,7 @@ def main(args):
 
                 if prevex:
                     _seq = exonsinfo[geneid][trascriptid][exon]["genome"][0]
-                    if exonsinfo[geneid][trascriptid]["strand"] == '-':
+                    if exonsinfo[geneid][trascriptid]["strand"] == "-":
                         _jstart = exonsinfo[geneid][trascriptid][exon]["genome"][2]
                         _jend = exonsinfo[geneid][trascriptid][prevex]["genome"][1]
                     else:
@@ -89,15 +89,18 @@ def main(args):
                         _jend = exonsinfo[geneid][trascriptid][exon]["genome"][1]
                     print(
                         # *[0,0,0], #*exonsinfo[geneid][trascriptid][exon]["genome"],
-                        _seq, _jstart, _jend,
+                        _seq,
+                        _jstart,
+                        _jend,
                         exonsinfo[geneid][trascriptid]["strand"],
                         "junction",
                         geneid,
                         trascriptid,
                         f"{prevex}-{exon}",
-                        ".", ".", #*exonsinfo[geneid][trascriptid][exon]["tr"],
+                        ".",
+                        ".",  # *exonsinfo[geneid][trascriptid][exon]["tr"],
                         junctionscount[geneid][trascriptid][(prevex, exon)],
-                        sep=","
+                        sep=",",
                     )
                 prevex = exon
 
@@ -110,7 +113,7 @@ def main(args):
                     exon,
                     *exonsinfo[geneid][trascriptid][exon]["tr"],
                     exonscount[geneid][trascriptid][exon],
-                    sep=","
+                    sep=",",
                 )
 
 
@@ -118,7 +121,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Check that GFA Path are identical to input FAs"
+        description="Compute correct read counts on exons and junctions"
     )
     parser.add_argument("FQ", type=str, help="Path to simulated FQ")
     parser.add_argument("TSV", type=str, help="Path to ASimulatoR exon junction tsv")

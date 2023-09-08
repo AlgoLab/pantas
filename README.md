@@ -11,15 +11,13 @@ Dependencies:
 vg construct --progress --threads 4 --reference example/4.fa --vcf example/4.vcf.gz > example/graph.pg
 vg rna --progress --threads 4 --add-ref-paths --transcripts example/4.gtf example/graph.pg > example/spliced_graph.pg
 vg prune --progress --threads 4 --restore-paths example/spliced_graph.pg > example/spliced_graph.pruned.pg
-# --restore-paths : restore the edges on non-alt paths
-# it should prune the graph and then restore the edges. Not the paths!
-# what is a non-alt paths? Those starting with _alt? Are transcripts non-alt paths?
-# Here the assumption is: we have the reference paths in the graph, but not the P lines
+# --restore-paths : restore the edges on non-alt paths (ie all paths not starting with _alt_, see https://github.com/vgteam/vg/blob/bcd57125c236782c3f964db10fa581c523ae8e1f/src/path.cpp#L10)
+# Here the assumption is: thanks to --restore-paths, we have the reference paths in the graph, but not the P lines
 cat <(vg view example/spliced_graph.pruned.pg) <(vg view example/spliced_graph.pg | grep "^P" | grep -v -P "_R1\t") > example/spliced_graph.pruned.wpath.gfa
 # to work properly, mpmap needs **only** the reference path
 vg convert --threads 4 -x example/spliced_graph.pruned.wpath.gfa > example/spliced_graph.pruned.wpath.xg
 
-# TODO: add haplotyoes?
+# TODO: add haplotyoes somehow?
 
 vg index --progress --threads 4 --gcsa-out example/spliced_graph.pruned.wpath.gcsa --dist-name example/spliced_graph.pruned.wpath.dist example/spliced_graph.pruned.wpath.xg
 vg view example/spliced_graph.pg > example/spliced_graph.gfa

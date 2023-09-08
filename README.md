@@ -1,35 +1,21 @@
 # pantas2
 
 Dependencies:
-* vg (please compile and use [my branch](https://github.com/ldenti/vg/tree/plain-altid))
+* vg
 * python3-pysam python3-rich python3-biopython
 * gffread
 * snakemake
 
 ``` sh
-# Construct and index
-vg construct --progress --threads 4 --reference example/4.fa --vcf example/4.vcf.gz > example/graph.pg
-vg rna --progress --threads 4 --add-ref-paths --transcripts example/4.gtf example/graph.pg > example/spliced_graph.pg
-vg prune --progress --threads 4 --restore-paths example/spliced_graph.pg > example/spliced_graph.pruned.pg
-# --restore-paths : restore the edges on non-alt paths (ie all paths not starting with _alt_, see https://github.com/vgteam/vg/blob/bcd57125c236782c3f964db10fa581c523ae8e1f/src/path.cpp#L10)
-# Here the assumption is: thanks to --restore-paths, we have the reference paths in the graph, but not the P lines
-cat <(vg view example/spliced_graph.pruned.pg) <(vg view example/spliced_graph.pg | grep "^P" | grep -v -P "_R1\t") > example/spliced_graph.pruned.wpath.gfa
-# to work properly, mpmap needs **only** the reference path
-vg convert --threads 4 -x example/spliced_graph.pruned.wpath.gfa > example/spliced_graph.pruned.wpath.xg
+snakemake -s index.smk -c4 --config fa=example/4.fa gtf=example/4.gtf vcf=example/4.vcf.gz odir=example/OUT
 
 # TODO: add haplotyoes somehow?
 
-vg index --progress --threads 4 --gcsa-out example/spliced_graph.pruned.wpath.gcsa --dist-name example/spliced_graph.pruned.wpath.dist example/spliced_graph.pruned.wpath.xg
-vg view example/spliced_graph.pg > example/spliced_graph.gfa
+# Map the reads
+vg mpmap -x example/OUT/spliced-pangenome.xg -g example/OUT/spliced-pangenome.gcsa -d example/OUT/spliced-pangenome.dist -f example/reads_1.fq -f example/reads_2.fq -F GAF > example/reads.gaf
 
-# Annotate graph
-gffread -g example/4.fa example/4.gtf -w example/4.cdna.fa -W
-python3 ./scripts/add_junctions.py example/spliced_graph.gfa example/4.cdna.fa > example/spliced_graph.anno.gfa
-
-# Align sample
-vg mpmap -x example/spliced_graph.pruned.wpath.xg -g example/spliced_graph.pruned.wpath.gcsa -d example/spliced_graph.pruned.wpath.dist -f example/reads_1.fq -f example/reads_2.fq -F GAF > example/reads.gaf
-#vg view -K -j example/reads.gamp > example/reads.json
-#python3 ./scripts/alignments_augmentation.py example/reads.json x example/4-graph.anno.gfa > example/4-graph.anno.weighted.gfa
+# Weight the graph
+python3 ./scripts/alignments_augmentation.py example/reads.gaf x example/OUT/spliced-pangenome.annotated.gfa > example/spliced-pangenome.weighted.gfa
 ```
 
 ## New GFA fields

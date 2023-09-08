@@ -2,6 +2,7 @@ import sys
 from os.path import join as pjoin
 from os.path import isfile
 
+
 FA = config["fa"]
 GTF = config["gtf"]
 VCF = config["vcf"]
@@ -32,7 +33,9 @@ for line in open(GTF):
 
 rule run:
     input:
-        pjoin(ODIR, "spliced-pangenome.xg"),
+        pjoin(ODIR, "spliced-pangenome.gcsa"),
+        pjoin(ODIR, "spliced-pangenome.gcsa.lcp"),
+        pjoin(ODIR, "spliced-pangenome.dist"),
         pjoin(ODIR, "spliced-pangenome.annotated.gfa"),
 
 
@@ -76,114 +79,109 @@ rule construct:
         fa=pjoin(ODIR, "chroms", "{c}.fa"),
         vcf=pjoin(ODIR, "chroms", "{c}.vcf.gz"),
     output:
-        vg=pjoin(ODIR, "{c}", "pangenome.vg"),
+        pg=pjoin(ODIR, "chroms", "{c}", "pangenome.pg"),
     benchmark:
         pjoin(ODIR, "benchmarks", "{c}", "1-construct.txt")
+    threads: workflow.cores
     shell:
         """
-        vg construct --alt-paths-plain --flat-alts --no-trim-indels --progress --reference {input.fa} --vcf {input.vcf} > {output.vg}
+        vg construct --progress --threads {threads} --reference {input.fa} --vcf {input.vcf} > {output.pg}
         """
 
 
 rule rna:
     input:
-        vg=rules.construct.output.vg,
+        pg=rules.construct.output.pg,
         gtf=pjoin(ODIR, "chroms", "{c}.gtf"),
     output:
-        vg=pjoin(ODIR, "{c}", "spliced-pangenome.vg"),
+        pg=pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.pg"),
     benchmark:
         pjoin(ODIR, "benchmarks", "{c}", "2-rna.txt")
     threads: workflow.cores
     shell:
         """
-        vg rna --progress --threads {threads} --add-ref-paths --transcripts {input.gtf} {input.vg} > {output.vg}
+        vg rna --progress --threads {threads} --add-ref-paths --transcripts {input.gtf} {input.pg} > {output.pg}
         """
 
 
-rule sort_and_convert:
-    input:
-        vg=rules.rna.output.vg,
-    output:
-        gfa=pjoin(ODIR, "{c}", "spliced-pangenome.sorted.gfa"),
-    benchmark:
-        pjoin(ODIR, "benchmarks", "{c}", "3-sort.txt")
-    shell:
-        """
-        vg ids --sort {input.vg} | vg view - > {output.gfa}
-        """
-
-
-# FIXME: we need -w 1 or more (depending on multi-allelic sites). Still need to understand why. This can be the reason:
-# If first base of a transcript is a bubble, the higher id will be the reference allele.
-# All smaller id will be removed from the graph (if w=0)
-# so we lose the alternate nodes.
+# Prune complex regions and remove alt paths (those starting with _alt_ see https://github.com/vgteam/vg/blob/bcd57125c236782c3f964db10fa581c523ae8e1f/src/path.cpp#L10)
 rule prune:
     input:
-        gfa=rules.sort_and_convert.output.gfa,
+        pg=rules.rna.output.pg,
     output:
-        gfa=pjoin(ODIR, "{c}", "spliced-pangenome.pruned.gfa"),
+        pg=pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.pruned.pg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "{c}", "4-prune.txt")
+        pjoin(ODIR, "benchmarks", "{c}", "3-prune.txt")
+    threads: workflow.cores
     shell:
         """
-        python3 scripts/prune_gfa.py -w 3 -t {tprefix} {input.gfa} > {output.gfa}
+        vg prune --progress --threads {threads} --restore-paths {input.pg} > {output.pg}
         """
 
 
-rule add_haplo:
+# Here the assumption is: thanks to --restore-paths, we have the reference/transcipt paths in the graph, but not the P line
+rule reintroduce_paths:
     input:
-        gfa=rules.prune.output.gfa,
-        vcf=pjoin(ODIR, "chroms", "{c}.vcf.gz"),
+        gfa=pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.gfa"),
+        pgfa=pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.pruned.gfa"),
     output:
-        vg=pjoin(ODIR, "{c}", "spliced-pangenome.pruned.whaps.vg"),
+        pg=pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.pruned.wpaths.pg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "{c}", "5-addhaplotypes.txt")
-    threads: workflow.cores / 2
+        pjoin(ODIR, "benchmarks", "{c}", "4-reintroducepaths.txt")
+    threads: workflow.cores
     shell:
         """
-        python3 scripts/add_haplotypes.py -t {tprefix} {input.gfa} {input.vcf} | vg convert --gfa-in - > {output.vg}
+        python3 scripts/reintroduce_paths.py {input.gfa} {input.pgfa} | vg convert --gfa-in --packed-out - > {output.pg}
         """
 
 
-rule merge:
+rule combine:
     input:
-        expand(pjoin(ODIR, "{c}", "spliced-pangenome.pruned.whaps.vg"), c=chroms),
+        expand(
+            pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.pruned.wpaths.pg"),
+            c=chroms,
+        ),
     output:
-        vg=pjoin(ODIR, "spliced-pangenome.vg"),
+        pg=pjoin(ODIR, "spliced-pangenome.wpaths.pg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "6-combine.txt")
+        pjoin(ODIR, "benchmarks", "5-combine.txt")
+    threads: 1
     shell:
         """
-        vg combine {input} > {output}
+        vg combine {input} > {output.pg}
+        """
+
+
+# Keep only reference path as P line (to work properly mpmap needs the reference path **only**)
+rule remove_transcripts:
+    input:
+        pg=pjoin(ODIR, "spliced-pangenome.wpaths.pg"),
+    output:
+        xg=pjoin(ODIR, "spliced-pangenome.xg"),
+    benchmark:
+        pjoin(ODIR, "benchmarks", "6-removetranscripts.txt")
+    threads: workflow.cores
+    shell:
+        """
+        vg view --threads {threads} {input.pg} | grep -v -P "_R1\t" | vg convert --threads {threads} --gfa-in -x - > {output.xg}
         """
 
 
 rule index:
     input:
-        vg=rules.merge.output.vg,
+        xg=rules.remove_transcripts.output.xg,
     output:
-        xg=pjoin(ODIR, "spliced-pangenome.xg"),
         gcsa2=pjoin(ODIR, "spliced-pangenome.gcsa"),
         lcp=pjoin(ODIR, "spliced-pangenome.gcsa.lcp"),
+        dist=pjoin(ODIR, "spliced-pangenome.dist"),
+    params:
+        tmpd=ODIR,
     benchmark:
         pjoin(ODIR, "benchmarks", "7-index.txt")
     threads: workflow.cores
     shell:
         """
-        vg index --progress --threads {threads} --xg-name {output.xg} --xg-alts --gcsa-out {output.gcsa2} {input.vg}
-        """
-
-
-rule vg2gfa:
-    input:
-        vg=rules.merge.output.vg,
-    output:
-        gfa=pjoin(ODIR, "spliced-pangenome.gfa"),
-    benchmark:
-        pjoin(ODIR, "benchmarks", "8-view.txt")
-    shell:
-        """
-        vg view {input.vg} > {output.gfa}
+        vg index --progress --threads {threads} --temp-dir {params.tmpd} --gcsa-out {output.gcsa2} --dist-name {output.dist} {input.xg}
         """
 
 
@@ -191,14 +189,25 @@ rule annotate:
     input:
         fa=FA,
         gtf=GTF,
-        gfa=rules.vg2gfa.output.gfa,
+        gfa=pjoin(ODIR, "spliced-pangenome.wpaths.gfa"),
     output:
         fa=pjoin(ODIR, "genes.spliced.fa"),
         gfa=pjoin(ODIR, "spliced-pangenome.annotated.gfa"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "9-annotate.txt")
+        pjoin(ODIR, "benchmarks", "7-annotate.txt")
     shell:
         """
         gffread -g {input.fa} {input.gtf} -w {output.fa} -W
         python3 scripts/add_junctions.py {input.gfa} {output.fa} > {output.gfa}
+        """
+
+
+rule convert:
+    input:
+        "{x}.pg",
+    output:
+        "{x}.gfa",
+    shell:
+        """
+        vg view {input} > {output}
         """

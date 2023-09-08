@@ -1,3 +1,5 @@
 *~
 .snakemake/
 __pycache__/
+example/OUT/
+*.gaf

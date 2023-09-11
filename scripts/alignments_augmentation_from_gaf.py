@@ -1,27 +1,80 @@
-# python alignments_augmentation_from_gaf.py  alignment.gaf output.path input.gfa > output.gfa
+# python alignments_augmentation_from_gaf.py alignment.gaf input.gfa > output.gfa
 
 
 import sys
-import json
 import re
+
+# import pickle
+# import os
+
+
+def parse_cigar(cigar):
+    patterns = {
+        "=": r"[ACGTN]+",
+        ":": r"[0-9]+",
+        "*": r"[acgtn][acgtn]",
+        "+": r"[acgtn]+",
+        "-": r"[acgtn]+",
+        "~": r"[acgtn]{2}[0-9]+[acgtn]{2}",
+    }
+    results = []
+    regex = re.compile("(=|:|\*|\+|\-|\~)")
+    tokens = regex.split(cigar)
+    curr_op = None
+    for token in tokens:
+        if token in patterns:
+            curr_op = token
+        else:
+            if curr_op:
+                if curr_op == "*":
+                    results.append((curr_op, 1))
+                else:
+                    if token.isdigit():
+                        results.append((curr_op, int(token)))
+                    else:
+                        results.append((curr_op, len(token)))
+                curr_op = None
+
+    return results
 
 
 def main(argv):
     gaf_file = argv[0]
-    output_file = argv[1]
-    gfa_file = argv[2]
+    gfa_file = argv[1]
     # gfa_file_out = argv[3]
     weights = {}
     revs = {}
-    print("Building paths and weights", file=sys.stderr)
-    with open(gaf_file) as f, open(output_file, "w") as out:
-        last_read = ""
+    nodes_info = {}
+
+    print("Read GFA", file=sys.stderr)
+    with open(gfa_file, "r") as f:
         for line in f:
+            if not line.startswith("S"):
+                continue
             tokens = line.strip().split()
+            nodes_info[tokens[1]] = (len(tokens[2]), [{}, {}])
+
+    # with open(f"test_dump.ser", "wb") as f:
+    #     pickle.dump(nodes_info, f)
+
+    # with open(f"test_dump.ser", "rb") as f:
+    #     nodes_info = pickle.load(f)
+
+    print("Augmentation by GAF alignments", file=sys.stderr)
+    with open(gaf_file) as f:
+        last_read = ""
+        count = 0
+        for line in f:
+            # print(line)
+            tokens = line.strip().split()
+
             if tokens[5] == "*":
                 continue
             read_name = tokens[0]
             path = tokens[5]
+            path_len = int(tokens[6])
+            start_pos = int(tokens[7])
+            end_pos_rel = path_len - int(tokens[8])
             cigar_re = re.search(
                 r"cs:.*?(?=\s|$)", " ".join(item for item in tokens[12:])
             )
@@ -29,37 +82,227 @@ def main(argv):
                 cigar = cigar_re.group(0).replace("cs:Z:", "")
             else:
                 cigar = "*"
+            score = tokens[11]
+            # print("score", score, cigar)
+            rev = False
+            # if score == 0:
+            #    continue
             if path[0] == ">":
                 nodes = path.split(">")[1:]
             else:
                 nodes = path.split("<")[1:]
-                print(nodes)
-                nodes.reverse()
-            print(nodes)
+                rev = True
+                # nodes.reverse()
+            # print(nodes)
+            cigar_vals = parse_cigar(cigar)
+            # print(cigar_vals)
+            # for i, cig in cigar_vals:
+            #     if cig[0] == "=" or cig[0] == "+" or cig[0] == "-":
+            #         cigar_vals[i][1] = len(cigar_vals[i][1])
+            # print(cigar_vals)
+            # print(line)
+            # print("score", score, cigar, cigar_vals, nodes)
+            # print("start", start_pos, "end", end_pos_rel)
+            align = []
+            # print(nodes)
+            # for n in nodes:
+            # print(n, nodes_info[n][0])
+            n_nodes = len(nodes)
+
+            for i, id_node in enumerate(nodes):
+                # print(nodes_info[n])
+                # id_node = nodes_info[n][0]
+                len_seq_node = nodes_info[id_node][0]
+                if i == 0:
+                    len_seq_node = len_seq_node - start_pos
+                if i == n_nodes - 1:
+                    len_seq_node = len_seq_node - end_pos_rel + 1
+                tmp_len = len_seq_node
+                first = True
+                # print("data", id_node, len_seq_node)
+                # print("cigar", cigar_vals)
+                # print("align", align)
+                while tmp_len > 0:
+                    # print(tmp_len)
+                    curr_cigar_op = cigar_vals[0][0]
+                    if curr_cigar_op == ":":
+                        curr_cigar_len = cigar_vals[0][1]
+                    elif curr_cigar_op == "*":
+                        curr_cigar_len = cigar_vals[0][1]
+                    elif curr_cigar_op in ["=", "-", "+"]:
+                        curr_cigar_len = cigar_vals[0][1]
+                    if tmp_len <= curr_cigar_len:
+                        if first:
+                            align.append((id_node, [(curr_cigar_op, tmp_len)]))
+                            first = False
+                        else:
+                            align[-1][1].append((curr_cigar_op, tmp_len))
+                        cigar_vals[0] = (curr_cigar_op, curr_cigar_len - tmp_len)
+                        if cigar_vals[0][1] == 0:
+                            cigar_vals.pop(0)
+                        tmp_len = 0
+                    else:
+                        if first:
+                            align.append((id_node, [(curr_cigar_op, curr_cigar_len)]))
+                            first = False
+                        else:
+                            align[-1][1].append((curr_cigar_op, curr_cigar_len))
+                        tmp_len = tmp_len - curr_cigar_len
+                        cigar_vals.pop(0)
+                    if len(cigar_vals) == 0:
+                        if len(align) != len(nodes):
+                            print("warning", file=sys.stderr)
+                        break
+            # print(align, file=sys.stderr)
+            ## TODO check semantic of "+" and "-" in cigar and check if all
+            ## cigar elements are parsed
+            for i, elem in enumerate(align):
+                node_id = elem[0]
+                cigar_values = elem[1]
+                for c in cigar_values:
+                    if not rev:
+                        if c[0] == "-" and i != 0:
+                            seq_len = nodes_info[node_id][0] - c[1]
+                            if seq_len in nodes_info[node_id][1][0].keys():
+                                nodes_info[node_id][1][0][seq_len] = (
+                                    nodes_info[node_id][1][0][seq_len] + 1
+                                )
+                            else:
+                                nodes_info[node_id][1][0][seq_len] = 1
+                        elif c[0] == "+" and i != len(cigar_values) - 1:
+                            seq_len = nodes_info[node_id][0] - c[1] + 1
+                            if seq_len in nodes_info[node_id][1][1].keys():
+                                nodes_info[node_id][1][1][seq_len] = (
+                                    nodes_info[node_id][1][1][seq_len] + 1
+                                )
+                            else:
+                                nodes_info[node_id][1][1][seq_len] = 1
+                        elif (c[0] == "-" and i == 0) or (
+                            c[0] == "+" and i == len(cigar_values) - 1
+                        ):
+                            continue
+                        elif c[0] != "*":
+                            if i != 0:
+                                if 0 in nodes_info[node_id][1][0].keys():
+                                    nodes_info[node_id][1][0][0] = (
+                                        nodes_info[node_id][1][0][0] + 1
+                                    )
+                                else:
+                                    nodes_info[node_id][1][0][0] = 1
+                            if i != len(cigar_values) - 1:
+                                seq_len = nodes_info[node_id][0]
+                                if seq_len in nodes_info[node_id][1][1].keys():
+                                    nodes_info[node_id][1][1][seq_len] = (
+                                        nodes_info[node_id][1][1][seq_len] + 1
+                                    )
+                                else:
+                                    nodes_info[node_id][1][1][seq_len] = 1
+                        else:
+                            continue
+                    else:
+                        if c[0] == "+" and i != 0:
+                            seq_len = nodes_info[node_id][0] - c[1]
+                            if seq_len in nodes_info[node_id][1][0].keys():
+                                nodes_info[node_id][1][0][seq_len] = (
+                                    nodes_info[node_id][1][0][seq_len] + 1
+                                )
+                            else:
+                                nodes_info[node_id][1][0][seq_len] = 1
+                        elif c[0] == "-" and i != len(cigar_values) - 1:
+                            seq_len = nodes_info[node_id][0] - c[1] + 1
+                            if seq_len in nodes_info[node_id][1][1].keys():
+                                nodes_info[node_id][1][1][seq_len] = (
+                                    nodes_info[node_id][1][1][seq_len] + 1
+                                )
+                            else:
+                                nodes_info[node_id][1][1][seq_len] = 1
+                        elif (c[0] == "-" and i == 0) or (
+                            c[0] == "+" and i == len(cigar_values) - 1
+                        ):
+                            continue
+                        elif c[0] != "*":
+                            if i != len(cigar_values) - 1:
+                                if 0 in nodes_info[node_id][1][0].keys():
+                                    nodes_info[node_id][1][0][0] = (
+                                        nodes_info[node_id][1][0][0] + 1
+                                    )
+                                else:
+                                    nodes_info[node_id][1][0][0] = 1
+
+                            if i != 0:
+                                seq_len = nodes_info[node_id][0]
+                                if seq_len in nodes_info[node_id][1][1].keys():
+                                    nodes_info[node_id][1][1][seq_len] = (
+                                        nodes_info[node_id][1][1][seq_len] + 1
+                                    )
+                                else:
+                                    nodes_info[node_id][1][1][seq_len] = 1
+                        else:
+                            continue
             for n1, n2 in zip(nodes, nodes[1:]):
+                if rev:
+                    (n1, n2) = (n2, n1)
                 if (n1, n2) in weights.keys():
                     weights[(n1, n2)] = weights[(n1, n2)] + 1
                 else:
                     weights[(n1, n2)] = 1
-            if read_name == last_read:
-                out.write(f"{path}\t{cigar}\n")
-            else:
-                out.write(f"{read_name}\n{path}\t{cigar}\n")
+            # if read_name == last_read:
+            #     out.write(f"{path}\t{cigar}\n")
+            # else:
+            #     out.write(f"R:{read_name}\n{path}\t{cigar}\n")
             last_read = read_name
-
+            # if count == 10:
+            # break
+            count = count + 1
+    # for n, d in nodes_info.items():
+    #    if d[1] != [{}, {}]:
+    #        print(n, d)
     print("Annotating GFA", file=sys.stderr)
     with open(gfa_file, "r") as f:
-
         for line in f:
             line = line.strip()
-            if not line.startswith("L"):
-                print(line)
-            else:
+            if line.startswith("S"):
+                tokens = line.split()
+                node_id = tokens[1]
+                len_seq = nodes_info[node_id][0]
+                in_w = nodes_info[node_id][1][0]
+                in_l = []
+                out_w = nodes_info[node_id][1][1]
+                out_l = []
+                for s, c in in_w.items():
+                    in_l.append(f"{s}.{c}")
+                for s, c in out_w.items():
+                    out_l.append(f"{s}.{c}")
+                if len(tokens) == 3:
+                    if len(in_l) != 0 and len(out_l):
+                        print(
+                            f"{line}\tSL:i:{len_seq},IL:Z:{'/'.join(in_l)},OL:Z:{'/'.join(out_l)}"
+                        )
+                    elif len(in_l) != 0 and len(out_l) == 0:
+                        print(f"{line}\tSL:i:{len_seq},IL:Z:{'/'.join(in_l)}")
+                    elif len(in_l) == 0 and len(out_l) != 0:
+                        print(f"{line}\tSL:i:{len_seq},OL:Z:{'/'.join(out_l)}")
+                    else:
+                        print(f"{line}\tSL:i:{len_seq}")
+                elif len(tokens) > 3:
+                    if len(in_l) != 0 and len(out_l):
+                        print(
+                            f"{line},SL:i:{len_seq},IL:Z:{'/'.join(in_l)},OL:Z:{'/'.join(out_l)}"
+                        )
+                    elif len(in_l) != 0 and len(out_l) == 0:
+                        print(f"{line},SL:i:{len_seq},IL:Z:{'/'.join(in_l)}")
+                    elif len(in_l) == 0 and len(out_l) != 0:
+                        print(f"{line},SL:i:{len_seq},OL:Z:{'/'.join(out_l)}")
+                    else:
+                        print(f"{line}\tSL:i:{len_seq}")
+            elif line.startswith("L"):
                 if len(line) == 1:
                     continue
                 tokens = line.split()
                 w = weights.pop((tokens[1], tokens[3]), 0)
                 print(f"{line}\tRC:i:{w}")
+            else:
+                print(line)
 
     for k, v in weights.items():
         print(f"L\t{k[0]}\t+\t{k[1]}\t+\t*\tRC:i:{v},ID:Z:N")
@@ -67,3 +310,4 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
+

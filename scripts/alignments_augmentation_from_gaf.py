@@ -275,26 +275,22 @@ def main(argv):
                     out_l.append(f"{s}.{c}")
                 if len(tokens) == 3:
                     if len(in_l) != 0 and len(out_l):
-                        print(
-                            f"{line}\tSL:i:{len_seq},IL:Z:{'/'.join(in_l)},OL:Z:{'/'.join(out_l)}"
-                        )
+                        print(f"{line}\tIL:Z:{','.join(in_l)}\tOL:Z:{','.join(out_l)}")
                     elif len(in_l) != 0 and len(out_l) == 0:
-                        print(f"{line}\tSL:i:{len_seq},IL:Z:{'/'.join(in_l)}")
+                        print(f"{line}\tIL:Z:{','.join(in_l)}")
                     elif len(in_l) == 0 and len(out_l) != 0:
-                        print(f"{line}\tSL:i:{len_seq},OL:Z:{'/'.join(out_l)}")
+                        print(f"{line}\tOL:Z:{','.join(out_l)}")
                     else:
-                        print(f"{line}\tSL:i:{len_seq}")
+                        print(f"{line}")
                 elif len(tokens) > 3:
                     if len(in_l) != 0 and len(out_l):
-                        print(
-                            f"{line},SL:i:{len_seq},IL:Z:{'/'.join(in_l)},OL:Z:{'/'.join(out_l)}"
-                        )
+                        print(f"{line}\tIL:Z:{','.join(in_l)}\tOL:Z:{','.join(out_l)}")
                     elif len(in_l) != 0 and len(out_l) == 0:
-                        print(f"{line},SL:i:{len_seq},IL:Z:{'/'.join(in_l)}")
+                        print(f"{line}\tIL:Z:{','.join(in_l)}")
                     elif len(in_l) == 0 and len(out_l) != 0:
-                        print(f"{line},SL:i:{len_seq},OL:Z:{'/'.join(out_l)}")
+                        print(f"{line}\tOL:Z:{','.join(out_l)}")
                     else:
-                        print(f"{line}\tSL:i:{len_seq}")
+                        print(f"{line}")
             elif line.startswith("L"):
                 if len(line) == 1:
                     continue
@@ -305,7 +301,7 @@ def main(argv):
                 print(line)
 
     for k, v in weights.items():
-        print(f"L\t{k[0]}\t+\t{k[1]}\t+\t*\tRC:i:{v},ID:Z:N")
+        print(f"L\t{k[0]}\t+\t{k[1]}\t+\t*\tRC:i:{v}\tID:Z:N")
 
 
 if __name__ == "__main__":

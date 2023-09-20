@@ -1,6 +1,5 @@
 # python alignments_augmentation_from_gaf.py alignment.gaf input.gfa > output.gfa
 
-
 import sys
 import re
 
@@ -38,6 +37,44 @@ def parse_cigar(cigar):
     return results
 
 
+def cigar_clipping(cigar_list, start_pos, end_pos):
+    cigar_list_new = cigar_list
+    new_start = start_pos
+    new_end = end_pos
+    if cigar_list[0][0] == "+" and cigar_list[1][0] == ":":
+        cigar_list_new = [cigar_list[1]]
+        new_start = start_pos + cigar_list[0][1]
+    elif cigar_list[0][0] == ":" and cigar_list[1][0] == "+":
+        cigar_list_new = [cigar_list[0]]
+
+    return cigar_list_new, new_start, new_end
+
+
+def compact_align(align):
+    new_al = []
+    for i, a in enumerate(align):
+        if i == 0:
+            new_al.append(a)
+        else:
+            if a[0] == new_al[-1][0]:
+                new_al[-1][1] = new_al[-1][1] + a[1]
+            else:
+                new_al.append(a)
+    return new_al
+
+
+def clear_align(align):
+    final_align = []
+    for i, al in enumerate(align):
+        if len(al[1]) == 1 and (al[1][0][0] == "-" or al[1][0][0] == "+"):
+            continue
+        else:
+            ## TODO I can do it when i create align
+            cal = compact_align(al)
+            final_align.append(cal)
+    return final_align
+
+
 def main(argv):
     gaf_file = argv[0]
     gfa_file = argv[1]
@@ -66,6 +103,8 @@ def main(argv):
         count = 0
         for line in f:
             # print(line)
+            # if count == 100000:
+            #    sys.exit()
             tokens = line.strip().split()
 
             if tokens[5] == "*":
@@ -83,6 +122,15 @@ def main(argv):
             else:
                 cigar = "*"
             score = tokens[11]
+            dv_re = re.search(
+                r"dv:f:(\d+(\.\d+)?)", " ".join(item for item in tokens[12:])
+            )
+            if dv_re:
+                dv = dv_re.group(0).replace("dv:f:", "")
+            else:
+                dv = "*"
+            if float(dv) > 0.1:
+                continue
             # print("score", score, cigar)
             rev = False
             # if score == 0:
@@ -95,10 +143,14 @@ def main(argv):
                 # nodes.reverse()
             # print(nodes)
             cigar_vals = parse_cigar(cigar)
+            # handle clipping
+            if len(cigar_vals) == 2:
+                cigar_vals, start_pos, end_pos_rel = cigar_clipping(
+                    cigar_vals, start_pos, end_pos_rel
+                )
+
             # print(cigar_vals)
-            # for i, cig in cigar_vals:
-            #     if cig[0] == "=" or cig[0] == "+" or cig[0] == "-":
-            #         cigar_vals[i][1] = len(cigar_vals[i][1])
+
             # print(cigar_vals)
             # print(line)
             # print("score", score, cigar, cigar_vals, nodes)
@@ -123,7 +175,8 @@ def main(argv):
                 # print("cigar", cigar_vals)
                 # print("align", align)
                 while tmp_len > 0:
-                    # print(tmp_len)
+                    # print(tmp_len, cigar_vals, align, file=sys.stderr)
+
                     curr_cigar_op = cigar_vals[0][0]
                     if curr_cigar_op == ":":
                         curr_cigar_len = cigar_vals[0][1]
@@ -154,33 +207,39 @@ def main(argv):
                             print("warning", file=sys.stderr)
                         break
             # print(align, file=sys.stderr)
+            final_align = clear_align(align)
+
+            # if stop:
+            #    print(align, final_align, file=sys.stderr)
+            #    sys.exit()
             ## TODO check semantic of "+" and "-" in cigar and check if all
             ## cigar elements are parsed
-            for i, elem in enumerate(align):
+            for i, elem in enumerate(final_align):
                 node_id = elem[0]
                 cigar_values = elem[1]
-                for c in cigar_values:
+                for j, c in enumerate(cigar_values):
                     if not rev:
-                        if c[0] == "-" and i != 0:
-                            seq_len = nodes_info[node_id][0] - c[1]
-                            if seq_len in nodes_info[node_id][1][0].keys():
-                                nodes_info[node_id][1][0][seq_len] = (
-                                    nodes_info[node_id][1][0][seq_len] + 1
-                                )
-                            else:
-                                nodes_info[node_id][1][0][seq_len] = 1
-                        elif c[0] == "+" and i != len(cigar_values) - 1:
-                            seq_len = nodes_info[node_id][0] - c[1] + 1
-                            if seq_len in nodes_info[node_id][1][1].keys():
-                                nodes_info[node_id][1][1][seq_len] = (
-                                    nodes_info[node_id][1][1][seq_len] + 1
-                                )
-                            else:
-                                nodes_info[node_id][1][1][seq_len] = 1
-                        elif (c[0] == "-" and i == 0) or (
-                            c[0] == "+" and i == len(cigar_values) - 1
-                        ):
-                            continue
+
+                        if c[0] == "-":
+                            if i != 0 and j == 0:
+                                seq_len = c[1]
+                                if seq_len in nodes_info[node_id][1][0].keys():
+                                    nodes_info[node_id][1][0][seq_len] = (
+                                        nodes_info[node_id][1][0][seq_len] + 1
+                                    )
+                                else:
+                                    nodes_info[node_id][1][0][seq_len] = 1
+                            if (
+                                i != len(cigar_values) - 1
+                                and j == len(cigar_values) - 1
+                            ):
+                                seq_len = nodes_info[node_id][0] - c[1] + 1
+                                if seq_len in nodes_info[node_id][1][1].keys():
+                                    nodes_info[node_id][1][1][seq_len] = (
+                                        nodes_info[node_id][1][1][seq_len] + 1
+                                    )
+                                else:
+                                    nodes_info[node_id][1][1][seq_len] = 1
                         elif c[0] != "*":
                             if i != 0:
                                 if 0 in nodes_info[node_id][1][0].keys():
@@ -200,26 +259,28 @@ def main(argv):
                         else:
                             continue
                     else:
-                        if c[0] == "+" and i != 0:
-                            seq_len = nodes_info[node_id][0] - c[1]
-                            if seq_len in nodes_info[node_id][1][0].keys():
-                                nodes_info[node_id][1][0][seq_len] = (
-                                    nodes_info[node_id][1][0][seq_len] + 1
-                                )
-                            else:
-                                nodes_info[node_id][1][0][seq_len] = 1
-                        elif c[0] == "-" and i != len(cigar_values) - 1:
-                            seq_len = nodes_info[node_id][0] - c[1] + 1
-                            if seq_len in nodes_info[node_id][1][1].keys():
-                                nodes_info[node_id][1][1][seq_len] = (
-                                    nodes_info[node_id][1][1][seq_len] + 1
-                                )
-                            else:
-                                nodes_info[node_id][1][1][seq_len] = 1
-                        elif (c[0] == "-" and i == 0) or (
-                            c[0] == "+" and i == len(cigar_values) - 1
-                        ):
-                            continue
+
+                        if c[0] == "-":
+                            if i != 0 and j == 0:
+                                seq_len = c[1]
+                                if seq_len in nodes_info[node_id][1][1].keys():
+                                    nodes_info[node_id][1][1][seq_len] = (
+                                        nodes_info[node_id][1][1][seq_len] + 1
+                                    )
+                                else:
+                                    nodes_info[node_id][1][1][seq_len] = 1
+                            if (
+                                i != len(cigar_values) - 1
+                                and j == len(cigar_values) - 1
+                            ):
+                                seq_len = nodes_info[node_id][0] - c[1] + 1
+                                if seq_len in nodes_info[node_id][1][0].keys():
+                                    nodes_info[node_id][1][0][seq_len] = (
+                                        nodes_info[node_id][1][0][seq_len] + 1
+                                    )
+                                else:
+                                    nodes_info[node_id][1][0][seq_len] = 1
+
                         elif c[0] != "*":
                             if i != len(cigar_values) - 1:
                                 if 0 in nodes_info[node_id][1][0].keys():
@@ -239,6 +300,9 @@ def main(argv):
                                     nodes_info[node_id][1][1][seq_len] = 1
                         else:
                             continue
+                    # if node_id == "310" and seq_len == 29:
+                    #    print(line, align, file=sys.stderr)
+
             for n1, n2 in zip(nodes, nodes[1:]):
                 if rev:
                     (n1, n2) = (n2, n1)
@@ -306,4 +370,5 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
+
 

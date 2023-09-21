@@ -149,40 +149,51 @@ def main():
 
                         if abs(_tex0 - _tex1) > 1:
                             # Checking that the trascripts belong to the same gene
-                            for _tj, _te in itertools.product(_trjunc, [_tr]):
+                            for _j, _te in itertools.product(junc["JN"], [_tr]):
+                                _tj = ".".join(_j.split(".")[:-2])
                                 if transcript2gene[_tj] == transcript2gene[_te]:
-                                    print("****************** KNOWN ES!!!", _tj, _te)
+                                    print("ES", "known", _j, f"{_tr}.{max(_tex0,_tex1)-1}", sep=',')
                                     # TODO: CHECKME: continue?
                                 
 
                     # Checking for non-novel A5 https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Alternative-5%E2%80%99
+                    # TODO: this is A5 on + / A3 on -
                     for n in get_outgoing_nodes(gfaL, ix_j[0]):
                         if (
-                            len(cap_a5 := ((get_set_exons(gfaS, n) & exons_n0) - exons_n1))
+                            len(cap_a5_ex := ((get_set_exons(gfaS, n) & exons_n0) - exons_n1))
                             > 0
                         ):
-                            cap_a5 = set(map(lambda x: ".".join(x.split(".")[:-1]), cap_a5))
+                            cap_a5 = set(map(lambda x: ".".join(x.split(".")[:-1]), cap_a5_ex))
                             cap_a5 = cap_a5 & cap
                             if len(cap_a5) > 0:
                                 # Checking that the trascripts belong to the same gene
-                                for _tj, _te in itertools.product(_trjunc, cap_a5):
+                                for _j, _te in itertools.product(junc["JN"], cap_a5):
+                                    _tj = ".".join(_j.split(".")[:-2])
+                                    _ee = [x for x in cap_a5_ex if x.startswith(_te)]
+                                    assert len(_ee) == 1
                                     if transcript2gene[_tj] == transcript2gene[_te]:
-                                        print("****************** KNOWN A5!!!", _tj, _te)
+                                         # TODO: check strand
+                                        print("A5", "known", _j, _ee[0], sep=',')
                                         # TODO: CHECKME: continue?
 
                     # Checking for non-novel A3 https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Alternative-3%E2%80%99
+                    # TODO: this is A3 on + / A5 on -
                     for n in get_incoming_nodes(gfaL, ix_j[1]):
                         if (
-                            len(cap_a3 := ((get_set_exons(gfaS, n) & exons_n1) - exons_n0))
+                            len(cap_a3_ex := ((get_set_exons(gfaS, n) & exons_n1) - exons_n0))
                             > 0
                         ):
-                            cap_a3 = set(map(lambda x: ".".join(x.split(".")[:-1]), cap_a3))
+                            cap_a3 = set(map(lambda x: ".".join(x.split(".")[:-1]), cap_a3_ex))
                             cap_a3 = cap & cap_a3
                             if len(cap_a3) > 0:
                                 # Checking that the trascripts belong to the same gene
-                                for _tj, _te in itertools.product(_trjunc, cap_a3):
+                                for _j, _te in itertools.product(junc["JN"], cap_a3):
+                                    _tj = ".".join(_j.split(".")[:-2])
+                                    _ee = [x for x in cap_a3_ex if x.startswith(_te)]
+                                    assert len(_ee) == 1
                                     if transcript2gene[_tj] == transcript2gene[_te]:
-                                        print("****************** KNOWN A3!!!", _tj, _te)
+                                        # TODO: check strand
+                                        print("A3", "known", _j, _ee[0], sep=',')
                                         # TODO: CHECKME: continue?
 
                     # Checking for non-novel IR https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Intron-retention
@@ -193,11 +204,13 @@ def main():
                     cap_ir = exons_n0.intersection(exons_n1, *ex_next_n0, *ex_prev_n1)
 
                     if len(cap_ir) > 0:
-                        cap_ir = set(map(lambda x: ".".join(x.split(".")[:-1]), cap_ir))
+                        # cap_ir = set(map(lambda x: ".".join(x.split(".")[:-1]), cap_ir))
                         # Checking that the trascripts belong to the same gene
-                        for _tj, _te in itertools.product(_trjunc, cap_ir):
+                        for _j, _e in itertools.product(junc["JN"], cap_ir):
+                            _tj = ".".join(_j.split(".")[:-2])
+                            _te = ".".join(_e.split(".")[:-1])
                             if transcript2gene[_tj] == transcript2gene[_te]:
-                                print("****************** KNOWN IR!!!", _tj, _te)
+                                print("IR", "known", _j, _e, sep=',')
                                 # TODO: CHECKME: continue?
             eprint("-" * 15)
     check_nonnovel()

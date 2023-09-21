@@ -93,6 +93,8 @@ def main():
     gtf_path = sys.argv[2]
     transcript2gene = {}
     for line in open(gtf_path):
+        if line.startswith("#"):
+            continue
         line = line.strip("\n").split("\t")
         if line[2] in [
             "mRNA",
@@ -103,11 +105,12 @@ def main():
             "snoRNA",
             "pseudogene",  # FIXME: do we want all these?
         ]:
+            # FIXME: we may need to add more chars to the regex
             gidx = (
-                re.search('gene_id "[A-Za-z0-9]+";', line[-1]).group(0).split('"')[-2]
+                re.search('gene_id "[A-Za-z0-9_]+";', line[-1]).group(0).split('"')[-2]
             )
             tidx = (
-                re.search('transcript_id "[A-Za-z0-9]+";', line[-1])
+                re.search('transcript_id "[A-Za-z0-9_]+";', line[-1])
                 .group(0)
                 .split('"')[-2]
             )

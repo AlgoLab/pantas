@@ -1,5 +1,4 @@
 # python alignments_augmentation_from_gaf.py alignment.gaf input.gfa > output.gfa
-
 import sys
 import re
 
@@ -80,6 +79,7 @@ def main(argv):
     gfa_file = argv[1]
     # gfa_file_out = argv[3]
     weights = {}
+    nodes_weights = {}
     revs = {}
     nodes_info = {}
 
@@ -208,7 +208,13 @@ def main(argv):
                         break
             # print(align, file=sys.stderr)
             final_align = clear_align(align)
-
+            clear_nodes = []
+            for n in final_align:
+                clear_nodes.append(n[0])
+                if n[0] not in nodes_weights.keys():
+                    nodes_weights[n[0]] = 1
+                else:
+                    nodes_weights[n[0]] = nodes_weights[n[0]] + 1
             # if stop:
             #    print(align, final_align, file=sys.stderr)
             #    sys.exit()
@@ -303,7 +309,7 @@ def main(argv):
                     # if node_id == "310" and seq_len == 29:
                     #    print(line, align, file=sys.stderr)
 
-            for n1, n2 in zip(nodes, nodes[1:]):
+            for n1, n2 in zip(clear_nodes, clear_nodes[1:]):
                 if rev:
                     (n1, n2) = (n2, n1)
                 if (n1, n2) in weights.keys():
@@ -328,6 +334,9 @@ def main(argv):
             if line.startswith("S"):
                 tokens = line.split()
                 node_id = tokens[1]
+                node_w = 0
+                if node_id in nodes_weights.keys():
+                    node_w = nodes_weights[node_id]
                 len_seq = nodes_info[node_id][0]
                 in_w = nodes_info[node_id][1][0]
                 in_l = []
@@ -339,22 +348,26 @@ def main(argv):
                     out_l.append(f"{s}.{c}")
                 if len(tokens) == 3:
                     if len(in_l) != 0 and len(out_l):
-                        print(f"{line}\tIL:Z:{','.join(in_l)}\tOL:Z:{','.join(out_l)}")
+                        print(
+                            f"{line}\tNW:i:{node_w}\tIL:Z:{','.join(in_l)}\tOL:Z:{','.join(out_l)}"
+                        )
                     elif len(in_l) != 0 and len(out_l) == 0:
-                        print(f"{line}\tIL:Z:{','.join(in_l)}")
+                        print(f"{line}\tNW:i:{node_w}\tIL:Z:{','.join(in_l)}")
                     elif len(in_l) == 0 and len(out_l) != 0:
-                        print(f"{line}\tOL:Z:{','.join(out_l)}")
+                        print(f"{line}\tNW:i:{node_w}\tOL:Z:{','.join(out_l)}")
                     else:
-                        print(f"{line}")
+                        print(f"{line}\tNW:i:{node_w}")
                 elif len(tokens) > 3:
                     if len(in_l) != 0 and len(out_l):
-                        print(f"{line}\tIL:Z:{','.join(in_l)}\tOL:Z:{','.join(out_l)}")
+                        print(
+                            f"{line}\tNW:i:{node_w}\tIL:Z:{','.join(in_l)}\tOL:Z:{','.join(out_l)}"
+                        )
                     elif len(in_l) != 0 and len(out_l) == 0:
-                        print(f"{line}\tIL:Z:{','.join(in_l)}")
+                        print(f"{line}\tNW:i:{node_w}\tIL:Z:{','.join(in_l)}")
                     elif len(in_l) == 0 and len(out_l) != 0:
-                        print(f"{line}\tOL:Z:{','.join(out_l)}")
+                        print(f"{line}\tNW:i:{node_w}\tOL:Z:{','.join(out_l)}")
                     else:
-                        print(f"{line}")
+                        print(f"{line}\tNW:i:{node_w}")
             elif line.startswith("L"):
                 if len(line) == 1:
                     continue

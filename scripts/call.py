@@ -289,11 +289,40 @@ def main():
                             #     if transcript2gene[_tj] == transcript2gene[_te]:
                             #         print("****************** NOVEL IRr!!!", _tj, _te)
                             #         # TODO: CHECKME: continue?
+
+                    # Check A3 - before
+                    if len(exons_n1) == 0:
+                        # n1 is an intron, check if there is a junction
+                        # from n0 to somewhere else
+                        
+                        nX = [x[1] for x in junctions if x[0] == ix_j[0]]
+                        if len(nX) > 0:
+                            # eprint("========================== CHECK A3b")
+                            eprint("nX:", nX)
+                            exons_nX = [get_set_exons(gfaS, x) for x in nX]; eprint("exons_nx:", exons_nX)
+                            transcripts_nX = set(*[list(get_transcript_from_exons(x)) for x in exons_nX]) ; eprint("TR_nx:", transcripts_nX)
+                            
+                            for _tr in transcripts_nX & transcripts_n0:
+                                # eprint("_tr", _tr)
+                                _fex0 = list(filter(lambda x: x.startswith(_tr), exons_n0))
+                                _fexX = list(filter(lambda x: x.startswith(_tr), *exons_nX))
+                                assert len(_fex0) == len(_fex1) == 1
+
+                                _tex0 = int(_fex0[0].split(".")[-1])
+                                _texX = int(_fexX[0].split(".")[-1])
+
+                                if abs(_tex0 - _texX) == 1:
+                                    print("****************** NOVEL A3b!!!", _tr, min(_tex0, _texX), '>', max(_tex0, _texX))
+
+
+
+
+
                     eprint("-" * 15)
 
         from_single_novel_junctions()
 
-        # Check potential CE and IR 
+        # Check potential CE
         # Known junctions (n0 > n1) that have novel junctions (n0 > nX) and (nY > n1)
         def from_novel_inside_nonnovel():
             for ix_j in junctions:
@@ -338,7 +367,7 @@ def main():
                         eprint("-" * 15)
         from_novel_inside_nonnovel()
 
-    check_novel()
+    # check_novel()
 
             # print(f"[Checking junction {ix_j}]: {junc}")
             # for ol in outgoing_l0:

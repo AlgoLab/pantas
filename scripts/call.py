@@ -49,6 +49,17 @@ def get_transcript_from_exons(exons) -> map:
 #     for n in out_curr:
 #         traverse_se(links, n, end)
 
+def get_path_transcript(path: dict, pid: str, start=None, end=None):
+    _key = pid
+    if not pid.endswith("_R1"):
+        _key = f"{pid}_R1"
+    p = path[_key]["path"]
+    start = p.index(start) if start else 0
+    end = p.index(end) if end else len(p)
+    _s = min(start, end)
+    _e = max(start,end)+1
+    return p[_s:_e]
+
 
 def main():
     gfaS = dict()
@@ -92,10 +103,12 @@ def main():
 
     gtf_path = sys.argv[2]
     transcript2gene = {}
+    genestrand = dict()
     for line in open(gtf_path):
         if line.startswith("#"):
             continue
         line = line.strip("\n").split("\t")
+        
         if line[2] in [
             "mRNA",
             "transcript",
@@ -115,6 +128,7 @@ def main():
                 .split('"')[-2]
             )
             transcript2gene[tidx] = gidx
+            genestrand[gidx] = line[6]
 
     # Check all the junctions
     def check_nonnovel():
@@ -152,12 +166,28 @@ def main():
                             for _j, _te in itertools.product(junc["JN"], [_tr]):
                                 _tj = ".".join(_j.split(".")[:-2])
                                 if transcript2gene[_tj] == transcript2gene[_te]:
-                                    print("ES", "known", _j, f"{_tr}.{max(_tex0,_tex1)-1}", sep=',')
+                                    # Find the junctions of this exon
+                                    _exno_min = min(_tex0,_tex1)
+                                    _exno_max = max(_tex0,_tex1)
+                                    _es_j1_name = f"{_tr}.{_exno_min}.{_exno_min+1}"
+                                    _es_j2_name = f"{_tr}.{_exno_max-1}.{_exno_max}"
+
+                                    if genestrand[transcript2gene[_tj]] == '-':
+                                        _es_j1_name = f"{_tr}.{_exno_max-1}.{_exno_max}"
+                                        _es_j2_name = f"{_tr}.{_exno_min}.{_exno_min+1}"
+                                    
+                                    _es_j1 = [gfaL[x] for x in junctions if x[0] == ix_j[0]]
+                                    _es_j2 = [gfaL[x] for x in junctions if x[1] == ix_j[1]]
+                                    _es_j1 = [x for x in _es_j1 if _es_j1_name in x["JN"]]
+                                    _es_j2 = [x for x in _es_j2 if _es_j2_name in x["JN"]]
+                                    assert len(_es_j1) == 1
+                                    assert len(_es_j2) == 1
+                                    print("ES", "known", _j, junc["RC"], _es_j1_name, _es_j1[0]["RC"], _es_j2_name, _es_j2[0]["RC"], sep=',')
                                     # TODO: CHECKME: continue?
                                 
 
                     # Checking for non-novel A5 https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Alternative-5%E2%80%99
-                    # TODO: this is A5 on + / A3 on -
+                    # this is A5 on + / A3 on -
                     for n in get_outgoing_nodes(gfaL, ix_j[0]):
                         if (
                             len(cap_a5_ex := ((get_set_exons(gfaS, n) & exons_n0) - exons_n1))
@@ -169,15 +199,18 @@ def main():
                                 # Checking that the trascripts belong to the same gene
                                 for _j, _te in itertools.product(junc["JN"], cap_a5):
                                     _tj = ".".join(_j.split(".")[:-2])
-                                    _ee = [x for x in cap_a5_ex if x.startswith(_te)]
-                                    assert len(_ee) == 1
                                     if transcript2gene[_tj] == transcript2gene[_te]:
-                                         # TODO: check strand
-                                        print("A5", "known", _j, _ee[0], sep=',')
+                                        _a_j = [gfaL[x] for x in junctions if x[1] == ix_j[1]]
+                                        _a_j = list(filter(lambda x: any([y.startswith(_te) for y in x["JN"]]), _a_j))
+                                        assert len(_a_j) == 1
+                                        _a_j = _a_j[0]
+                                        _a_j_name = [x for x in _a_j["JN"] if x.startswith(_te)]
+                                        assert len(_a_j_name) == 1
+                                        print("A5+" if genestrand[transcript2gene[_tj]] == '+' else "A3-", "known", _j, junc["RC"], _a_j_name[0], _a_j["RC"], sep=',')
                                         # TODO: CHECKME: continue?
 
                     # Checking for non-novel A3 https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Alternative-3%E2%80%99
-                    # TODO: this is A3 on + / A5 on -
+                    # this is A3 on + / A5 on -
                     for n in get_incoming_nodes(gfaL, ix_j[1]):
                         if (
                             len(cap_a3_ex := ((get_set_exons(gfaS, n) & exons_n1) - exons_n0))
@@ -189,11 +222,19 @@ def main():
                                 # Checking that the trascripts belong to the same gene
                                 for _j, _te in itertools.product(junc["JN"], cap_a3):
                                     _tj = ".".join(_j.split(".")[:-2])
-                                    _ee = [x for x in cap_a3_ex if x.startswith(_te)]
-                                    assert len(_ee) == 1
                                     if transcript2gene[_tj] == transcript2gene[_te]:
-                                        # TODO: check strand
-                                        print("A3", "known", _j, _ee[0], sep=',')
+                                        _a_j = [gfaL[x] for x in junctions if x[0] == ix_j[0]]
+                                        _a_j = list(filter(lambda x: any([y.startswith(_te) for y in x["JN"]]), _a_j))
+                                        assert len(_a_j) == 1
+                                        _a_j = _a_j[0]
+                                        _a_j_name = [x for x in _a_j["JN"] if x.startswith(_te)]
+                                        assert len(_a_j_name) == 1
+
+                                        # NOTE: In this case to keep ordering consistent with the reference
+                                        # the order of trascript is inverted.
+                                        # The first one is the one the event is considered to
+                                        # and the second is the one containing the event
+                                        print("A3+" if genestrand[transcript2gene[_tj]] == '+' else "A5-", "known", _a_j_name[0], _a_j["RC"], _j, junc["RC"], sep=',')
                                         # TODO: CHECKME: continue?
 
                     # Checking for non-novel IR https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Intron-retention
@@ -210,7 +251,17 @@ def main():
                             _tj = ".".join(_j.split(".")[:-2])
                             _te = ".".join(_e.split(".")[:-1])
                             if transcript2gene[_tj] == transcript2gene[_te]:
-                                print("IR", "known", _j, _e, sep=',')
+                                # get retained nodes to get their read count
+                                _subpath = get_path_transcript(gfaP, _te, start=ix_j[0], end=ix_j[1])
+                                assert len(_subpath) > 2
+                                # excluding the junction nodes
+                                _subpath = _subpath[1:-1]
+                                _count_sum = 0
+                                for _in in _subpath:
+                                    # TODO: change this to actual RC once we have it
+                                    _count_sum += sum([int(x.split(".")[1]) for x in gfaS[_in].get("IL", ["0.0"])])
+                                
+                                print("IR", "known", _j, junc["RC"], _e, _count_sum // len(_subpath), sep=',')
                                 # TODO: CHECKME: continue?
             eprint("-" * 15)
     check_nonnovel()

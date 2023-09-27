@@ -97,13 +97,14 @@ def main():
                     chrom,
                     gene_id,
                     strand,
-                    f"{chrom}:{j1[0]}:{j1[1]}",
-                    f"{chrom}:{j2[0]}:{j2[1]}",
-                    f"{chrom}:{jj[0]}:{jj[1]}",
+                    f"{chrom}:{j1[0]}-{j1[1]}",
+                    f"{chrom}:{j2[0]}-{j2[1]}",
+                    f"{chrom}:{jj[0]}-{jj[1]}",
                     f"{j1[2]}/{j2[2]}/{jj[2]}",
                     f"{j1[3]}/{j2[3]}/{jj[3]}",
                     psi1,
                     psi2,
+                    sep=",",
                 )
             elif (strand == "+" and transcript_id.endswith("a5")) or (
                 strand == "-" and transcript_id.endswith("a3")
@@ -147,6 +148,7 @@ def main():
                     f"{sj[3]}/{lj[3]}",
                     psi1,
                     psi2,
+                    sep=",",
                 )
             elif (strand == "-" and transcript_id.endswith("a5")) or (
                 strand == "+" and transcript_id.endswith("a3")
@@ -190,6 +192,7 @@ def main():
                     f"{sj[3]}/{lj[3]}",
                     psi1,
                     psi2,
+                    sep=",",
                 )
             elif transcript_id.endswith("ir"):
                 retained_intron = events[transcript_id]
@@ -232,6 +235,7 @@ def main():
                     f"{sj[3]}/{ri[3]}",
                     psi1,
                     psi2,
+                    sep=",",
                 )
 
 

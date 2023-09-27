@@ -197,9 +197,9 @@ def main():
             elif transcript_id.endswith("ir"):
                 retained_intron = events[transcript_id]
                 chrom = None
-                sj, ri = (
+                sj, exon = (
                     None,
-                    None,
+                    (0, 0, 0, 0),
                 )  # splice junction and retained intron
                 for t, chrom, s, e, rc1, rc2 in template:
                     if t == "junction":
@@ -207,19 +207,27 @@ def main():
                             sj = (s, e, rc1, rc2)
                 for t, chrom, s, e, rc1, rc2 in alternate:
                     if (
+                        t == "exon"
+                        and s < retained_intron[0]
+                        and retained_intron[1] < e
+                    ):
+                        exon = (s, e, exon[2], exon[3])
+                    if (
                         t == "-exon"
                         and s == retained_intron[0]
                         and e == retained_intron[1]
                     ):
-                        ri = (s, e, rc1, rc2)
-                assert sj != None and ri != None
-                assert sj[0] + 1 == ri[0] and sj[1] - 1 == ri[1]
+                        # Keep longer exon, use coverage of retained portion
+                        exon = (exon[0], exon[1], rc1, rc2)
+
+                assert sj != None and exon != (0, 0, 0, 0)
+                assert exon[0] < sj[0] and sj[0] < sj[1] and sj[1] < exon[1]
                 try:
-                    psi1 = sj[2] / (sj[2] + ri[2])
+                    psi1 = sj[2] / (sj[2] + exon[2])
                 except ZeroDivisionError:
                     psi1 = "NaN"
                 try:
-                    psi2 = sj[3] / (sj[3] + ri[3])
+                    psi2 = sj[3] / (sj[3] + exon[3])
                 except ZeroDivisionError:
                     psi2 = "NaN"
                 # Isoform with splice junction is canonical
@@ -229,10 +237,10 @@ def main():
                     gene_id,
                     strand,
                     f"{chrom}:{sj[0]}-{sj[1]}",
-                    f"{chrom}:{ri[0]}-{ri[1]}",
+                    f"{chrom}:{exon[0]}-{exon[1]}",
                     ".",
-                    f"{sj[2]}/{ri[2]}",
-                    f"{sj[3]}/{ri[3]}",
+                    f"{sj[2]}/{exon[2]}",
+                    f"{sj[3]}/{exon[3]}",
                     psi1,
                     psi2,
                     sep=",",

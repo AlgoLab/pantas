@@ -197,36 +197,23 @@ def main(args):
                                     ]
 
                                     if len(_es_j1) == 1 and len(_es_j2) == 1:
-                                        if args.format == "junctions":
-                                            print(
-                                                "ES",
-                                                "annotated",
-                                                genechr[transcript2gene[_tj]],
-                                                transcript2gene[_tj],
-                                                genestrand[transcript2gene[_tj]],
-                                                _j,
-                                                junc["RC"],
-                                                _es_j1_name,
-                                                gfaL[_es_j1[0]]["RC"],
-                                                _es_j2_name,
-                                                gfaL[_es_j2[0]]["RC"],
-                                                sep=",",
-                                            )
-                                        elif args.format == "nodes":
-                                            print(
-                                                "ES",
-                                                "annotated",
-                                                genechr[transcript2gene[_tj]],
-                                                transcript2gene[_tj],
-                                                genestrand[transcript2gene[_tj]],
-                                                ">".join(ix_j),
-                                                junc["RC"],
-                                                ">".join(_es_j1[0]),
-                                                gfaL[_es_j1[0]]["RC"],
-                                                ">".join(_es_j2[0]),
-                                                gfaL[_es_j2[0]]["RC"],
-                                                sep=",",
-                                            )
+                                        print(
+                                            "ES",
+                                            "annotated",
+                                            genechr[transcript2gene[_tj]],
+                                            transcript2gene[_tj],
+                                            genestrand[transcript2gene[_tj]],
+                                            _j,
+                                            ">".join(ix_j),
+                                            junc["RC"],
+                                            _es_j1_name,
+                                            ">".join(_es_j1[0]),
+                                            gfaL[_es_j1[0]]["RC"],
+                                            _es_j2_name,
+                                            ">".join(_es_j2[0]),
+                                            gfaL[_es_j2[0]]["RC"],
+                                            sep=",",
+                                        )
                                     # TODO: CHECKME: continue?
 
                     # Checking for non-novel A5 https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Alternative-5%E2%80%99
@@ -270,42 +257,26 @@ def main(args):
                                                 if x.startswith(_te)
                                             ]
                                             assert len(_a_j_name) == 1
-                                            if args.format == "junctions":
-                                                print(
-                                                    "A5"
-                                                    if genestrand[transcript2gene[_tj]]
-                                                    == "+"
-                                                    else "A3",
-                                                    "annotated",
-                                                    genechr[transcript2gene[_tj]],
-                                                    transcript2gene[_tj],
-                                                    genestrand[transcript2gene[_tj]],
-                                                    _j,
-                                                    junc["RC"],
-                                                    _a_j_name[0],
-                                                    gfaL[_a_j]["RC"],
-                                                    ".",
-                                                    ".",
-                                                    sep=",",
-                                                )
-                                            elif args.format == "nodes":
-                                                print(
-                                                    "A5"
-                                                    if genestrand[transcript2gene[_tj]]
-                                                    == "+"
-                                                    else "A3",
-                                                    "annotated",
-                                                    genechr[transcript2gene[_tj]],
-                                                    transcript2gene[_tj],
-                                                    genestrand[transcript2gene[_tj]],
-                                                    ">".join(ix_j),
-                                                    junc["RC"],
-                                                    ">".join(_a_j),
-                                                    gfaL[_a_j]["RC"],
-                                                    ".",
-                                                    ".",
-                                                    sep=",",
-                                                )
+                                            print(
+                                                "A5"
+                                                if genestrand[transcript2gene[_tj]]
+                                                == "+"
+                                                else "A3",
+                                                "annotated",
+                                                genechr[transcript2gene[_tj]],
+                                                transcript2gene[_tj],
+                                                genestrand[transcript2gene[_tj]],
+                                                _j,
+                                                ">".join(ix_j),
+                                                junc["RC"],
+                                                _a_j_name[0],
+                                                ">".join(_a_j),
+                                                gfaL[_a_j]["RC"],
+                                                ".",
+                                                ".",
+                                                ".",
+                                                sep=",",
+                                            )
                                             # TODO: CHECKME: continue?
 
                     # Checking for non-novel A3 https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Alternative-3%E2%80%99
@@ -328,15 +299,14 @@ def main(args):
                                 for _j, _te in itertools.product(junc["JN"], cap_a3):
                                     _tj = ".".join(_j.split(".")[:-2])
                                     if transcript2gene[_tj] == transcript2gene[_te]:
-                                        _a_j = [
-                                            gfaL[x]
-                                            for x in junctions
-                                            if x[0] == ix_j[0]
-                                        ]
+                                        _a_j = [x for x in junctions if x[0] == ix_j[0]]
                                         _a_j = list(
                                             filter(
                                                 lambda x: any(
-                                                    [y.startswith(_te) for y in x["JN"]]
+                                                    [
+                                                        y.startswith(_te)
+                                                        for y in gfaL[x]["JN"]
+                                                    ]
                                                 ),
                                                 _a_j,
                                             )
@@ -345,7 +315,7 @@ def main(args):
                                             _a_j = _a_j[0]
                                             _a_j_name = [
                                                 x
-                                                for x in _a_j["JN"]
+                                                for x in gfaL[_a_j]["JN"]
                                                 if x.startswith(_te)
                                             ]
                                             assert len(_a_j_name) == 1
@@ -364,9 +334,12 @@ def main(args):
                                                 transcript2gene[_tj],
                                                 genestrand[transcript2gene[_tj]],
                                                 _a_j_name[0],
-                                                _a_j["RC"],
+                                                ">".join(_a_j),
+                                                gfaL[_a_j]["RC"],
                                                 _j,
+                                                ">".join(ix_j),
                                                 junc["RC"],
+                                                ".",
                                                 ".",
                                                 ".",
                                                 sep=",",
@@ -411,9 +384,12 @@ def main(args):
                                     transcript2gene[_tj],
                                     genestrand[transcript2gene[_tj]],
                                     _j,
+                                    ">".join(ix_j),
                                     junc["RC"],
                                     _e,
+                                    ">".join(_subpath),
                                     _count_sum // len(_subpath),
+                                    ".",
                                     ".",
                                     ".",
                                     sep=",",
@@ -720,14 +696,6 @@ if __name__ == "__main__":
         help="Do not call known annotated events (default: False)",
         action="store_true",
         default=False,
-    )
-    parser.add_argument(
-        "--format",
-        help="Minimum read count (default: junctions)",
-        dest="format",
-        choices=["junctions", "nodes"],
-        required=False,
-        default="junctions",
     )
     args = parser.parse_args()
     main(args)

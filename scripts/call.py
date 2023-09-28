@@ -447,12 +447,47 @@ def main(args):
                             _tex1 = int(_fex1[0].split(".")[-1])
 
                             if abs(_tex0 - _tex1) > 1:
-                                print("****************** NOVEL ES!!!", _tr)
                                 # Checking that the trascripts belong to the same gene
-                                # for _tj, _te in itertools.product(_trjunc, [_tr]):
-                                #     if transcript2gene[_tj] == transcript2gene[_te]:
-                                #         print("****************** NOVEL ES!!!", _tj, _te)
-                                #         # TODO: CHECKME: continue?
+                                _exno_min = min(_tex0, _tex1)
+                                _exno_max = max(_tex0, _tex1)
+                                _es_j1_name = f"{_tr}.{_exno_min}.{_exno_min+1}"
+                                _es_j2_name = f"{_tr}.{_exno_max-1}.{_exno_max}"
+
+                                if genestrand[transcript2gene[_tr]] == "-":
+                                    _es_j1_name = f"{_tr}.{_exno_max-1}.{_exno_max}"
+                                    _es_j2_name = f"{_tr}.{_exno_min}.{_exno_min+1}"
+
+                                _n_j1 = [x for x in junctions if x[0] == ix_j[0]]
+                                _n_j2 = [x for x in junctions if x[1] == ix_j[1]]
+                                # eprint("_n_j1:",_n_j1)
+                                # eprint("_n_j2:",_n_j2)
+                                _es_j1 = [
+                                    x for x in _n_j1 if _es_j1_name in gfaL[x]["JN"]
+                                ]
+                                _es_j2 = [
+                                    x for x in _n_j2 if _es_j2_name in gfaL[x]["JN"]
+                                ]
+                                # eprint("_es_j1:",_es_j1)
+                                # eprint("_es_j2:",_es_j2)
+
+                                # eprint("****************** NOVEL ES!!!", _tr)
+                                print(
+                                    "ES",
+                                    "novel",
+                                    genechr[transcript2gene[_tr]],
+                                    transcript2gene[_tr],
+                                    genestrand[transcript2gene[_tr]],
+                                    "?",  # _j,
+                                    ">".join(ix_j),
+                                    junc["RC"],
+                                    _es_j1_name,
+                                    ">".join(_es_j1[0]),
+                                    gfaL[_es_j1[0]]["RC"],
+                                    _es_j2_name,
+                                    ">".join(_es_j2[0]),
+                                    gfaL[_es_j2[0]]["RC"],
+                                    sep=",",
+                                )
 
                         # Checking for novel A5+ before / A3- after
                         # Checking for novel A3+ after
@@ -464,7 +499,6 @@ def main(args):
                             _tex0 = int(_fex0[0].split(".")[-1])
                             _tex1 = int(_fex1[0].split(".")[-1])
                             if abs(_tex0 - _tex1) == 1:
-                                # TODO: maybe this check is in not necessary
                                 ex_next_n0 = set().union(
                                     *[
                                         get_set_exons(gfaS, x)
@@ -472,18 +506,47 @@ def main(args):
                                     ]
                                 )
                                 if _fex0[0] in ex_next_n0:
-                                    print(
-                                        "****************** NOVEL A5b!!!",
-                                        _tr,
-                                        min(_tex0, _tex1),
-                                        ">",
-                                        max(_tex0, _tex1),
+                                    _a_j = [x for x in junctions if x[1] == ix_j[1]]
+                                    _a_j = list(
+                                        filter(
+                                            lambda x: any(
+                                                [
+                                                    y.startswith(_tr)
+                                                    for y in gfaL[x]["JN"]
+                                                ]
+                                            ),
+                                            _a_j,
+                                        )
                                     )
-                                    print(
-                                        "A5b+"
-                                        if genestrand[transcript2gene[_tr]] == "+"
-                                        else "A3a-"
-                                    )
+                                    if len(_a_j) == 1:
+                                        _a_j = _a_j[0]
+                                        _a_j_name = [
+                                            x
+                                            for x in gfaL[_a_j]["JN"]
+                                            if x.startswith(_tr)
+                                        ]
+                                        assert len(_a_j_name) == 1
+
+                                        # A5b+ / A3a-
+                                        print(
+                                            "A5"
+                                            if genestrand[transcript2gene[_tr]] == "+"
+                                            else "A3",
+                                            "novel",
+                                            genechr[transcript2gene[_tr]],
+                                            transcript2gene[_tr],
+                                            genestrand[transcript2gene[_tr]],
+                                            "?",  # _j,
+                                            ">".join(ix_j),
+                                            junc["RC"],
+                                            _a_j_name[0],
+                                            ">".join(_a_j),
+                                            gfaL[_a_j]["RC"],
+                                            ".",
+                                            ".",
+                                            ".",
+                                            sep=",",
+                                        )
 
                                 ex_prev_n1 = set().union(
                                     *[
@@ -492,14 +555,52 @@ def main(args):
                                     ]
                                 )
                                 if _fex1[0] in ex_prev_n1:
-                                    print(
-                                        "****************** NOVEL A3a!!!",
-                                        _tr,
-                                        min(_tex0, _tex1),
-                                        ">",
-                                        max(_tex0, _tex1),
+                                    _a_j = [x for x in junctions if x[0] == ix_j[0]]
+                                    _a_j = list(
+                                        filter(
+                                            lambda x: any(
+                                                [
+                                                    y.startswith(_tr)
+                                                    for y in gfaL[x]["JN"]
+                                                ]
+                                            ),
+                                            _a_j,
+                                        )
                                     )
-                                    # print("A3a+" if genestrand[transcript2gene[_tr]] == '+' else "A5b-")
+                                    if len(_a_j) == 1:
+                                        _a_j = _a_j[0]
+                                        _a_j_name = [
+                                            x
+                                            for x in gfaL[_a_j]["JN"]
+                                            if x.startswith(_tr)
+                                        ]
+                                        assert len(_a_j_name) == 1
+
+                                        # NOTE: In this case to keep ordering consistent with the reference
+                                        # the order of trascript is inverted.
+                                        # The first one is the one the event is considered to
+                                        # and the second is the one containing the event
+
+                                        # A3a+ / A5b-
+                                        print(
+                                            "A3"
+                                            if genestrand[transcript2gene[_tr]] == "+"
+                                            else "A5",
+                                            "novel",
+                                            genechr[transcript2gene[_tr]],
+                                            transcript2gene[_tr],
+                                            genestrand[transcript2gene[_tr]],
+                                            _a_j_name[0],
+                                            ">".join(_a_j),
+                                            gfaL[_a_j]["RC"],
+                                            "?",  # _j,
+                                            ">".join(ix_j),
+                                            junc["RC"],
+                                            ".",
+                                            ".",
+                                            ".",
+                                            sep=",",
+                                        )
 
                         # Checking for novel IR reverse
                         next_n0 = get_outgoing_nodes(gfaL, ix_j[0])
@@ -512,24 +613,49 @@ def main(args):
                         eprint("cap_ir EX:", cap_ir)
 
                         if len(cap_ir) > 0:
-                            cap_ir = set(
-                                map(lambda x: ".".join(x.split(".")[:-1]), cap_ir)
-                            )
-                            print("****************** NOVEL IRr!!!", cap_ir)
-                            # Checking that the trascripts belong to the same gene
-                            # for _tj, _te in itertools.product(_trjunc, cap_ir):
-                            #     if transcript2gene[_tj] == transcript2gene[_te]:
-                            #         print("****************** NOVEL IRr!!!", _tj, _te)
-                            #         # TODO: CHECKME: continue?
+                            for ex_ir in cap_ir:
+                                _tr = ".".join(ex_ir.split(".")[:-1])
+                                _subpath = get_path_transcript(
+                                    gfaP, _tr, start=ix_j[0], end=ix_j[1]
+                                )
+                                assert len(_subpath) > 2
+                                # excluding the junction nodes
+                                _subpath = _subpath[1:-1]
+                                _count_sum = 0
+                                for _in in _subpath:
+                                    # TODO: change this to actual RC once we have it
+                                    _count_sum += sum(
+                                        [
+                                            int(x.split(".")[1])
+                                            for x in gfaS[_in].get("IL", ["0.0"])
+                                        ]
+                                    )
+                                print(
+                                    "IR",
+                                    "novel",
+                                    genechr[transcript2gene[_tr]],
+                                    transcript2gene[_tr],
+                                    genestrand[transcript2gene[_tr]],
+                                    "?", # _j,
+                                    ">".join(ix_j),
+                                    junc["RC"],
+                                    ex_ir,
+                                    ">".join(_subpath),
+                                    _count_sum // len(_subpath),
+                                    ".",
+                                    ".",
+                                    ".",
+                                    sep=",",
+                                )
 
                     # Check A3 - before
                     if len(exons_n1) == 0:
                         # n1 is an intron, check if there is a junction
                         # from n0 to somewhere else
 
-                        nX = [x[1] for x in junctions if x[0] == ix_j[0]]
+                        nX_j = [x for x in junctions if x[0] == ix_j[0]]
+                        nX = [x[1] for x in nX_j]
                         if len(nX) > 0:
-                            # eprint("========================== CHECK A3b")
                             eprint("nX:", nX)
                             exons_nX = [get_set_exons(gfaS, x) for x in nX]
                             eprint("exons_nx:", exons_nX)
@@ -539,7 +665,6 @@ def main(args):
                             eprint("TR_nx:", transcripts_nX)
 
                             for _tr in transcripts_nX & transcripts_n0:
-                                # eprint("_tr", _tr)
                                 _fex0 = list(
                                     filter(lambda x: x.startswith(_tr), exons_n0)
                                 )
@@ -552,20 +677,55 @@ def main(args):
                                 _texX = int(_fexX[0].split(".")[-1])
 
                                 if abs(_tex0 - _texX) == 1:
-                                    print(
-                                        "****************** NOVEL A3b!!!",
-                                        _tr,
-                                        min(_tex0, _texX),
-                                        ">",
-                                        max(_tex0, _texX),
+                                    _a_j = list(
+                                        filter(
+                                            lambda x: any(
+                                                [
+                                                    y.startswith(_tr)
+                                                    for y in gfaL[x]["JN"]
+                                                ]
+                                            ),
+                                            nX_j,
+                                        )
                                     )
+                                    eprint("_a_j:", _a_j, gfaL[_a_j[0]])
+                                    if len(_a_j) == 1:
+                                        _a_j = _a_j[0]
+                                        _a_j_name = [
+                                            x
+                                            for x in gfaL[_a_j]["JN"]
+                                            if x.startswith(_tr)
+                                        ]
+                                        assert len(_a_j_name) == 1
+
+                                        print(
+                                            "A3"
+                                            if genestrand[transcript2gene[_tr]] == "+"
+                                            else "A5.A3b",
+                                            "novel",
+                                            genechr[transcript2gene[_tr]],
+                                            transcript2gene[_tr],
+                                            genestrand[transcript2gene[_tr]],
+                                            _a_j_name[0],
+                                            ">".join(_a_j),
+                                            gfaL[_a_j]["RC"],
+                                            "?",  # _j,
+                                            ">".join(ix_j),
+                                            junc["RC"],
+                                            ".",
+                                            ".",
+                                            ".",
+                                            sep=",",
+                                        )
 
                     # Chek A5 - after
                     if len(exons_n0) == 0:
                         # n0 is an intron, check if there is a junction
                         # to n1 from somewhere else
 
-                        nX = [x[0] for x in junctions if x[1] == ix_j[1]]
+                        # nX = [x[0] for x in junctions if x[1] == ix_j[1]]
+                        nX_j = [x for x in junctions if x[1] == ix_j[1]]
+                        nX = [x[0] for x in nX_j]
                         if len(nX) > 0:
                             eprint("nX:", nX)
                             exons_nX = [get_set_exons(gfaS, x) for x in nX]
@@ -592,13 +752,47 @@ def main(args):
                                 _texX = int(_fexX[0].split(".")[-1])
 
                                 if abs(_tex0 - _texX) == 1:
-                                    print(
-                                        "****************** NOVEL A5a!!!",
-                                        _tr,
-                                        min(_tex0, _texX),
-                                        ">",
-                                        max(_tex0, _texX),
+                                    # NOTE: this has not been tested (no events to check)
+                                    _a_j = list(
+                                        filter(
+                                            lambda x: any(
+                                                [
+                                                    y.startswith(_tr)
+                                                    for y in gfaL[x]["JN"]
+                                                ]
+                                            ),
+                                            nX_j,
+                                        )
                                     )
+                                    eprint("_a_j:", _a_j, gfaL[_a_j[0]])
+                                    if len(_a_j) == 1:
+                                        _a_j = _a_j[0]
+                                        _a_j_name = [
+                                            x
+                                            for x in gfaL[_a_j]["JN"]
+                                            if x.startswith(_tr)
+                                        ]
+                                        assert len(_a_j_name) == 1
+
+                                        print(
+                                            "A5"
+                                            if genestrand[transcript2gene[_tr]] == "+"
+                                            else "A3.A5a",
+                                            "novel",
+                                            genechr[transcript2gene[_tr]],
+                                            transcript2gene[_tr],
+                                            genestrand[transcript2gene[_tr]],
+                                            "?",  # _j,
+                                            ">".join(ix_j),
+                                            junc["RC"],
+                                            _a_j_name[0],
+                                            ">".join(_a_j),
+                                            gfaL[_a_j]["RC"],
+                                            ".",
+                                            ".",
+                                            ".",
+                                            sep=",",
+                                        )
 
                     eprint("-" * 15)
 
@@ -615,8 +809,10 @@ def main(args):
                     _trjunc = set(
                         map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"])
                     )
-                    nX = [x[1] for x in noveljunctions if x[0] == ix_j[0]]
-                    nY = [x[0] for x in noveljunctions if x[1] == ix_j[1]]
+                    # nX = [x[1] for x in noveljunctions if x[0] == ix_j[0]]
+                    # nY = [x[0] for x in noveljunctions if x[1] == ix_j[1]]
+                    nX = [x for x in noveljunctions if x[0] == ix_j[0]]
+                    nY = [x for x in noveljunctions if x[1] == ix_j[1]]
 
                     if len(nX) > 0 and len(nY) > 0:
                         eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
@@ -651,12 +847,56 @@ def main(args):
                                 _tex1 = int(_fex1[0].split(".")[-1])
 
                                 if abs(_tex0 - _tex1) == 1:
-                                    print("****************** NOVEL CE!!!", _tr)
-                                    # # Checking that the trascripts belong to the same gene
-                                    # for _tj, _te in itertools.product(_trjunc, [_tr]):
-                                    #     if transcript2gene[_tj] == transcript2gene[_te]:
-                                    #         print("****************** NOVEL CE!!!", _tj, _te)
-                                    #         # TODO: CHECKME: continue?
+
+                                    # TODO: get sequence if necessary
+
+                                    # _ce_trs = set(
+                                    #     get_transcript_from_exons(
+                                    #         get_set_exons(gfaS, _nx[1])
+                                    #     )
+                                    # ) | set(
+                                    #     get_transcript_from_exons(
+                                    #         get_set_exons(gfaS, _ny[0])
+                                    #     )
+                                    # )
+                                    # for x in _ce_trs:
+                                    #     try:
+                                    #         _subpath = get_path_transcript(
+                                    #             gfaP, x, start=_nx[1], end=_ny[0]
+                                    #         )
+                                    #         seq_ce = "".join([gfaS[x]["seq"] for x in _subpath])
+                                    #         break
+                                    #     except:
+                                    #         continue
+                                    # else:
+                                    #     # this might be because: 
+                                    #     # 1. the nodes are intronic or
+                                    #     # 2. the assumption of nX and nY for the CE is not valid: 
+                                    #     #   e.g. there is more than one jump, it might jump onto different genes/transcripts 
+                                    #     #       maybe we can check and differentiate the two cases and treat them differently
+                                    #     seq_ce = "?"
+
+                                    seq_ce = "?"
+                                    print(
+                                        "CE",
+                                        "novel",
+                                        genechr[transcript2gene[_tr]],
+                                        transcript2gene[_tr],
+                                        genestrand[transcript2gene[_tr]],
+                                        # Intron on annotation
+                                        f"{_tr}.{min(_tex0, _tex1)}.{max(_tex0, _tex1)}",
+                                        ">".join(ix_j),
+                                        junc["RC"],
+                                        # Cassette junction 1
+                                        seq_ce,  # sequence of CE,
+                                        ">".join(_nx),
+                                        gfaL[_nx]["RC"],
+                                        # Cassette junction 2
+                                        ".",
+                                        ">".join(_ny),
+                                        gfaL[_ny]["RC"],
+                                        sep=",",
+                                    )
 
                         eprint("-" * 15)
 

@@ -26,6 +26,7 @@ python3 ./scripts/alignments_augmentation_from_gaf.py example/reads.gaf example/
 |-----|------|----------------------------------------------------------------------------------------------------------------|
 | EX  | Z    | Comma (`,`) separated values for each exons the node is part of. Annotated as `[Transcript].[Exon_Number]`     |
 | LN  | i    | Sequence length                                                                                                |
+| NC  | i    | Count of read that cover the node                                                                              |
 | IL  | Z    | Comma (`,`) separated values for counting in-links position over the sequence. Annotated as `[Index].[Count]`  |
 | OL  | Z    | Comma (`,`) separated values for counting out-links position over the sequence. Annotated as `[Index].[Count]` |
 

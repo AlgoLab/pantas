@@ -88,7 +88,6 @@ def compact_align(align):
 def clear_align(align):
     final_align = []
     for i, al in enumerate(align):
-
         # al = rem_edit_align(al)
         if len(al[1]) == 1 and (al[1][0][0] == "-" or al[1][0][0] == "+"):
             continue
@@ -102,7 +101,7 @@ def clear_align(align):
 def main(argv):
     gaf_file = argv[0]
     gfa_file = argv[1]
-    thr = int(argv[2])
+    thr = int(argv[2]) if len(argv) > 2 else 20
     # gfa_file_out = argv[3]
     weights = {}
     nodes_weights = {}
@@ -260,7 +259,6 @@ def main(argv):
                 cigar_values = elem[1]
                 for j, c in enumerate(cigar_values):
                     if not rev:
-
                         if c[0] == "-":
                             if i != 0 and j == 0:
                                 seq_len = c[1]
@@ -297,7 +295,6 @@ def main(argv):
                         else:
                             continue
                     else:
-
                         if c[0] == "-":
                             if i != 0 and j == 0:
                                 seq_len = c[1]
@@ -413,5 +410,3 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-
-

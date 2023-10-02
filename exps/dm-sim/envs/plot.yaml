@@ -1,0 +1,8 @@
+name: plot
+channels:
+  - bioconda
+dependencies:
+  - python=3.9
+  - seaborn
+  - matplotlib
+  - scipy

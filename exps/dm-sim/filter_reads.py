@@ -2,7 +2,9 @@
 
 import sys
 import os
+import random
 from Bio import SeqIO
+from Bio.Seq import Seq
 
 
 def main():
@@ -25,10 +27,16 @@ def main():
     for record in SeqIO.parse(fq1_path, "fastq"):
         if record.id.split("/")[0] in reads_to_remove:
             continue
+        record.seq = Seq(
+            str(record.seq.replace("N", random.choice(["A", "C", "G", "T"])))
+        )
         SeqIO.write(record, new_fq1, "fastq")
     for record in SeqIO.parse(fq2_path, "fastq"):
         if record.id.split("/")[0] in reads_to_remove:
             continue
+        record.seq = Seq(
+            str(record.seq.replace("N", random.choice(["A", "C", "G", "T"])))
+        )
         SeqIO.write(record, new_fq2, "fastq")
 
     new_fq1.close()

@@ -1,0 +1,662 @@
+import sys
+import random
+from os.path import join as pjoin
+from os.path import isfile
+import gzip
+
+# FIXME: everything is hardcoded to 1 replicate and 2 conditions
+
+seed = 23
+iterations = 1
+
+random.seed(seed)
+
+FA = config["fa"]
+GTF = config["gtf"]
+VCF = config["vcf"]
+ODIR = config["odir"]
+L = 150  # config["l"]
+N = config["n"]
+
+WHIPPET_DIR = "/home/denti/software/Whippet.jl"
+
+if not isfile(FA + ".fai"):
+    print("\n\nInput reference not indexed, please index with samtools faidx\n\n")
+    sys.exit(1)
+
+chroms = []
+for line in open(FA + ".fai"):
+    chroms.append(line.split("\t")[0])
+
+samples = []
+with gzip.open(VCF, "rt") as fin:
+    for line in fin:
+        if line.startswith("#C"):
+            samples = random.sample(line.split("\t")[9:], iterations)
+            break
+assert samples != []
+
+
+rule run:
+    input:
+        expand(pjoin(ODIR, "{sample}.results.csv"), sample=samples),
+        expand(
+            pjoin(ODIR, "{sample}", "anno", "pantas2", "sample_{x}.bam"),
+            sample=samples,
+            x=[1, 2],
+        ),
+        expand(
+            pjoin(ODIR, "{sample}", "novel", "pantas2", "sample_{x}.bam"),
+            sample=samples,
+            x=[1, 2],
+        ),
+
+
+rule combine:
+    input:
+        expand(pjoin(ODIR, "{{sample}}", "pantas2-anno.w{w}.csv"), w=[-1, 1, 3, 5, 10]),
+        expand(
+            pjoin(ODIR, "{{sample}}", "pantas2-novel.w{w}.csv"),
+            w=[-1, 1, 3, 5, 10],
+        ),
+        pjoin(ODIR, "{sample}", "rMATS-anno.csv"),
+        pjoin(ODIR, "{sample}", "rMATS-novel.csv"),
+        pjoin(ODIR, "{sample}", "whippet-anno.csv"),
+        pjoin(ODIR, "{sample}", "whippet-anno-relaxed.csv"),
+        pjoin(ODIR, "{sample}", "whippet-anno-nofilt.csv"),
+        pjoin(ODIR, "{sample}", "whippet-anno-nofilt-relaxed.csv"),
+        pjoin(ODIR, "{sample}", "whippet-novel.csv"),
+        pjoin(ODIR, "{sample}", "whippet-novel-relaxed.csv"),
+        pjoin(ODIR, "{sample}", "whippet-novel-nofilt.csv"),
+        pjoin(ODIR, "{sample}", "whippet-novel-nofilt-relaxed.csv"),
+    output:
+        pjoin(ODIR, "{sample}.results.csv"),
+    shell:
+        """
+        bash combine.sh {input} > {output}
+        """
+
+
+# ------------------
+# --- SIMULATION ---
+# ------------------
+rule apply_variants:
+    input:
+        fa=FA,
+        vcf=VCF,
+    output:
+        fa=pjoin(ODIR, "{sample}", "ref-wvars.fa"),
+    shell:
+        """
+        bcftools consensus -f {input.fa} -H 1 -s {wildcards.sample} {input.vcf} > {output.fa}
+        samtools faidx {output.fa}
+        """
+
+
+rule extract_chrom:
+    input:
+        fa=rules.apply_variants.output.fa,
+    output:
+        fa=pjoin(ODIR, "{sample}", "asim-input", "{c}.fa"),
+    shell:
+        """
+        samtools faidx {input.fa} {wildcards.c} > {output.fa}
+        """
+
+
+rule link_annotation:
+    input:
+        GTF,
+    output:
+        pjoin(ODIR, "{sample}", "asim-input", "annotation.gtf"),
+    shell:
+        """
+        ln {input} {output}
+        """
+
+
+rule simulate:
+    input:
+        expand(pjoin(ODIR, "{{sample}}", "asim-input", "{c}.fa"), c=chroms),
+        pjoin(ODIR, "{sample}", "asim-input", "annotation.gtf"),
+    output:
+        pjoin(ODIR, "{sample}", "asim-output", "sample_01_1.fastq"),
+        pjoin(ODIR, "{sample}", "asim-output", "sample_01_2.fastq"),
+        pjoin(ODIR, "{sample}", "asim-output", "sample_02_1.fastq"),
+        pjoin(ODIR, "{sample}", "asim-output", "sample_02_2.fastq"),
+        pjoin(ODIR, "{sample}", "asim-output", "exon_junction_coverage.tsv"),
+        pjoin(ODIR, "{sample}", "asim-output", "splicing_variants.gtf"),
+        pjoin(ODIR, "{sample}", "asim-output", "event_annotation.tsv"),
+    params:
+        input_dir=pjoin(ODIR, "{sample}", "asim-input"),
+        output_dir=pjoin(ODIR, "{sample}", "asim-output"),
+    threads: workflow.cores
+    shell:
+        """
+        Rscript asimulator.R {params.input_dir} {params.output_dir} {L} {N} {seed} {threads}
+        """
+
+
+rule get_novel:
+    input:
+        gtf=pjoin(ODIR, "{sample}", "asim-output", "splicing_variants.gtf"),
+    output:
+        gtf=pjoin(ODIR, "{sample}", "asim-output", "splicing_variants_novel.gtf"),
+    shell:
+        """
+        grep -v 'template "FALSE"' {input.gtf} > {output.gtf}
+        """
+
+
+# --------------
+# --- TRUTH  ---
+# --------------
+rule clean_samples:
+    input:
+        fq1=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_1.fastq"),
+        fq2=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_2.fastq"),
+    output:
+        pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_1.clean.fq"),
+        pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_2.clean.fq"),
+    shell:
+        """
+        python3 filter_reads.py {input.fq1} {input.fq2}
+        """
+
+
+rule get_rc:
+    input:
+        tsv1=pjoin(ODIR, "{sample}", "asim-output", "exon_junction_coverage.tsv"),
+        fq1=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_1.clean.fq"),
+        tsv2=pjoin(ODIR, "{sample}", "asim-output", "event_annotation.tsv"),
+    output:
+        csv=pjoin(ODIR, "{sample}", "asim-output", "read-counts.{x}.csv"),
+    shell:
+        """
+        python3 simrc.py {input.fq1} {input.tsv1} {input.tsv2} > {output.csv}
+        """
+
+
+rule merge_rc:
+    input:
+        csv1=pjoin(ODIR, "{sample}", "asim-output", "read-counts.1.csv"),
+        csv2=pjoin(ODIR, "{sample}", "asim-output", "read-counts.2.csv"),
+    output:
+        csv=pjoin(ODIR, "{sample}", "asim-output", "read-counts.csv"),
+    shell:
+        """
+        # CHECKME: assuming ordered input
+        paste {input.csv1}  <(cut -f11 -d',' {input.csv2} ) -d',' > {output.csv}
+        """
+
+
+rule get_truth:
+    input:
+        tsv=pjoin(ODIR, "{sample}", "asim-output", "event_annotation.tsv"),
+        csv=pjoin(ODIR, "{sample}", "asim-output", "read-counts.csv"),
+    output:
+        csv=pjoin(ODIR, "{sample}", "truth.csv"),
+    shell:
+        """
+        python3 build_truth.py {input.tsv} {input.csv} > {output.csv}
+        """
+
+
+# --------------
+# --- PANTAS ---
+# --------------
+rule pantas2_index:
+    input:
+        fa=FA,
+        gtf=lambda wildcards: pjoin(
+            ODIR, "{sample}", "asim-output", "splicing_variants.gtf"
+        )
+        if wildcards.annov == "anno"
+        else pjoin(ODIR, "{sample}", "asim-output", "splicing_variants_novel.gtf"),
+        vcf=VCF,
+    output:
+        xg=pjoin(
+            ODIR, "{sample}", "{annov}", "pantas2", "index", "spliced-pangenome.xg"
+        ),
+        gcsa=pjoin(
+            ODIR, "{sample}", "{annov}", "pantas2", "index", "spliced-pangenome.gcsa"
+        ),
+        dist=pjoin(
+            ODIR, "{sample}", "{annov}", "pantas2", "index", "spliced-pangenome.dist"
+        ),
+        gfa=pjoin(
+            ODIR,
+            "{sample}",
+            "{annov}",
+            "pantas2",
+            "index",
+            "spliced-pangenome.annotated.gfa",
+        ),
+        splicedfa=pjoin(
+            ODIR, "{sample}", "{annov}", "pantas2", "index", "genes.spliced.fa"
+        ),
+    params:
+        wd=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "index"),
+    log:
+        time=pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "index.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log.time} bash ../../pantas2.sh index {input.fa} {input.gtf} {input.vcf} {params.wd} {threads}
+        """
+
+
+rule pantas2_mpmap:
+    input:
+        xg=pjoin(
+            ODIR, "{sample}", "{annov}", "pantas2", "index", "spliced-pangenome.xg"
+        ),
+        gcsa=pjoin(
+            ODIR, "{sample}", "{annov}", "pantas2", "index", "spliced-pangenome.gcsa"
+        ),
+        dist=pjoin(
+            ODIR, "{sample}", "{annov}", "pantas2", "index", "spliced-pangenome.dist"
+        ),
+        fq1=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_1.clean.fq"),
+        fq2=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_2.clean.fq"),
+    output:
+        gaf=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "sample_{x}.gaf"),
+    threads: workflow.cores
+    log:
+        pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "mpmap{x}.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} vg mpmap -x {input.xg} -g {input.gcsa} -d {input.dist} -f {input.fq1} -f {input.fq2} -F GAF --threads {threads} > {output.gaf}
+        """
+
+
+rule pantas2_mpmap_bam:
+    input:
+        xg=pjoin(
+            ODIR, "{sample}", "{annov}", "pantas2", "index", "spliced-pangenome.xg"
+        ),
+        gcsa=pjoin(
+            ODIR, "{sample}", "{annov}", "pantas2", "index", "spliced-pangenome.gcsa"
+        ),
+        dist=pjoin(
+            ODIR, "{sample}", "{annov}", "pantas2", "index", "spliced-pangenome.dist"
+        ),
+        fq1=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_1.clean.fq"),
+        fq2=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_2.clean.fq"),
+    output:
+        bam=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "sample_{x}.bam"),
+    threads: workflow.cores
+    shell:
+        """
+        vg mpmap -x {input.xg} -g {input.gcsa} -d {input.dist} -f {input.fq1} -f {input.fq2} -F BAM --threads {threads} | samtools sort > {output.bam}
+        samtools index {output.bam}
+        """
+
+
+rule pantas_weight:
+    input:
+        gfa=pjoin(
+            ODIR,
+            "{sample}",
+            "{annov}",
+            "pantas2",
+            "index",
+            "spliced-pangenome.annotated.gfa",
+        ),
+        gaf=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "sample_{x}.gaf"),
+    output:
+        gfa=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "graph_{x}.gfa"),
+    log:
+        pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "weight{x}.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} python3 ../../scripts/alignments_augmentation_from_gaf.py {input.gaf} {input.gfa} > {output.gfa}
+        """
+
+
+rule pantas_call:
+    input:
+        gfa=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "graph_{x}.gfa"),
+        gtf=lambda wildcards: pjoin(
+            ODIR, "{sample}", "asim-output", "splicing_variants.gtf"
+        )
+        if wildcards.annov == "anno"
+        else pjoin(ODIR, "{sample}", "asim-output", "splicing_variants_novel.gtf"),
+    output:
+        csv=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "events_{x}.w{w}.csv"),
+    params:
+        novelp=lambda wildcards: "" if wildcards.annov == "anno" else "--novel",
+        # --no-annotated
+    log:
+        pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "call{x}.w{w}.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} python3 ../../scripts/call.py {params.novelp} --rc {wildcards.w} {input.gfa} {input.gtf} > {output.csv}
+        """
+
+
+rule pantas_quant:
+    input:
+        splicedfa=pjoin(
+            ODIR, "{sample}", "{annov}", "pantas2", "index", "genes.spliced.fa"
+        ),
+        csv1=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "events_1.w{w}.csv"),
+        csv2=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "events_2.w{w}.csv"),
+    output:
+        csv=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "quant.w{w}.csv"),
+    log:
+        pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "quant.w{w}.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} python3 ../../scripts/quantify.py {input.splicedfa} {input.csv1} {input.csv2} > {output.csv}
+        """
+
+
+rule compare_pantas:
+    input:
+        truth=pjoin(ODIR, "{sample}", "truth.csv"),
+        calls=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "quant.w{w}.csv"),
+    output:
+        pjoin(ODIR, "{sample}", "pantas2-{annov}.w{w}.csv"),
+    shell:
+        """
+        python3 compare_pantas.py {wildcards.annov} {input.truth} {input.calls} > {output}
+        """
+
+
+# --------------------
+# --- STAR + RMATS ---
+# --------------------
+rule STAR_index_anno:
+    input:
+        fa=FA,
+        gtf=lambda wildcards: pjoin(
+            ODIR, "{sample}", "asim-output", "splicing_variants.gtf"
+        )
+        if wildcards.annov == "anno"
+        else pjoin(ODIR, "{sample}", "asim-output", "splicing_variants_novel.gtf"),
+    output:
+        index=directory(pjoin(ODIR, "{sample}", "{annov}", "STAR-index")),
+    threads: workflow.cores
+    log:
+        pjoin(ODIR, "{sample}", "bench", "{annov}", "STAR", "index.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} STAR --runThreadN {threads} --runMode genomeGenerate --genomeDir {output.index} --genomeFastaFiles {input.fa} --sjdbGTFfile {input.gtf} --sjdbOverhang 149 --genomeSAindexNbases 9
+        """
+
+
+rule STAR_map:
+    input:
+        index=pjoin(ODIR, "{sample}", "{annov}", "STAR-index"),
+        fq1=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_1.clean.fq"),
+        fq2=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_2.clean.fq"),
+    output:
+        bam=pjoin(
+            ODIR,
+            "{sample}",
+            "{annov}",
+            "STAR",
+            "sample_{x}.Aligned.sortedByCoord.out.bam",
+        ),
+    params:
+        oprefix=pjoin(ODIR, "{sample}", "{annov}", "STAR", "sample_{x}."),
+    threads: workflow.cores
+    log:
+        pjoin(ODIR, "{sample}", "bench", "{annov}", "STAR", "map.{x}.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} STAR --runThreadN {threads} --genomeDir {input.index} --readFilesIn {input.fq1} {input.fq2} --outFileNamePrefix {params.oprefix} --outSAMtype BAM SortedByCoordinate --outSAMattributes All --limitBAMsortRAM 53687091200
+        samtools index {output.bam}
+        """
+
+
+rule rmats_c1:
+    input:
+        pjoin(
+            ODIR,
+            "{sample}",
+            "{annov}",
+            "STAR",
+            "sample_1.Aligned.sortedByCoord.out.bam",
+        ),
+    output:
+        pjoin(ODIR, "{sample}", "{annov}", "STAR.1.txt"),
+    shell:
+        """
+        echo {input} > {output}
+        """
+
+
+rule rmats_c2:
+    input:
+        pjoin(
+            ODIR,
+            "{sample}",
+            "{annov}",
+            "STAR",
+            "sample_2.Aligned.sortedByCoord.out.bam",
+        ),
+    output:
+        pjoin(ODIR, "{sample}", "{annov}", "STAR.2.txt"),
+    shell:
+        """
+        echo {input} > {output}
+        """
+
+
+rule rmats:
+    input:
+        gtf=lambda wildcards: pjoin(
+            ODIR, "{sample}", "asim-output", "splicing_variants.gtf"
+        )
+        if wildcards.annov == "anno"
+        else pjoin(ODIR, "{sample}", "asim-output", "splicing_variants_novel.gtf"),
+        c1txt=pjoin(ODIR, "{sample}", "{annov}", "STAR.1.txt"),
+        c2txt=pjoin(ODIR, "{sample}", "{annov}", "STAR.2.txt"),
+    output:
+        outd=directory(pjoin(ODIR, "{sample}", "{annov}", "rMATS")),
+        summary=pjoin(ODIR, "{sample}", "{annov}", "rMATS", "summary.txt"),
+    params:
+        tmpd=pjoin(ODIR, "{sample}", "{annov}", "rMATS-tmp"),
+        novelp=lambda wildcards: "--novelSS --mil 30 --mel 5000"
+        if wildcards.annov == "novel"
+        else "",
+    threads: workflow.cores
+    log:
+        pjoin(ODIR, "{sample}", "bench", "{annov}", "rMATS.time"),
+    conda:
+        "envs/rmats.yaml"
+    shell:
+        """
+        /usr/bin/time -vo {log} rmats.py {params.novelp} --gtf {input.gtf} --b1 {input.c1txt} --b2 {input.c2txt} --od {output.outd} --tmp {params.tmpd} --readLength 150 --nthread {threads} -t paired
+        """
+
+
+rule compare_rmats:
+    input:
+        truth=pjoin(ODIR, "{sample}", "truth.csv"),
+        calls=pjoin(ODIR, "{sample}", "{annov}", "rMATS"),
+    output:
+        pjoin(ODIR, "{sample}", "rMATS-{annov}.csv"),
+    shell:
+        """
+        python3 compare_rmats.py {wildcards.annov} {input.truth} {input.calls} > {output}
+        """
+
+
+# ---------------
+# --- WHIPPET ---
+# ---------------
+rule whippet_index_anno:
+    input:
+        fa=FA,
+        gtf=pjoin(ODIR, "{sample}", "asim-output", "splicing_variants.gtf"),
+    output:
+        jls=pjoin(ODIR, "{sample}", "anno", "whippet", "index.jls"),
+    params:
+        index_prefix=pjoin(ODIR, "{sample}", "anno", "whippet", "index"),
+    log:
+        pjoin(ODIR, "{sample}", "bench", "anno", "whippet", "index.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} julia {WHIPPET_DIR}/bin/whippet-index.jl --fasta {input.fa} --gtf {input.gtf} --index {params.index_prefix}
+        """
+
+
+rule whippet_quant_anno:
+    input:
+        jls=pjoin(ODIR, "{sample}", "anno", "whippet", "index.jls"),
+        fq1=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_1.clean.fq"),
+        fq2=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_2.clean.fq"),
+    output:
+        pjoin(ODIR, "{sample}", "anno", "whippet", "output_{x}.psi.gz"),
+    params:
+        index_prefix=pjoin(ODIR, "{sample}", "anno", "whippet", "index"),
+        output_prefix=pjoin(ODIR, "{sample}", "anno", "whippet", "output_{x}"),
+    log:
+        pjoin(ODIR, "{sample}", "bench", "anno", "whippet", "quant-{x}.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} julia {WHIPPET_DIR}/bin/whippet-quant.jl --index {params.index_prefix} --out {params.output_prefix} --biascorrect {input.fq1} {input.fq2} 
+        """
+
+
+rule whippet_delta_anno:
+    input:
+        psi1=pjoin(ODIR, "{sample}", "anno", "whippet", "output_1.psi.gz"),
+        psi2=pjoin(ODIR, "{sample}", "anno", "whippet", "output_2.psi.gz"),
+    output:
+        gz=pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff.gz"),
+        diff=pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff"),
+    params:
+        prefix=pjoin(ODIR, "{sample}", "anno", "whippet", "psi"),
+    log:
+        pjoin(ODIR, "{sample}", "bench", "anno", "whippet", "delta.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} julia {WHIPPET_DIR}/bin/whippet-delta.jl -a {input.psi1}, -b {input.psi2}, -o {params.prefix}
+        gunzip -k {output.gz}
+        """
+
+
+rule merge_bams:
+    input:
+        pjoin(
+            ODIR, "{sample}", "novel", "STAR", "sample_1.Aligned.sortedByCoord.out.bam"
+        ),
+        pjoin(
+            ODIR, "{sample}", "novel", "STAR", "sample_2.Aligned.sortedByCoord.out.bam"
+        ),
+    output:
+        pjoin(ODIR, "{sample}", "novel", "STAR", "both.bam"),
+    params:
+        pjoin(ODIR, "{sample}", "novel", "STAR", "both.unsrt.bam"),
+    shell:
+        """
+        samtools merge {params} {input}
+        samtools index {params}
+        samtools sort {params} | samtools rmdup -S - {output}
+        samtools index {output}
+        """
+
+
+rule whippet_index_novel:
+    input:
+        fa=FA,
+        gtf=pjoin(ODIR, "{sample}", "asim-output", "splicing_variants_novel.gtf"),
+        bam=pjoin(ODIR, "{sample}", "novel", "STAR", "both.bam"),
+    output:
+        jls=pjoin(ODIR, "{sample}", "novel", "whippet", "index.jls"),
+    params:
+        index_prefix=pjoin(ODIR, "{sample}", "novel", "whippet", "index"),
+    log:
+        pjoin(ODIR, "{sample}", "bench", "novel", "whippet", "index.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} julia {WHIPPET_DIR}/bin/whippet-index.jl --fasta {input.fa} --gtf {input.gtf} --index {params.index_prefix}
+        # --bam {input.bam}
+        """
+
+
+rule whippet_quant_novel:
+    input:
+        jls=pjoin(ODIR, "{sample}", "novel", "whippet", "index.jls"),
+        fq1=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_1.clean.fq"),
+        fq2=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_2.clean.fq"),
+    output:
+        pjoin(ODIR, "{sample}", "novel", "whippet", "output_{x}.psi.gz"),
+    params:
+        index_prefix=pjoin(ODIR, "{sample}", "novel", "whippet", "index"),
+        output_prefix=pjoin(ODIR, "{sample}", "novel", "whippet", "output_{x}"),
+    log:
+        pjoin(ODIR, "{sample}", "bench", "novel", "whippet", "quant-{x}.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} julia {WHIPPET_DIR}/bin/whippet-quant.jl --index {params.index_prefix} --out {params.output_prefix} --biascorrect {input.fq1} {input.fq2} 
+        """
+
+
+rule whippet_delta_novel:
+    input:
+        psi1=pjoin(ODIR, "{sample}", "novel", "whippet", "output_1.psi.gz"),
+        psi2=pjoin(ODIR, "{sample}", "novel", "whippet", "output_2.psi.gz"),
+    output:
+        gz=pjoin(ODIR, "{sample}", "novel", "whippet", "psi.diff.gz"),
+        diff=pjoin(ODIR, "{sample}", "novel", "whippet", "psi.diff"),
+    params:
+        prefix=pjoin(ODIR, "{sample}", "novel", "whippet", "psi"),
+    log:
+        pjoin(ODIR, "{sample}", "bench", "novel", "whippet", "delta.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} julia {WHIPPET_DIR}/bin/whippet-delta.jl -a {input.psi1}, -b {input.psi2}, -o {params.prefix}
+        gunzip -k {output.gz}
+        """
+
+
+rule compare_whippet:
+    input:
+        truth=pjoin(ODIR, "{sample}", "truth.csv"),
+        calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
+    output:
+        pjoin(ODIR, "{sample}", "whippet-{annov}.csv"),
+    shell:
+        """
+        python3 compare_whippet.py {input.truth} {input.calls} 0.1 0.9 0 > {output}
+        """
+
+
+rule compare_whippet_nofilt:
+    input:
+        truth=pjoin(ODIR, "{sample}", "truth.csv"),
+        calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
+    output:
+        pjoin(ODIR, "{sample}", "whippet-{annov}-nofilt.csv"),
+    shell:
+        """
+        python3 compare_whippet.py {input.truth} {input.calls} -1 -1 0 > {output}
+        """
+
+
+rule compare_whippet_relaxed:
+    input:
+        truth=pjoin(ODIR, "{sample}", "truth.csv"),
+        calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
+    output:
+        pjoin(ODIR, "{sample}", "whippet-{annov}-relaxed.csv"),
+    shell:
+        """
+        python3 compare_whippet.py {input.truth} {input.calls} 0.1 0.9 3 > {output}
+        """
+
+
+rule compare_whippet_nofilt_relaxed:
+    input:
+        truth=pjoin(ODIR, "{sample}", "truth.csv"),
+        calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
+    output:
+        pjoin(ODIR, "{sample}", "whippet-{annov}-nofilt-relaxed.csv"),
+    shell:
+        """
+        python3 compare_whippet.py {input.truth} {input.calls} -1 -1 3 > {output}
+        """

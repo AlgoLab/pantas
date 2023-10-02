@@ -5,8 +5,8 @@ args = commandArgs(trailingOnly = TRUE)
 
 input = args[1] #path to the input folder. Note: contains the chromosomes fasta file and the genome annotation (in gtf or gff3 format)
 output = args[2] #path to the output folder
-seed = 142 #seed for a reproducible simulation
-ncores = 8 #number of cores for the parallel simulation
+seed = args[5] #seed for a reproducible simulation
+ncores = args[6] #number of cores for the parallel simulation
 
 multi_events_per_exon = F #T - allow multiple events per exon; F - allow only one event per exon
 probs_as_freq = F #T - use fixed frequencies (should be summed up to 1); F - use probabilities
@@ -17,7 +17,7 @@ max_genes = NULL #number of genes. NULL - use all compatible exon supersets
 seq_depth = strtoi(args[4]) #sequencing depth i.e. the number of reads per sample
 num_reps = c(1,1) #number of samples and groups. E.g., c(1,1) - two groups with 1 sample each 
 
-stopifnot(length(args) == 4)
+stopifnot(length(args) == 6)
 
 #distribution of events. One event per gene; equal distribution
 as_events = c('es','ir','a3','a5')
@@ -67,7 +67,7 @@ params = list(
   multi_events_per_exon = multi_events_per_exon,
   probs_as_freq = probs_as_freq,
   num_reps = num_reps,
-  novel_variants = 0,
+  novel_variants = 1,
   reportCoverage = F,
   exon_junction_coverage = TRUE
 )

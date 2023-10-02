@@ -13,19 +13,29 @@ def build_attrs(fields: str):
         name, _, value = f.split(":")
         if name == "LN":
             attrs[name] = int(value)
-        elif name == "RC":
+        elif name == "RC" or name == "NC":
             attrs[name] = int(value)
         else:
             attrs[name] = value.split(",")
     return attrs
 
 
-def get_outgoing_nodes(links: dict, nid: str) -> list:
-    return [k[1] for k in links.keys() if k[0] == nid]
+def get_outgoing_nodes(
+    links: dict, nid: str, segments: dict = None, rc: int = -1
+) -> list:
+    ret = [k[1] for k in links.keys() if k[0] == nid]
+    if segments:
+        ret = [x for x in ret if segments[x]["NC"] > rc]
+    return ret
 
 
-def get_incoming_nodes(links: dict, nid: str) -> list:
-    return [k[0] for k in links.keys() if k[1] == nid]
+def get_incoming_nodes(
+    links: dict, nid: str, segments: dict = None, rc: int = -1
+) -> list:
+    ret = [k[0] for k in links.keys() if k[1] == nid]
+    if segments:
+        ret = [x for x in ret if segments[x]["NC"] > rc]
+    return ret
 
 
 def get_outgoing_links(links: dict, nid: str) -> list:
@@ -214,7 +224,6 @@ def main(args):
                                             gfaL[_es_j2[0]]["RC"],
                                             sep=",",
                                         )
-                                    # TODO: CHECKME: continue?
 
                     # Checking for non-novel A5 https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Alternative-5%E2%80%99
                     # this is A5 on + / A3 on -
@@ -277,7 +286,6 @@ def main(args):
                                                 ".",
                                                 sep=",",
                                             )
-                                            # TODO: CHECKME: continue?
 
                     # Checking for non-novel A3 https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Alternative-3%E2%80%99
                     # this is A3 on + / A5 on -
@@ -344,7 +352,6 @@ def main(args):
                                                 ".",
                                                 sep=",",
                                             )
-                                            # TODO: CHECKME: continue?
 
                     # Checking for non-novel IR https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Intron-retention
                     next_n0 = get_outgoing_nodes(gfaL, ix_j[0])
@@ -370,12 +377,13 @@ def main(args):
                                 _count_sum = 0
                                 for _in in _subpath:
                                     # TODO: change this to actual RC once we have it
-                                    _count_sum += sum(
-                                        [
-                                            int(x.split(".")[1])
-                                            for x in gfaS[_in].get("IL", ["0.0"])
-                                        ]
-                                    )
+                                    # _count_sum += sum(
+                                    #     [
+                                    #         int(x.split(".")[1])
+                                    #         for x in gfaS[_in].get("IL", ["0.0"])
+                                    #     ]
+                                    # )
+                                    _count_sum += gfaS[_in].get("NC", 0)
 
                                 print(
                                     "IR",
@@ -394,7 +402,6 @@ def main(args):
                                     ".",
                                     sep=",",
                                 )
-                                # TODO: CHECKME: continue?
             eprint("-" * 15)
 
     if not args.annotated:
@@ -406,7 +413,6 @@ def main(args):
             for ix_j in noveljunctions:
                 junc = gfaL[ix_j]
                 if junc["RC"] > args.rc:
-                    # _trjunc = set(map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"]))
                     _trjunc = set()
                     eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
 
@@ -490,7 +496,6 @@ def main(args):
                                 )
 
                         # Checking for novel A5+ before / A3- after
-                        # Checking for novel A3+ after
                         for _tr in cap:
                             _fex0 = list(filter(lambda x: x.startswith(_tr), exons_n0))
                             _fex1 = list(filter(lambda x: x.startswith(_tr), exons_n1))
@@ -502,7 +507,9 @@ def main(args):
                                 ex_next_n0 = set().union(
                                     *[
                                         get_set_exons(gfaS, x)
-                                        for x in get_outgoing_nodes(gfaL, ix_j[0])
+                                        for x in get_outgoing_nodes(
+                                            gfaL, ix_j[0]
+                                        )  # TODO: add rc check
                                     ]
                                 )
                                 if _fex0[0] in ex_next_n0:
@@ -551,7 +558,9 @@ def main(args):
                                 ex_prev_n1 = set().union(
                                     *[
                                         get_set_exons(gfaS, x)
-                                        for x in get_incoming_nodes(gfaL, ix_j[1])
+                                        for x in get_incoming_nodes(
+                                            gfaL, ix_j[1]
+                                        )  # TODO: add rc check
                                     ]
                                 )
                                 if _fex1[0] in ex_prev_n1:
@@ -603,9 +612,13 @@ def main(args):
                                         )
 
                         # Checking for novel IR reverse
-                        next_n0 = get_outgoing_nodes(gfaL, ix_j[0])
+                        next_n0 = get_outgoing_nodes(
+                            gfaL, ix_j[0]
+                        )  # TODO: add rc check
                         ex_next_n0 = [get_set_exons(gfaS, x) for x in next_n0]
-                        prev_n1 = get_incoming_nodes(gfaL, ix_j[1])
+                        prev_n1 = get_incoming_nodes(
+                            gfaL, ix_j[1]
+                        )  # TODO: add rc check
                         ex_prev_n1 = [get_set_exons(gfaS, x) for x in prev_n1]
                         cap_ir = exons_n0.intersection(
                             exons_n1, *ex_next_n0, *ex_prev_n1
@@ -624,19 +637,20 @@ def main(args):
                                 _count_sum = 0
                                 for _in in _subpath:
                                     # TODO: change this to actual RC once we have it
-                                    _count_sum += sum(
-                                        [
-                                            int(x.split(".")[1])
-                                            for x in gfaS[_in].get("IL", ["0.0"])
-                                        ]
-                                    )
+                                    # _count_sum += sum(
+                                    #     [
+                                    #         int(x.split(".")[1])
+                                    #         for x in gfaS[_in].get("IL", ["0.0"])
+                                    #     ]
+                                    # )
+                                    _count_sum += gfaS[_in].get("NC", 0)
                                 print(
                                     "IR",
                                     "novel",
                                     genechr[transcript2gene[_tr]],
                                     transcript2gene[_tr],
                                     genestrand[transcript2gene[_tr]],
-                                    "?", # _j,
+                                    "?",  # _j,
                                     ">".join(ix_j),
                                     junc["RC"],
                                     ex_ir,
@@ -653,7 +667,9 @@ def main(args):
                         # n1 is an intron, check if there is a junction
                         # from n0 to somewhere else
 
-                        nX_j = [x for x in junctions if x[0] == ix_j[0]]
+                        nX_j = [
+                            x for x in junctions if x[0] == ix_j[0]
+                        ]  # TODO: add rc check
                         nX = [x[1] for x in nX_j]
                         if len(nX) > 0:
                             eprint("nX:", nX)
@@ -701,7 +717,7 @@ def main(args):
                                         print(
                                             "A3"
                                             if genestrand[transcript2gene[_tr]] == "+"
-                                            else "A5.A3b",
+                                            else "A5",
                                             "novel",
                                             genechr[transcript2gene[_tr]],
                                             transcript2gene[_tr],
@@ -724,7 +740,9 @@ def main(args):
                         # to n1 from somewhere else
 
                         # nX = [x[0] for x in junctions if x[1] == ix_j[1]]
-                        nX_j = [x for x in junctions if x[1] == ix_j[1]]
+                        nX_j = [
+                            x for x in junctions if x[1] == ix_j[1]
+                        ]  # TODO: add rc check
                         nX = [x[0] for x in nX_j]
                         if len(nX) > 0:
                             eprint("nX:", nX)
@@ -777,7 +795,7 @@ def main(args):
                                         print(
                                             "A5"
                                             if genestrand[transcript2gene[_tr]] == "+"
-                                            else "A3.A5a",
+                                            else "A3",
                                             "novel",
                                             genechr[transcript2gene[_tr]],
                                             transcript2gene[_tr],
@@ -798,8 +816,6 @@ def main(args):
 
         from_single_novel_junctions()
 
-        # TODO: check IR
-
         # Check potential CE
         # Known junctions (n0 > n1) that have novel junctions (n0 > nX) and (nY > n1)
         def from_novel_inside_nonnovel():
@@ -811,8 +827,12 @@ def main(args):
                     )
                     # nX = [x[1] for x in noveljunctions if x[0] == ix_j[0]]
                     # nY = [x[0] for x in noveljunctions if x[1] == ix_j[1]]
-                    nX = [x for x in noveljunctions if x[0] == ix_j[0]]
-                    nY = [x for x in noveljunctions if x[1] == ix_j[1]]
+                    nX = [
+                        x for x in noveljunctions if x[0] == ix_j[0]
+                    ]  # TODO: add rc check
+                    nY = [
+                        x for x in noveljunctions if x[1] == ix_j[1]
+                    ]  # TODO: add rc check
 
                     if len(nX) > 0 and len(nY) > 0:
                         eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
@@ -847,7 +867,6 @@ def main(args):
                                 _tex1 = int(_fex1[0].split(".")[-1])
 
                                 if abs(_tex0 - _tex1) == 1:
-
                                     # TODO: get sequence if necessary
 
                                     # _ce_trs = set(
@@ -869,10 +888,10 @@ def main(args):
                                     #     except:
                                     #         continue
                                     # else:
-                                    #     # this might be because: 
+                                    #     # this might be because:
                                     #     # 1. the nodes are intronic or
-                                    #     # 2. the assumption of nX and nY for the CE is not valid: 
-                                    #     #   e.g. there is more than one jump, it might jump onto different genes/transcripts 
+                                    #     # 2. the assumption of nX and nY for the CE is not valid:
+                                    #     #   e.g. there is more than one jump, it might jump onto different genes/transcripts
                                     #     #       maybe we can check and differentiate the two cases and treat them differently
                                     #     seq_ce = "?"
 
@@ -901,6 +920,112 @@ def main(args):
                         eprint("-" * 15)
 
         from_novel_inside_nonnovel()
+
+        # checking for IR
+        for ix_j in junctions:
+            junc = gfaL[ix_j]
+            _trjunc = set()
+            eprint(f"[IIR Checking junction {ix_j}]: {junc}, {_trjunc}")
+
+            exons_n0 = get_set_exons(gfaS, ix_j[0])
+            eprint("exons_n0:", exons_n0)
+            exons_n1 = get_set_exons(gfaS, ix_j[1])
+            eprint("exons_n1:", exons_n1)
+            transcripts_n0 = set(map(lambda x: ".".join(x.split(".")[:-1]), exons_n0))
+            eprint("transcripts_n0:", transcripts_n0)
+            transcripts_n1 = set(map(lambda x: ".".join(x.split(".")[:-1]), exons_n1))
+            eprint("transcripts_n1:", transcripts_n1)
+
+            if len(cap := ((set(transcripts_n0) & set(transcripts_n1)) - _trjunc)) > 0:
+                # 1. visit n0 and n1
+                # 2. are not part of the junction (n0, n1)
+                for _tr in cap:
+                    _fex0 = list(filter(lambda x: x.startswith(_tr), exons_n0))
+                    _fex1 = list(filter(lambda x: x.startswith(_tr), exons_n1))
+                    assert len(_fex0) == len(_fex1) == 1
+
+                    _tex0 = int(_fex0[0].split(".")[-1])
+                    _tex1 = int(_fex1[0].split(".")[-1])
+
+                    if abs(_tex0 - _tex1) == 1:
+                        next_n0 = get_outgoing_nodes(
+                            gfaL, ix_j[0], segments=gfaS, rc=args.rc
+                        )
+                        prev_n1 = get_incoming_nodes(
+                            gfaL, ix_j[1], segments=gfaS, rc=args.rc
+                        )
+
+                        # filter only intronic
+                        _intron_next = list(
+                            filter(lambda x: len(get_set_exons(gfaS, x)) == 0, next_n0)
+                        )
+                        _intron_prev = list(
+                            filter(lambda x: len(get_set_exons(gfaS, x)) == 0, prev_n1)
+                        )
+
+                        i = 0
+                        # eprint(f"{i=} {_intron_next=}")
+                        # eprint(f"{i=} {_intron_prev=}")
+
+                        args.irw = 10
+
+                        while (
+                            len(_intron_next) > 0
+                            and len(_intron_prev) > 0
+                            and i < args.irw
+                        ):
+                            i += 1
+                            _intron_next = [
+                                get_outgoing_nodes(gfaL, x, segments=gfaS, rc=args.rc)
+                                for x in _intron_next
+                            ]
+                            _intron_prev = [
+                                get_incoming_nodes(gfaL, x, segments=gfaS, rc=args.rc)
+                                for x in _intron_prev
+                            ]
+                            _intron_next = [x for y in _intron_next for x in y]
+                            _intron_prev = [x for y in _intron_prev for x in y]
+
+                            _intron_next = list(
+                                filter(
+                                    lambda x: len(get_set_exons(gfaS, x)) == 0,
+                                    _intron_next,
+                                )
+                            )
+                            _intron_prev = list(
+                                filter(
+                                    lambda x: len(get_set_exons(gfaS, x)) == 0,
+                                    _intron_prev,
+                                )
+                            )
+                            # eprint(f"{i=} {_intron_next=}")
+                            # eprint(f"{i=} {_intron_prev=}")
+
+                            if len(set(_intron_next) & set(_intron_prev)) > 0:
+                                i = args.irw
+
+                        if i == args.irw:
+                            eprint("POTENTIAL")
+                            eprint(f"{i=} {_intron_next=}")
+                            eprint(f"{i=} {_intron_prev=}")
+                            for _tr in cap:
+                                print(
+                                    "IR",
+                                    "novel",
+                                    genechr[transcript2gene[_tr]],
+                                    transcript2gene[_tr],
+                                    genestrand[transcript2gene[_tr]],
+                                    "?",  # _j,
+                                    ".",  # ">".join(_subpath),
+                                    ".",  # _count_sum // len(_subpath),
+                                    f"{_tr}.{min(_tex0, _tex1)}",  # ex_ir,
+                                    ">".join(ix_j),
+                                    junc["RC"],
+                                    f"{_tr}.{max(_tex0, _tex1)}",
+                                    ">".join(ix_j),
+                                    junc["RC"],
+                                    sep=",",
+                                )
 
     if args.novel:
         check_novel()
@@ -937,5 +1062,21 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
     )
+    parser.add_argument(
+        "--irw",
+        dest="irw",
+        help="Novel intron retention search window, larger values reduce FP but increase time (default: 5)",
+        type=int,
+        default=5,
+    )
+    parser.add_argument(
+        "--debug",
+        dest="debug",
+        help="Debug (default: False)",
+        action="store_true",
+        default=False,
+    )
     args = parser.parse_args()
+    if args.debug:
+        eprint = print
     main(args)

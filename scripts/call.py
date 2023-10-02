@@ -501,8 +501,8 @@ def main(args):
                                     *[
                                         get_set_exons(gfaS, x)
                                         for x in get_outgoing_nodes(
-                                            gfaL, ix_j[0]
-                                        )  # TODO: add rc check
+                                            gfaL, ix_j[0], segments=gfaS, rc=args.rc
+                                        )
                                     ]
                                 )
                                 if _fex0[0] in ex_next_n0:
@@ -552,8 +552,8 @@ def main(args):
                                     *[
                                         get_set_exons(gfaS, x)
                                         for x in get_incoming_nodes(
-                                            gfaL, ix_j[1]
-                                        )  # TODO: add rc check
+                                            gfaL, ix_j[1], segments=gfaS, rc=args.rc
+                                        )
                                     ]
                                 )
                                 if _fex1[0] in ex_prev_n1:
@@ -606,12 +606,12 @@ def main(args):
 
                         # Checking for novel IR reverse
                         next_n0 = get_outgoing_nodes(
-                            gfaL, ix_j[0]
-                        )  # TODO: add rc check
+                            gfaL, ix_j[0], segments=gfaS, rc=args.rc
+                        )
                         ex_next_n0 = [get_set_exons(gfaS, x) for x in next_n0]
                         prev_n1 = get_incoming_nodes(
-                            gfaL, ix_j[1]
-                        )  # TODO: add rc check
+                            gfaL, ix_j[1], segments=gfaS, rc=args.rc
+                        )
                         ex_prev_n1 = [get_set_exons(gfaS, x) for x in prev_n1]
                         cap_ir = exons_n0.intersection(
                             exons_n1, *ex_next_n0, *ex_prev_n1
@@ -653,10 +653,8 @@ def main(args):
                         # n1 is an intron, check if there is a junction
                         # from n0 to somewhere else
 
-                        nX_j = [
-                            x for x in junctions if x[0] == ix_j[0]
-                        ]  # TODO: add rc check
-                        nX = [x[1] for x in nX_j]
+                        nX_j = [x for x in junctions if x[0] == ix_j[0]]
+                        nX = [x[1] for x in nX_j if gfaS[x[1]].get("NC", 0) > args.rc]
                         if len(nX) > 0:
                             eprint("nX:", nX)
                             exons_nX = [get_set_exons(gfaS, x) for x in nX]
@@ -726,10 +724,8 @@ def main(args):
                         # to n1 from somewhere else
 
                         # nX = [x[0] for x in junctions if x[1] == ix_j[1]]
-                        nX_j = [
-                            x for x in junctions if x[1] == ix_j[1]
-                        ]  # TODO: add rc check
-                        nX = [x[0] for x in nX_j]
+                        nX_j = [x for x in junctions if x[1] == ix_j[1]]
+                        nX = [x[0] for x in nX_j if gfaS[x[0]].get("NC", 0) > args.rc]
                         if len(nX) > 0:
                             eprint("nX:", nX)
                             exons_nX = [get_set_exons(gfaS, x) for x in nX]
@@ -814,11 +810,15 @@ def main(args):
                     # nX = [x[1] for x in noveljunctions if x[0] == ix_j[0]]
                     # nY = [x[0] for x in noveljunctions if x[1] == ix_j[1]]
                     nX = [
-                        x for x in noveljunctions if x[0] == ix_j[0]
-                    ]  # TODO: add rc check
+                        x
+                        for x in noveljunctions
+                        if x[0] == ix_j[0] and gfaS[x[0]].get("NC", 0) > args.rc
+                    ]
                     nY = [
-                        x for x in noveljunctions if x[1] == ix_j[1]
-                    ]  # TODO: add rc check
+                        x
+                        for x in noveljunctions
+                        if x[1] == ix_j[1] and gfaS[x[1]].get("NC", 0) > args.rc
+                    ]
 
                     if len(nX) > 0 and len(nY) > 0:
                         eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
@@ -932,8 +932,12 @@ def main(args):
             _subpath_p = []
             _subpath_count = 0
             if len(_intron_next) > 0 and len(_intron_prev) > 0:
-                _max_n = max([(x, gfaS[x]["NC"]) for x in _intron_next], key=lambda x: x[1])
-                _max_p = max([(x, gfaS[x]["NC"]) for x in _intron_prev], key=lambda x: x[1])
+                _max_n = max(
+                    [(x, gfaS[x]["NC"]) for x in _intron_next], key=lambda x: x[1]
+                )
+                _max_p = max(
+                    [(x, gfaS[x]["NC"]) for x in _intron_prev], key=lambda x: x[1]
+                )
 
                 _subpath_n.append(_max_n[0])
                 _subpath_p.append(_max_p[0])
@@ -977,15 +981,22 @@ def main(args):
 
                 if len(_intron_next & _intron_prev) > 0:
                     _subpath_total = True
-                    _max_n = max([(x, gfaS[x]["NC"]) for x in _intron_next & _intron_prev], key=lambda x: x[1])
+                    _max_n = max(
+                        [(x, gfaS[x]["NC"]) for x in _intron_next & _intron_prev],
+                        key=lambda x: x[1],
+                    )
                     _subpath_n.append(_max_n[0])
                     _subpath_count += _max_n[1]
                     i = args.irw
                     break
 
                 if len(_intron_next) > 0 and len(_intron_prev) > 0:
-                    _max_n = max([(x, gfaS[x]["NC"]) for x in _intron_next], key=lambda x: x[1])
-                    _max_p = max([(x, gfaS[x]["NC"]) for x in _intron_prev], key=lambda x: x[1])
+                    _max_n = max(
+                        [(x, gfaS[x]["NC"]) for x in _intron_next], key=lambda x: x[1]
+                    )
+                    _max_p = max(
+                        [(x, gfaS[x]["NC"]) for x in _intron_prev], key=lambda x: x[1]
+                    )
 
                     _subpath_n.append(_max_n[0])
                     _subpath_p.append(_max_p[0])
@@ -1019,7 +1030,6 @@ def main(args):
                     _subpath = list(dict.fromkeys(_subpath))
                     _subpath_name = ">".join(_subpath)
                 eprint(f"{i=} {_subpath=}")
-
 
                 for _j in junc["JN"]:
                     _tr = ".".join(_j.split(".")[:-2])

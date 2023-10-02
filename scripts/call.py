@@ -913,105 +913,133 @@ def main(args):
             _trjunc = set()
             eprint(f"[IIR Checking junction {ix_j}]: {junc}, {_trjunc}")
 
-            exons_n0 = get_set_exons(gfaS, ix_j[0])
-            eprint("exons_n0:", exons_n0)
-            exons_n1 = get_set_exons(gfaS, ix_j[1])
-            eprint("exons_n1:", exons_n1)
-            transcripts_n0 = set(map(lambda x: ".".join(x.split(".")[:-1]), exons_n0))
-            eprint("transcripts_n0:", transcripts_n0)
-            transcripts_n1 = set(map(lambda x: ".".join(x.split(".")[:-1]), exons_n1))
-            eprint("transcripts_n1:", transcripts_n1)
+            next_n0 = get_outgoing_nodes(gfaL, ix_j[0], segments=gfaS, rc=args.rc)
+            prev_n1 = get_incoming_nodes(gfaL, ix_j[1], segments=gfaS, rc=args.rc)
 
-            if len(cap := ((set(transcripts_n0) & set(transcripts_n1)) - _trjunc)) > 0:
-                # 1. visit n0 and n1
-                # 2. are not part of the junction (n0, n1)
-                for _tr in cap:
-                    _fex0 = list(filter(lambda x: x.startswith(_tr), exons_n0))
-                    _fex1 = list(filter(lambda x: x.startswith(_tr), exons_n1))
-                    assert len(_fex0) == len(_fex1) == 1
+            # filter only intronic
+            _intron_next = set(
+                filter(lambda x: len(get_set_exons(gfaS, x)) == 0, next_n0)
+            )
+            _intron_prev = set(
+                filter(lambda x: len(get_set_exons(gfaS, x)) == 0, prev_n1)
+            )
 
-                    _tex0 = int(_fex0[0].split(".")[-1])
-                    _tex1 = int(_fex1[0].split(".")[-1])
+            i = 0
+            # eprint(f"{i=} {_intron_next=}")
+            # eprint(f"{i=} {_intron_prev=}")
 
-                    if abs(_tex0 - _tex1) == 1:
-                        next_n0 = get_outgoing_nodes(
-                            gfaL, ix_j[0], segments=gfaS, rc=args.rc
-                        )
-                        prev_n1 = get_incoming_nodes(
-                            gfaL, ix_j[1], segments=gfaS, rc=args.rc
-                        )
+            _subpath_n = []
+            _subpath_p = []
+            _subpath_count = 0
+            if len(_intron_next) > 0 and len(_intron_prev) > 0:
+                _max_n = max([(x, gfaS[x]["NC"]) for x in _intron_next], key=lambda x: x[1])
+                _max_p = max([(x, gfaS[x]["NC"]) for x in _intron_prev], key=lambda x: x[1])
 
-                        # filter only intronic
-                        _intron_next = list(
-                            filter(lambda x: len(get_set_exons(gfaS, x)) == 0, next_n0)
-                        )
-                        _intron_prev = list(
-                            filter(lambda x: len(get_set_exons(gfaS, x)) == 0, prev_n1)
-                        )
+                _subpath_n.append(_max_n[0])
+                _subpath_p.append(_max_p[0])
+                _subpath_count += _max_n[1] + _max_p[1]
 
-                        i = 0
-                        # eprint(f"{i=} {_intron_next=}")
-                        # eprint(f"{i=} {_intron_prev=}")
+                eprint(f"{i=} {_subpath_n=}")
+                eprint(f"{i=} {_subpath_p=}")
+            else:
+                continue
 
-                        args.irw = 10
+            _subpath_total = False
 
-                        while (
-                            len(_intron_next) > 0
-                            and len(_intron_prev) > 0
-                            and i < args.irw
-                        ):
-                            i += 1
-                            _intron_next = [
-                                get_outgoing_nodes(gfaL, x, segments=gfaS, rc=args.rc)
-                                for x in _intron_next
-                            ]
-                            _intron_prev = [
-                                get_incoming_nodes(gfaL, x, segments=gfaS, rc=args.rc)
-                                for x in _intron_prev
-                            ]
-                            _intron_next = [x for y in _intron_next for x in y]
-                            _intron_prev = [x for y in _intron_prev for x in y]
+            while i < args.irw:
+                i += 1
+                _intron_next = [
+                    get_outgoing_nodes(gfaL, x, segments=gfaS, rc=args.rc)
+                    for x in _intron_next
+                ]
+                _intron_prev = [
+                    get_incoming_nodes(gfaL, x, segments=gfaS, rc=args.rc)
+                    for x in _intron_prev
+                ]
+                # flatten lists
+                _intron_next = [x for y in _intron_next for x in y]
+                _intron_prev = [x for y in _intron_prev for x in y]
 
-                            _intron_next = list(
-                                filter(
-                                    lambda x: len(get_set_exons(gfaS, x)) == 0,
-                                    _intron_next,
-                                )
-                            )
-                            _intron_prev = list(
-                                filter(
-                                    lambda x: len(get_set_exons(gfaS, x)) == 0,
-                                    _intron_prev,
-                                )
-                            )
-                            # eprint(f"{i=} {_intron_next=}")
-                            # eprint(f"{i=} {_intron_prev=}")
+                _intron_next = set(
+                    filter(
+                        lambda x: len(get_set_exons(gfaS, x)) == 0,
+                        _intron_next,
+                    )
+                )
+                _intron_prev = set(
+                    filter(
+                        lambda x: len(get_set_exons(gfaS, x)) == 0,
+                        _intron_prev,
+                    )
+                )
+                eprint(f"{i=} {_intron_next=}")
+                eprint(f"{i=} {_intron_prev=}")
 
-                            if len(set(_intron_next) & set(_intron_prev)) > 0:
-                                i = args.irw
+                if len(_intron_next & _intron_prev) > 0:
+                    _subpath_total = True
+                    _max_n = max([(x, gfaS[x]["NC"]) for x in _intron_next & _intron_prev], key=lambda x: x[1])
+                    _subpath_n.append(_max_n[0])
+                    _subpath_count += _max_n[1]
+                    i = args.irw
+                    break
 
-                        if i == args.irw:
-                            eprint("POTENTIAL")
-                            eprint(f"{i=} {_intron_next=}")
-                            eprint(f"{i=} {_intron_prev=}")
-                            for _tr in cap:
-                                print(
-                                    "IR",
-                                    "novel",
-                                    genechr[transcript2gene[_tr]],
-                                    transcript2gene[_tr],
-                                    genestrand[transcript2gene[_tr]],
-                                    "?",  # _j,
-                                    ".",  # ">".join(_subpath),
-                                    ".",  # _count_sum // len(_subpath),
-                                    f"{_tr}.{min(_tex0, _tex1)}",  # ex_ir,
-                                    ">".join(ix_j),
-                                    junc["RC"],
-                                    f"{_tr}.{max(_tex0, _tex1)}",
-                                    ">".join(ix_j),
-                                    junc["RC"],
-                                    sep=",",
-                                )
+                if len(_intron_next) > 0 and len(_intron_prev) > 0:
+                    _max_n = max([(x, gfaS[x]["NC"]) for x in _intron_next], key=lambda x: x[1])
+                    _max_p = max([(x, gfaS[x]["NC"]) for x in _intron_prev], key=lambda x: x[1])
+
+                    _subpath_n.append(_max_n[0])
+                    _subpath_p.append(_max_p[0])
+                    _subpath_count += _max_n[1] + _max_p[1]
+
+                    eprint(f"{i=} {_subpath_n=}")
+                    eprint(f"{i=} {_subpath_p=}")
+
+                    if len(set(_subpath_n) & set(_subpath_p)) > 1:
+                        _subpath_total = True
+                        eprint(_subpath_count)
+                        i = args.irw
+                        break
+
+                else:
+                    break
+
+            if i == args.irw:
+                _subpath = _subpath_n + _subpath_p[::-1]
+                _subpath_name = ">".join(_subpath_n + ["?"] + _subpath_p[::-1])
+                eprint("POTENTIAL")
+                # eprint(f"{i=} {_intron_next=}")
+                # eprint(f"{i=} {_intron_prev=}")
+                eprint(f"{i=} {_subpath_n=}")
+                eprint(f"{i=} {_subpath_p=}")
+                eprint(f"{i=} {_subpath=}")
+                # Must be done before collapsing because collapsed nodes
+                # are counted twice
+                _subpath_avg = _subpath_count // len(_subpath)
+                if _subpath_total:
+                    _subpath = list(dict.fromkeys(_subpath))
+                    _subpath_name = ">".join(_subpath)
+                eprint(f"{i=} {_subpath=}")
+
+
+                for _j in junc["JN"]:
+                    _tr = ".".join(_j.split(".")[:-2])
+                    print(
+                        "IR",
+                        "novel",
+                        genechr[transcript2gene[_tr]],
+                        transcript2gene[_tr],
+                        genestrand[transcript2gene[_tr]],
+                        _j,
+                        ">".join(ix_j),
+                        junc["RC"],
+                        "?",  # ex_ir,
+                        _subpath_name,  # ">".join(_subpath),
+                        _subpath_avg,
+                        ".",
+                        ".",
+                        ".",
+                        sep=",",
+                    )
 
     if args.novel:
         check_novel()

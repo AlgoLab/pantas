@@ -1,3 +1,5 @@
+# Experiments
+## Data preparation
 ### Drosophila
 
 ``` sh
@@ -25,30 +27,6 @@ STAR --runThreadN 32 --runMode genomeGenerate --genomeDir dm6.genome-STAR --geno
 
 ```
 
-#### Simulate
-``` sh
-Rscript exps/asimulator.R INPUT OUTPUT READ_LEN SEQ_DEPTH
-# eg: Rscript exps/asimulator.R /data/drosmel-age-recomb/simulated/input /data/drosmel-age-recomb/simulated/output-3 150 2000000
-
-python exps/filter_reads.py OUTPU/sample_N_1.fastq OUTPUT/sample_N_2.fastq
-# eg: python exps/filter_reads.py /data/drosmel-age-recomb/simulated/output-3/sample_01_1.fastq /data/drosmel-age-recomb/simulated/output-3/sample_01_2.fastq
-
-# No need to use sample_N_2 the headers are the same
-python exps/simrc.py OUTPUT/sample_N_1.clean.fq OUTPUT/exon_junction_coverage.tsv > OUTPUT/readcount.sample_N.csv
-# eg: python exps/simrc.py /data/drosmel-age-recomb/simulated/output-3/sample_01_1.clean.fq /data/drosmel-age-recomb/simulated/output-3/exon_junction_coverage.tsv
-
-STAR --runThreadN 16 --genomeDir dm6.genome-STAR \
-        --readFilesIn OUTPUT/sample_N_1.clean.fq OUTPUT/sample_N_2.clean.fq \
-        --outFileNamePrefix OUTPUT/STAR/sample_N \
-        --outSAMtype BAM SortedByCoordinate --outSAMattributes All
-
-# eg: STAR --runThreadN 16 --genomeDir /data/drosmel-age-recomb/dm6.genome-STAR \
-#         --readFilesIn /data/drosmel-age-recomb/simulated/output-3/sample_01_1.clean.fq /data/drosmel-age-recomb/simulated/output-3/sample_01_2.clean.fq \
-#         --outFileNamePrefix /data/drosmel-age-recomb/simulated/output-3/STAR/sample_01 \
-#         --outSAMtype BAM SortedByCoordinate --outSAMattributes All
-
-```
-
 ### Human
 
 ``` sh
@@ -68,4 +46,23 @@ mv 1kGP_high_coverage_Illumina.chrX.filtered.SNV_INDEL_SV_phased_panel.v2.vcf.gz
 for chr in $(seq 1 22) X ; do bcftools view -c 1 -q 0.001 1kGP_high_coverage_Illumina.chr$c.filtered.SNV_INDEL_SV_phased_panel.vcf.gz -Oz | python3 ~/code/pantas2/exps/fix_vidx.py | bcftools norm -d all -Oz -f ../reference.chroms.fa > $c-mod.vcf.gz ; tabix -p vcf $c-mod.vcf.gz ; done
 bcftools concat -Oz *-mod.vcf.gz > ../1kgp-GRCh38.vcf.gz
 tabix -p vcf ../1kgp-GRCh38.vcf.gz
+```
+
+
+## Simulation
+``` sh
+mamba create -n pantas2 -c bioconda -c conda-forge r-base samtools bcftools biopython intervaltree
+conda activate pantas2
+R
+> install.packages("remotes")
+> remotes::install_github("biomedbigdata/ASimulatoR")
+> q()
+
+cd dm-sim
+snakemake -c16 --config fa=/path/to/reference.fa gtf=/path/to/annotation.gtf vcf=/path/to/population.vcf.gz odir=/path/to/output/directory n=<nreads>
+```
+
+## Evaluation
+``` sh
+
 ```

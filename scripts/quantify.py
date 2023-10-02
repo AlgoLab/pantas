@@ -1,10 +1,10 @@
 import sys
 
-ETYPES = ["ES", "IR", "A3", "A5"]
+ETYPES = ["ES", "CE", "IR", "A3", "A5"]
 
 
 def get_interval(region):
-    if region == ".":
+    if region in [".", "?"]:
         return region
     s, e = [int(x) for x in region.split(":")[1].split("-")]
     return s, e
@@ -60,11 +60,17 @@ class Event:
             pass  # 1 is skipping, 2-3 are inclusion
         elif self.etype in ["A3", "A5"]:
             # force 1 to be shorter intron
-            if self.intron1[1] - self.intron1[0] > self.intron2[1] - self.intron2[0]:
-                self.intron1, self.intron2 = self.intron2, self.intron1
-                self.intron1_r, self.intron2_r = self.intron2_r, self.intron1_r
-                self.w1, self.w2 = self.w2, self.w1
-                self.nodes1, self.nodes2 = self.nodes2, self.nodes1
+            if self.intron1_r == "?" or self.intron2_r == "?":
+                pass
+            else:
+                if (
+                    self.intron1[1] - self.intron1[0]
+                    > self.intron2[1] - self.intron2[0]
+                ):
+                    self.intron1, self.intron2 = self.intron2, self.intron1
+                    self.intron1_r, self.intron2_r = self.intron2_r, self.intron1_r
+                    self.w1, self.w2 = self.w2, self.w1
+                    self.nodes1, self.nodes2 = self.nodes2, self.nodes1
         elif self.etype == "IR":
             pass  # 1 is retaining junction, 2 is exon
 
@@ -153,26 +159,29 @@ def parse_pantas(fpath, rep, nreps, exons, introns):
         else:
             # SE/A3/A5
             i1, i2, i3 = introns[i1], introns[i2], introns[i3] if i3 in introns else "."
-        pantas[etype].add(
-            Event(
-                etype,
-                novel,
-                chrom,
-                gene,
-                strand,
-                i1,
-                i2,
-                i3,
-                n1,
-                n2,
-                n3,
-                w1,
-                w2,
-                w3,
-                rep,
-                nreps,
+        if etype not in pantas:
+            print(f"Skipping {etype}..", file=sys.stderr)
+        else:
+            pantas[etype].add(
+                Event(
+                    etype,
+                    novel,
+                    chrom,
+                    gene,
+                    strand,
+                    i1,
+                    i2,
+                    i3,
+                    n1,
+                    n2,
+                    n3,
+                    w1,
+                    w2,
+                    w3,
+                    rep,
+                    nreps,
+                )
             )
-        )
     return pantas
 
 
@@ -183,6 +192,8 @@ def main():
     c2_paths = pantas_paths[int(len(pantas_paths) / 2) :]
 
     exons, introns = get_referencebased_coordinates(splicedfa_path)
+    introns["."] = "."
+    introns["?"] = "?"
 
     events_1 = {x: set() for x in ETYPES}
     for i, fpath in enumerate(c1_paths):
@@ -285,6 +296,7 @@ def main():
                     e1.novel,
                     e1.chrom,
                     e1.gene,
+                    e1.strand,
                     e1.intron1_r,
                     e1.intron2_r,
                     e1.intron3_r,

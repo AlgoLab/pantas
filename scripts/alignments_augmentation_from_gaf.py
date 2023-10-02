@@ -1,6 +1,4 @@
-# python alignments_augmentation_from_gaf.py alignment.gaf input.gfa > output.gfa
-
-
+# python alignments_augmentation_from_gaf.py alignment.gaf input.gfa 20 > output.gfa
 
 import sys
 import re
@@ -104,12 +102,13 @@ def clear_align(align):
 def main(argv):
     gaf_file = argv[0]
     gfa_file = argv[1]
+    thr = int(argv[2])
     # gfa_file_out = argv[3]
     weights = {}
     nodes_weights = {}
     revs = {}
     nodes_info = {}
-
+    rej = 0
     print("Read GFA", file=sys.stderr)
     with open(gfa_file, "r") as f:
         for line in f:
@@ -133,7 +132,10 @@ def main(argv):
             # if count == 100000:
             #    sys.exit()
             tokens = line.strip().split()
-
+            score = int(tokens[11])
+            if score < thr:
+                rej = rej + 1
+                continue
             if tokens[5] == "*":
                 continue
             read_name = tokens[0]
@@ -148,7 +150,7 @@ def main(argv):
                 cigar = cigar_re.group(0).replace("cs:Z:", "")
             else:
                 cigar = "*"
-            score = tokens[11]
+
             dv_re = re.search(
                 r"dv:f:(\d+(\.\d+)?)", " ".join(item for item in tokens[12:])
             )
@@ -354,6 +356,7 @@ def main(argv):
     # for n, d in nodes_info.items():
     #    if d[1] != [{}, {}]:
     #        print(n, d)
+    print(f"Rejected alignments: {rej}", file=sys.stderr)
     print("Annotating GFA", file=sys.stderr)
     with open(gfa_file, "r") as f:
         for line in f:
@@ -376,25 +379,25 @@ def main(argv):
                 if len(tokens) == 3:
                     if len(in_l) != 0 and len(out_l):
                         print(
-                            f"{line}\tNW:i:{node_w}\tIL:Z:{','.join(in_l)}\tOL:Z:{','.join(out_l)}"
+                            f"{line}\tNC:i:{node_w}\tIL:Z:{','.join(in_l)}\tOL:Z:{','.join(out_l)}"
                         )
                     elif len(in_l) != 0 and len(out_l) == 0:
-                        print(f"{line}\tNW:i:{node_w}\tIL:Z:{','.join(in_l)}")
+                        print(f"{line}\tNC:i:{node_w}\tIL:Z:{','.join(in_l)}")
                     elif len(in_l) == 0 and len(out_l) != 0:
-                        print(f"{line}\tNW:i:{node_w}\tOL:Z:{','.join(out_l)}")
+                        print(f"{line}\tNC:i:{node_w}\tOL:Z:{','.join(out_l)}")
                     else:
-                        print(f"{line}\tNW:i:{node_w}")
+                        print(f"{line}\tNC:i:{node_w}")
                 elif len(tokens) > 3:
                     if len(in_l) != 0 and len(out_l):
                         print(
-                            f"{line}\tNW:i:{node_w}\tIL:Z:{','.join(in_l)}\tOL:Z:{','.join(out_l)}"
+                            f"{line}\tNC:i:{node_w}\tIL:Z:{','.join(in_l)}\tOL:Z:{','.join(out_l)}"
                         )
                     elif len(in_l) != 0 and len(out_l) == 0:
-                        print(f"{line}\tNW:i:{node_w}\tIL:Z:{','.join(in_l)}")
+                        print(f"{line}\tNC:i:{node_w}\tIL:Z:{','.join(in_l)}")
                     elif len(in_l) == 0 and len(out_l) != 0:
-                        print(f"{line}\tNW:i:{node_w}\tOL:Z:{','.join(out_l)}")
+                        print(f"{line}\tNC:i:{node_w}\tOL:Z:{','.join(out_l)}")
                     else:
-                        print(f"{line}\tNW:i:{node_w}")
+                        print(f"{line}\tNC:i:{node_w}")
             elif line.startswith("L"):
                 if len(line) == 1:
                     continue

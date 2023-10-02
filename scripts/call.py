@@ -376,13 +376,6 @@ def main(args):
                                 _subpath = _subpath[1:-1]
                                 _count_sum = 0
                                 for _in in _subpath:
-                                    # TODO: change this to actual RC once we have it
-                                    # _count_sum += sum(
-                                    #     [
-                                    #         int(x.split(".")[1])
-                                    #         for x in gfaS[_in].get("IL", ["0.0"])
-                                    #     ]
-                                    # )
                                     _count_sum += gfaS[_in].get("NC", 0)
 
                                 print(
@@ -636,13 +629,6 @@ def main(args):
                                 _subpath = _subpath[1:-1]
                                 _count_sum = 0
                                 for _in in _subpath:
-                                    # TODO: change this to actual RC once we have it
-                                    # _count_sum += sum(
-                                    #     [
-                                    #         int(x.split(".")[1])
-                                    #         for x in gfaS[_in].get("IL", ["0.0"])
-                                    #     ]
-                                    # )
                                     _count_sum += gfaS[_in].get("NC", 0)
                                 print(
                                     "IR",

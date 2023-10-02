@@ -313,8 +313,8 @@ def main():
                     + "-".join([str(w) for w in e2.w2])
                     + "/"
                     + "-".join([str(w) for w in e2.w3]),
-                    "/".join([str(x) for x in psi1]),
-                    "/".join([str(x) for x in psi2]),
+                    "/".join([str(x) for x in e1.psi]),
+                    "/".join(["NaN" for x in e1.psi]),
                     "NaN",
                     sep=",",
                 )
@@ -343,8 +343,8 @@ def main():
                     + "-".join([str(w) for w in e2.w2])
                     + "/"
                     + "-".join([str(w) for w in e2.w3]),
-                    "/".join([str(x) for x in psi1]),
-                    "/".join([str(x) for x in psi2]),
+                    "/".join(["NaN" for x in e2.psi]),
+                    "/".join([str(x) for x in e2.psi]),
                     "NaN",
                     sep=",",
                 )

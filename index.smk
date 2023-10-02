@@ -2,11 +2,10 @@ import sys
 from os.path import join as pjoin
 from os.path import isfile
 
-
 FA = config["fa"]
 GTF = config["gtf"]
 VCF = config["vcf"]
-ODIR = config["odir"]
+WD = config["wd"]
 
 if not isfile(FA + ".fai"):
     print("\n\nInput reference not indexed, please index with samtools faidx\n\n")
@@ -18,6 +17,8 @@ for line in open(FA + ".fai"):
 
 tprefix = ""
 for line in open(GTF):
+    if line.startswith("#"):
+        continue
     line = line.strip("\n").split("\t")
     t, info = line[2], line[-1]
     if t in ["mRNA", "transcript"]:
@@ -33,17 +34,17 @@ for line in open(GTF):
 
 rule run:
     input:
-        pjoin(ODIR, "spliced-pangenome.gcsa"),
-        pjoin(ODIR, "spliced-pangenome.gcsa.lcp"),
-        pjoin(ODIR, "spliced-pangenome.dist"),
-        pjoin(ODIR, "spliced-pangenome.annotated.gfa"),
+        pjoin(WD, "spliced-pangenome.gcsa"),
+        pjoin(WD, "spliced-pangenome.gcsa.lcp"),
+        pjoin(WD, "spliced-pangenome.dist"),
+        pjoin(WD, "spliced-pangenome.annotated.gfa"),
 
 
 rule extract_chrom_fa:
     input:
         FA,
     output:
-        pjoin(ODIR, "chroms", "{c}.fa"),
+        pjoin(WD, "chroms", "{c}.fa"),
     shell:
         """
         samtools faidx {input} {wildcards.c} > {output}
@@ -55,7 +56,7 @@ rule extract_chrom_gtf:
     input:
         GTF,
     output:
-        pjoin(ODIR, "chroms", "{c}.gtf"),
+        pjoin(WD, "chroms", "{c}.gtf"),
     shell:
         """
         grep -P "^{wildcards.c}\t" {input} > {output}
@@ -66,7 +67,7 @@ rule extract_chrom_vcf:
     input:
         VCF,
     output:
-        pjoin(ODIR, "chroms", "{c}.vcf.gz"),
+        pjoin(WD, "chroms", "{c}.vcf.gz"),
     shell:
         """
         bcftools view -Oz {input} {wildcards.c} > {output}
@@ -76,12 +77,12 @@ rule extract_chrom_vcf:
 
 rule construct:
     input:
-        fa=pjoin(ODIR, "chroms", "{c}.fa"),
-        vcf=pjoin(ODIR, "chroms", "{c}.vcf.gz"),
+        fa=pjoin(WD, "chroms", "{c}.fa"),
+        vcf=pjoin(WD, "chroms", "{c}.vcf.gz"),
     output:
-        pg=pjoin(ODIR, "chroms", "{c}", "pangenome.pg"),
+        pg=pjoin(WD, "chroms", "{c}", "pangenome.pg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "{c}", "1-construct.txt")
+        pjoin(WD, "benchmarks", "{c}", "1-construct.txt")
     threads: workflow.cores
     shell:
         """
@@ -92,11 +93,11 @@ rule construct:
 rule rna:
     input:
         pg=rules.construct.output.pg,
-        gtf=pjoin(ODIR, "chroms", "{c}.gtf"),
+        gtf=pjoin(WD, "chroms", "{c}.gtf"),
     output:
-        pg=pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.pg"),
+        pg=pjoin(WD, "chroms", "{c}", "spliced-pangenome.pg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "{c}", "2-rna.txt")
+        pjoin(WD, "benchmarks", "{c}", "2-rna.txt")
     threads: workflow.cores
     shell:
         """
@@ -109,9 +110,9 @@ rule prune:
     input:
         pg=rules.rna.output.pg,
     output:
-        pg=pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.pruned.pg"),
+        pg=pjoin(WD, "chroms", "{c}", "spliced-pangenome.pruned.pg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "{c}", "3-prune.txt")
+        pjoin(WD, "benchmarks", "{c}", "3-prune.txt")
     threads: workflow.cores
     shell:
         """
@@ -122,12 +123,12 @@ rule prune:
 # Here the assumption is: thanks to --restore-paths, we have the reference/transcipt paths in the graph, but not the P line
 rule reintroduce_paths:
     input:
-        gfa=pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.gfa"),
-        pgfa=pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.pruned.gfa"),
+        gfa=pjoin(WD, "chroms", "{c}", "spliced-pangenome.gfa"),
+        pgfa=pjoin(WD, "chroms", "{c}", "spliced-pangenome.pruned.gfa"),
     output:
-        pg=pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.pruned.wpaths.pg"),
+        pg=pjoin(WD, "chroms", "{c}", "spliced-pangenome.pruned.wpaths.pg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "{c}", "4-reintroducepaths.txt")
+        pjoin(WD, "benchmarks", "{c}", "4-reintroducepaths.txt")
     threads: workflow.cores
     shell:
         """
@@ -138,13 +139,13 @@ rule reintroduce_paths:
 rule combine:
     input:
         expand(
-            pjoin(ODIR, "chroms", "{c}", "spliced-pangenome.pruned.wpaths.pg"),
+            pjoin(WD, "chroms", "{c}", "spliced-pangenome.pruned.wpaths.pg"),
             c=chroms,
         ),
     output:
-        pg=pjoin(ODIR, "spliced-pangenome.wpaths.pg"),
+        pg=pjoin(WD, "spliced-pangenome.wpaths.pg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "5-combine.txt")
+        pjoin(WD, "benchmarks", "5-combine.txt")
     threads: 1
     shell:
         """
@@ -155,11 +156,11 @@ rule combine:
 # Keep only reference path as P line (to work properly mpmap needs the reference path **only**)
 rule remove_transcripts:
     input:
-        pg=pjoin(ODIR, "spliced-pangenome.wpaths.pg"),
+        pg=pjoin(WD, "spliced-pangenome.wpaths.pg"),
     output:
-        xg=pjoin(ODIR, "spliced-pangenome.xg"),
+        xg=pjoin(WD, "spliced-pangenome.xg"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "6-removetranscripts.txt")
+        pjoin(WD, "benchmarks", "6-removetranscripts.txt")
     threads: workflow.cores
     shell:
         """
@@ -171,13 +172,13 @@ rule index:
     input:
         xg=rules.remove_transcripts.output.xg,
     output:
-        gcsa2=pjoin(ODIR, "spliced-pangenome.gcsa"),
-        lcp=pjoin(ODIR, "spliced-pangenome.gcsa.lcp"),
-        dist=pjoin(ODIR, "spliced-pangenome.dist"),
+        gcsa2=pjoin(WD, "spliced-pangenome.gcsa"),
+        lcp=pjoin(WD, "spliced-pangenome.gcsa.lcp"),
+        dist=pjoin(WD, "spliced-pangenome.dist"),
     params:
-        tmpd=ODIR,
+        tmpd=WD,
     benchmark:
-        pjoin(ODIR, "benchmarks", "7-index.txt")
+        pjoin(WD, "benchmarks", "7-index.txt")
     threads: workflow.cores
     shell:
         """
@@ -189,12 +190,12 @@ rule annotate:
     input:
         fa=FA,
         gtf=GTF,
-        gfa=pjoin(ODIR, "spliced-pangenome.wpaths.gfa"),
+        gfa=pjoin(WD, "spliced-pangenome.wpaths.gfa"),
     output:
-        fa=pjoin(ODIR, "genes.spliced.fa"),
-        gfa=pjoin(ODIR, "spliced-pangenome.annotated.gfa"),
+        fa=pjoin(WD, "genes.spliced.fa"),
+        gfa=pjoin(WD, "spliced-pangenome.annotated.gfa"),
     benchmark:
-        pjoin(ODIR, "benchmarks", "7-annotate.txt")
+        pjoin(WD, "benchmarks", "7-annotate.txt")
     shell:
         """
         gffread -g {input.fa} {input.gtf} -w {output.fa} -W

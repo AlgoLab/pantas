@@ -432,7 +432,6 @@ def main(args):
                     ):
                         # cap contains all the trascripts that:
                         # 1. visit n0 and n1
-                        # 2. are not part of the junction (n0, n1)
 
                         eprint("cap:", cap)
 
@@ -446,7 +445,6 @@ def main(args):
                             _tex1 = int(_fex1[0].split(".")[-1])
 
                             if abs(_tex0 - _tex1) > 1:
-                                # Checking that the trascripts belong to the same gene
                                 _exno_min = min(_tex0, _tex1)
                                 _exno_max = max(_tex0, _tex1)
                                 _es_j1_name = f"{_tr}.{_exno_min}.{_exno_min+1}"
@@ -458,18 +456,14 @@ def main(args):
 
                                 _n_j1 = [x for x in junctions if x[0] == ix_j[0]]
                                 _n_j2 = [x for x in junctions if x[1] == ix_j[1]]
-                                # eprint("_n_j1:",_n_j1)
-                                # eprint("_n_j2:",_n_j2)
+                                
                                 _es_j1 = [
                                     x for x in _n_j1 if _es_j1_name in gfaL[x]["JN"]
                                 ]
                                 _es_j2 = [
                                     x for x in _n_j2 if _es_j2_name in gfaL[x]["JN"]
                                 ]
-                                # eprint("_es_j1:",_es_j1)
-                                # eprint("_es_j2:",_es_j2)
 
-                                # eprint("****************** NOVEL ES!!!", _tr)
                                 print(
                                     "ES",
                                     "novel",
@@ -494,6 +488,9 @@ def main(args):
                             _fex1 = list(filter(lambda x: x.startswith(_tr), exons_n1))
                             assert len(_fex0) == len(_fex1) == 1
 
+                            eprint(f"{_fex0=}")
+                            eprint(f"{_fex1=}")
+
                             _tex0 = int(_fex0[0].split(".")[-1])
                             _tex1 = int(_fex1[0].split(".")[-1])
                             if abs(_tex0 - _tex1) == 1:
@@ -501,10 +498,11 @@ def main(args):
                                     *[
                                         get_set_exons(gfaS, x)
                                         for x in get_outgoing_nodes(
-                                            gfaL, ix_j[0], segments=gfaS, rc=args.rc
+                                            gfaL, ix_j[0]
                                         )
                                     ]
                                 )
+                                eprint(f"check A5b {ex_next_n0=}")
                                 if _fex0[0] in ex_next_n0:
                                     _a_j = [x for x in junctions if x[1] == ix_j[1]]
                                     _a_j = list(
@@ -553,10 +551,12 @@ def main(args):
                                     *[
                                         get_set_exons(gfaS, x)
                                         for x in get_incoming_nodes(
-                                            gfaL, ix_j[1], segments=gfaS, rc=args.rc
+                                            gfaL, ix_j[1]
                                         )
                                     ]
                                 )
+                                # eprint(f"prev n1 {get_incoming_nodes(gfaL, ix_j[1], segments=gfaS, rc=-1)}")
+                                eprint(f"check A3a {ex_prev_n1=}")
                                 if _fex1[0] in ex_prev_n1:
                                     _a_j = [x for x in junctions if x[0] == ix_j[0]]
                                     _a_j = list(

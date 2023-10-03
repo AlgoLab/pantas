@@ -528,6 +528,7 @@ def main(args):
                                         assert len(_a_j_name) == 1
 
                                         # A5b+ / A3a-
+                                        eprint("A5b")
                                         print(
                                             "A5"
                                             if genestrand[transcript2gene[_tr]] == "+"
@@ -584,6 +585,7 @@ def main(args):
                                         # and the second is the one containing the event
 
                                         # A3a+ / A5b-
+                                        eprint("A3a")
                                         print(
                                             "A3"
                                             if genestrand[transcript2gene[_tr]] == "+"
@@ -630,6 +632,7 @@ def main(args):
                                 _count_sum = 0
                                 for _in in _subpath:
                                     _count_sum += gfaS[_in].get("NC", 0)
+                                eprint("IRr")
                                 print(
                                     "IR",
                                     "novel",
@@ -697,7 +700,7 @@ def main(args):
                                             if x.startswith(_tr)
                                         ]
                                         assert len(_a_j_name) == 1
-
+                                        eprint("A3b")
                                         print(
                                             "A3"
                                             if genestrand[transcript2gene[_tr]] == "+"
@@ -773,7 +776,7 @@ def main(args):
                                             if x.startswith(_tr)
                                         ]
                                         assert len(_a_j_name) == 1
-
+                                        eprint("A5a")
                                         print(
                                             "A5"
                                             if genestrand[transcript2gene[_tr]] == "+"
@@ -1033,6 +1036,7 @@ def main(args):
 
                 for _j in junc["JN"]:
                     _tr = ".".join(_j.split(".")[:-2])
+                    eprint("IR")
                     print(
                         "IR",
                         "novel",

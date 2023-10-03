@@ -15,9 +15,19 @@ def build_attrs(fields: str):
             attrs[name] = int(value)
         elif name == "RC" or name == "NC":
             attrs[name] = int(value)
+        elif name == "IL" or name == "OL":
+            attrs[name] = value.split(",")
+
+            _v = [x for x in value.split(",")]
+            _v = [list(map(int, x.split('.'))) for x in _v]
+            attrs[f"MAX{name}"] = max(_v, key= lambda x: x[1])[0]
         else:
             attrs[name] = value.split(",")
     return attrs
+
+def get_refpos(segments:dict, start:str, end:str):
+    # TODO: check OL and IL
+    return f"{segments[start]['RP']+segments[start]['MAXOL']+1}" + "-" + f"{segments[end]['RP']+segments[end].get('MAXIL', 0)}"
 
 
 def get_outgoing_nodes(
@@ -81,6 +91,7 @@ def main(args):
     gfaP = dict()
     junctions = list()
     noveljunctions = list()
+    refpath = []
     for line in open(args.GFA, "r"):
         line = line.strip()
         if line.startswith("S"):
@@ -96,6 +107,8 @@ def main(args):
             else:
                 gfaP[pid] = {"path": p[:-1].split("-,")}
                 gfaP[pid]["reverse"] = True
+            if not "_R1" in pid:
+                refpath = gfaP[pid]["path"]
         elif line.startswith("L"):
             (
                 _,
@@ -113,6 +126,11 @@ def main(args):
                 junctions.append((nid_from, nid_to))
             if "ID" in gfaL[(nid_from, nid_to)]:
                 noveljunctions.append((nid_from, nid_to))
+
+    curr = 0
+    for n in refpath:
+        gfaS[n]["RP"] = curr
+        curr += gfaS[n]["LN"]
 
     transcript2gene = dict()
     genestrand = dict()
@@ -215,12 +233,15 @@ def main(args):
                                             genestrand[transcript2gene[_tj]],
                                             _j,
                                             ">".join(ix_j),
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                                             junc["RC"],
                                             _es_j1_name,
                                             ">".join(_es_j1[0]),
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_es_j1[0])}",
                                             gfaL[_es_j1[0]]["RC"],
                                             _es_j2_name,
                                             ">".join(_es_j2[0]),
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_es_j2[0])}",
                                             gfaL[_es_j2[0]]["RC"],
                                             sep=",",
                                         )
@@ -278,9 +299,12 @@ def main(args):
                                                 _j,
                                                 ">".join(ix_j),
                                                 junc["RC"],
+                                                f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                                                 _a_j_name[0],
                                                 ">".join(_a_j),
+                                                f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j)}",
                                                 gfaL[_a_j]["RC"],
+                                                ".",
                                                 ".",
                                                 ".",
                                                 ".",
@@ -343,10 +367,13 @@ def main(args):
                                                 genestrand[transcript2gene[_tj]],
                                                 _a_j_name[0],
                                                 ">".join(_a_j),
+                                                f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j)}",
                                                 gfaL[_a_j]["RC"],
                                                 _j,
                                                 ">".join(ix_j),
+                                                f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                                                 junc["RC"],
+                                                ".",
                                                 ".",
                                                 ".",
                                                 ".",
@@ -386,10 +413,13 @@ def main(args):
                                     genestrand[transcript2gene[_tj]],
                                     _j,
                                     ">".join(ix_j),
+                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                                     junc["RC"],
                                     _e,
                                     ">".join(_subpath),
+                                    ".", # CHECKME: this should not be needed
                                     _count_sum // len(_subpath),
+                                    ".",
                                     ".",
                                     ".",
                                     ".",
@@ -472,12 +502,15 @@ def main(args):
                                     genestrand[transcript2gene[_tr]],
                                     "?",  # _j,
                                     ">".join(ix_j),
+                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                                     junc["RC"],
                                     _es_j1_name,
                                     ">".join(_es_j1[0]),
+                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_es_j1[0])}",
                                     gfaL[_es_j1[0]]["RC"],
                                     _es_j2_name,
                                     ">".join(_es_j2[0]),
+                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_es_j2[0])}",
                                     gfaL[_es_j2[0]]["RC"],
                                     sep=",",
                                 )
@@ -537,10 +570,13 @@ def main(args):
                                             genestrand[transcript2gene[_tr]],
                                             "?",  # _j,
                                             ">".join(ix_j),
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                                             junc["RC"],
                                             _a_j_name[0],
                                             ">".join(_a_j),
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j)}",
                                             gfaL[_a_j]["RC"],
+                                            ".",
                                             ".",
                                             ".",
                                             ".",
@@ -597,10 +633,13 @@ def main(args):
                                             genestrand[transcript2gene[_tr]],
                                             _a_j_name[0],
                                             ">".join(_a_j),
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j)}",
                                             gfaL[_a_j]["RC"],
                                             "?",  # _j,
                                             ">".join(ix_j),
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                                             junc["RC"],
+                                            ".",
                                             ".",
                                             ".",
                                             ".",
@@ -642,10 +681,13 @@ def main(args):
                                     genestrand[transcript2gene[_tr]],
                                     "?",  # _j,
                                     ">".join(ix_j),
+                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                                     junc["RC"],
                                     ex_ir,
                                     ">".join(_subpath),
+                                    ".", # CHECKME: this should not be needed
                                     _count_sum // len(_subpath),
+                                    ".",
                                     ".",
                                     ".",
                                     ".",
@@ -712,10 +754,13 @@ def main(args):
                                             genestrand[transcript2gene[_tr]],
                                             _a_j_name[0],
                                             ">".join(_a_j),
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j)}",
                                             gfaL[_a_j]["RC"],
                                             "?",  # _j,
                                             ">".join(ix_j),
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                                             junc["RC"],
+                                            ".",
                                             ".",
                                             ".",
                                             ".",
@@ -788,10 +833,13 @@ def main(args):
                                             genestrand[transcript2gene[_tr]],
                                             "?",  # _j,
                                             ">".join(ix_j),
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                                             junc["RC"],
                                             _a_j_name[0],
                                             ">".join(_a_j),
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j)}",
                                             gfaL[_a_j]["RC"],
+                                            ".",
                                             ".",
                                             ".",
                                             ".",
@@ -885,7 +933,6 @@ def main(args):
                                     #     #       maybe we can check and differentiate the two cases and treat them differently
                                     #     seq_ce = "?"
 
-                                    seq_ce = "?"
                                     print(
                                         "CE",
                                         "novel",
@@ -895,14 +942,17 @@ def main(args):
                                         # Intron on annotation
                                         f"{_tr}.{min(_tex0, _tex1)}.{max(_tex0, _tex1)}",
                                         ">".join(ix_j),
+                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                                         junc["RC"],
                                         # Cassette junction 1
-                                        seq_ce,  # sequence of CE,
+                                        "?",
                                         ">".join(_nx),
+                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_nx)}",
                                         gfaL[_nx]["RC"],
                                         # Cassette junction 2
-                                        ".",
+                                        "?",
                                         ">".join(_ny),
+                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_ny)}",
                                         gfaL[_ny]["RC"],
                                         sep=",",
                                     )
@@ -1064,10 +1114,13 @@ def main(args):
                         genestrand[transcript2gene[_tr]],
                         _j,
                         ">".join(ix_j),
+                        f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                         junc["RC"],
                         "?",  # ex_ir,
                         _subpath_name,  # ">".join(_subpath),
+                        ".",
                         _subpath_avg,
+                        ".",
                         ".",
                         ".",
                         ".",

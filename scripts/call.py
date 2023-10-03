@@ -578,6 +578,7 @@ def main(args):
                                             if x.startswith(_tr)
                                         ]
                                         assert len(_a_j_name) == 1
+                                        eprint(f"{_fex1=}")
 
                                         # NOTE: In this case to keep ordering consistent with the reference
                                         # the order of trascript is inverted.
@@ -913,23 +914,32 @@ def main(args):
         # checking for IR
         for ix_j in junctions:
             junc = gfaL[ix_j]
-            _trjunc = set()
+            _trjunc = set(map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"]))
             eprint(f"[IIR Checking junction {ix_j}]: {junc}, {_trjunc}")
 
             next_n0 = get_outgoing_nodes(gfaL, ix_j[0], segments=gfaS, rc=args.rc)
             prev_n1 = get_incoming_nodes(gfaL, ix_j[1], segments=gfaS, rc=args.rc)
 
-            # filter only intronic
-            _intron_next = set(
-                filter(lambda x: len(get_set_exons(gfaS, x)) == 0, next_n0)
-            )
-            _intron_prev = set(
-                filter(lambda x: len(get_set_exons(gfaS, x)) == 0, prev_n1)
-            )
+            eprint(f"pre {next_n0=}")
+            eprint(f"pre {prev_n1=}")
 
+            # filter only intronic
+            # _intron_next = set(
+            #     filter(lambda x: len(
+            #         set(get_transcript_from_exons(get_set_exons(gfaS, x))) - _trjunc
+            #         ) == 0, next_n0)
+            # )
+            # _intron_prev = set(
+            #     filter(lambda x: len(
+            #         set(get_transcript_from_exons(get_set_exons(gfaS, x))) - _trjunc
+            #         ) == 0, prev_n1)
+            # )
+
+            _intron_next =set(next_n0) - set(ix_j)
+            _intron_prev =set(prev_n1) - set(ix_j)
             i = 0
-            # eprint(f"{i=} {_intron_next=}")
-            # eprint(f"{i=} {_intron_prev=}")
+            eprint(f"{i=} {_intron_next=}")
+            eprint(f"{i=} {_intron_prev=}")
 
             _subpath_n = []
             _subpath_p = []
@@ -966,19 +976,28 @@ def main(args):
                 # flatten lists
                 _intron_next = [x for y in _intron_next for x in y]
                 _intron_prev = [x for y in _intron_prev for x in y]
+                _intron_next = set(_intron_next) - set(ix_j)
+                _intron_prev = set(_intron_prev) - set(ix_j)
 
-                _intron_next = set(
-                    filter(
-                        lambda x: len(get_set_exons(gfaS, x)) == 0,
-                        _intron_next,
-                    )
-                )
-                _intron_prev = set(
-                    filter(
-                        lambda x: len(get_set_exons(gfaS, x)) == 0,
-                        _intron_prev,
-                    )
-                )
+                eprint(f"{i=} {_intron_next=}")
+                eprint(f"{i=} {_intron_prev=}")
+
+                # _intron_next = set(
+                #     filter(
+                #         lambda x: len(
+                #             set(get_transcript_from_exons(get_set_exons(gfaS, x))) - _trjunc
+                #             ) == 0,
+                #         _intron_next,
+                #     )
+                # )
+                # _intron_prev = set(
+                #     filter(
+                #         lambda x: len(
+                #             set(get_transcript_from_exons(get_set_exons(gfaS, x))) - _trjunc
+                #                       ) == 0,
+                #         _intron_prev,
+                #     )
+                # )
                 eprint(f"{i=} {_intron_next=}")
                 eprint(f"{i=} {_intron_prev=}")
 

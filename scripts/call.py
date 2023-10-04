@@ -32,12 +32,12 @@ def get_refpos(
 ):
     # TODO: check OL and IL
     if "RP" in segments[start] and "RP" in segments[end]:
-        if jn_w > 0:
-            eprint(f"{jn_w=}")
-            eprint(f"{segments[start]['OL']=}")
-            eprint(f"{segments[end]['IL']=}")
-            eprint("ADDWs:", [(x[0], abs(jn_w - x[1])) for x in segments[start]["OL"]] if "OL" in segments[start] else (segments[start]["LN"], 1))
-            eprint("ADDWe:", [(x[0], abs(jn_w - x[1])) for x in segments[end]["IL"]] if "IL" in segments[end] else (0, 1))
+        # if jn_w > 0:
+        #     eprint(f"{jn_w=}")
+        #     eprint(f"{segments[start]['OL']=}")
+        #     eprint(f"{segments[end]['IL']=}")
+        #     eprint("ADDWs:", [(x[0], abs(jn_w - x[1])) for x in segments[start]["OL"]] if "OL" in segments[start] else (segments[start]["LN"], 1))
+        #     eprint("ADDWe:", [(x[0], abs(jn_w - x[1])) for x in segments[end]["IL"]] if "IL" in segments[end] else (0, 1))
         # else:
         add_start = segments[start].get("MAXOL", segments[start]["LN"])
         add_end = segments[end].get("MAXIL", 0)

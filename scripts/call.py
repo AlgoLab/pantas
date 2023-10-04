@@ -28,11 +28,14 @@ def build_attrs(fields: str):
 
 def get_refpos(segments: dict, start: str, end: str):
     # TODO: check OL and IL
-    return (
-        f"{segments[start]['RP'] + segments[start].get('MAXOL', segments[start]['LN']) + 1}"
-        + "-"
-        + f"{segments[end]['RP'] + segments[end].get('MAXIL', 0)}"
-    )
+    if "RP" in segments[start] and "RP" in segments[end]:
+        return (
+            f"{segments[start]['RP'] + segments[start].get('MAXOL', segments[start]['LN']) + 1}"
+            + "-"
+            + f"{segments[end]['RP'] + segments[end].get('MAXIL', 0)}"
+        )
+    else:
+        return "?:?"
 
 
 def get_outgoing_nodes(
@@ -1188,5 +1191,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     if args.debug:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+        # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+        eprint = print
     main(args)

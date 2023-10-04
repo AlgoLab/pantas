@@ -158,6 +158,28 @@ def main(args):
             genestrand[gidx] = line[6]
             genechr[gidx] = line[0]
 
+    if args.header:
+        print(
+            "event_type",
+            "annotated/novel",
+            "chr",
+            "gene",
+            "strand",
+            "junction1_name",
+            "junction1_nodes",
+            "junction1_refpos",
+            "junction1_coverage",
+            "junction2_name",
+            "junction2_nodes",
+            "junction2_refpos",
+            "junction2_coverage",
+            "junction3_name",
+            "junction3_nodes",
+            "junction3_refpos",
+            "junction3_coverage",
+            sep=",",
+        )
+
     # Check all the junctions
     def check_nonnovel():
         for ix_j in junctions:
@@ -1154,6 +1176,13 @@ if __name__ == "__main__":
         "--debug",
         dest="debug",
         help="Debug (default: False)",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--header",
+        dest="header",
+        help="Print CSV header (default: False)",
         action="store_true",
         default=False,
     )

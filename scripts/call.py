@@ -16,23 +16,37 @@ def build_attrs(fields: str):
         elif name == "RC" or name == "NC":
             attrs[name] = int(value)
         elif name == "IL" or name == "OL":
-            attrs[name] = value.split(",")
+            # attrs[name] = value.split(",")
 
             _v = [x for x in value.split(",")]
             _v = [list(map(int, x.split("."))) for x in _v]
+            attrs[name] = _v
             attrs[f"MAX{name}"] = max(_v, key=lambda x: x[1])[0]
         else:
             attrs[name] = value.split(",")
     return attrs
 
 
-def get_refpos(segments: dict, start: str, end: str):
+def get_refpos(
+    segments: dict, start: str, end: str, jn_w: int = -1
+):
     # TODO: check OL and IL
     if "RP" in segments[start] and "RP" in segments[end]:
+        if jn_w > 0:
+            eprint(f"{jn_w=}")
+            eprint(f"{segments[start]['OL']=}")
+            eprint(f"{segments[end]['IL']=}")
+            eprint("ADDWs:", [(x[0], abs(jn_w - x[1])) for x in segments[start]["OL"]] if "OL" in segments[start] else (segments[start]["LN"], 1))
+            eprint("ADDWe:", [(x[0], abs(jn_w - x[1])) for x in segments[end]["IL"]] if "IL" in segments[end] else (0, 1))
+        # else:
+        add_start = segments[start].get("MAXOL", segments[start]["LN"])
+        add_end = segments[end].get("MAXIL", 0)
+        eprint(f"{add_start=}")
+        eprint(f"{add_end=}")
         return (
-            f"{segments[start]['RP'] + segments[start].get('MAXOL', segments[start]['LN']) + 1}"
+            f"{segments[start]['RP'] + add_start + 1}"
             + "-"
-            + f"{segments[end]['RP'] + segments[end].get('MAXIL', 0)}"
+            + f"{segments[end]['RP'] + add_end}"
         )
     else:
         return "?-?"
@@ -82,6 +96,89 @@ def get_path_transcript(path: dict, pid: str, start=None, end=None):
     _s = min(start, end)
     _e = max(start, end) + 1
     return p[_s:_e]
+
+
+def check_junction(ix_j: tuple, segments: dict, links: dict, window: int, rc: int):
+    next_n0 = get_outgoing_nodes(links, ix_j[0], segments=segments, rc=rc)
+    prev_n1 = get_incoming_nodes(links, ix_j[1], segments=segments, rc=rc)
+
+    eprint(f"pre {next_n0=}")
+    eprint(f"pre {prev_n1=}")
+
+    _intron_next = set(next_n0) - set(ix_j)
+    _intron_prev = set(prev_n1) - set(ix_j)
+    i = 0
+    eprint(f"{i=} {_intron_next=}")
+    eprint(f"{i=} {_intron_prev=}")
+
+    _subpath_n = []
+    _subpath_p = []
+    _subpath_count = 0
+    if len(_intron_next) > 0 and len(_intron_prev) > 0:
+        _max_n = max([(x, segments[x]["NC"]) for x in _intron_next], key=lambda x: x[1])
+        _max_p = max([(x, segments[x]["NC"]) for x in _intron_prev], key=lambda x: x[1])
+
+        _subpath_n.append(_max_n[0])
+        _subpath_p.append(_max_p[0])
+        _subpath_count += _max_n[1] + _max_p[1]
+
+        eprint(f"{i=} {_subpath_n=}")
+        eprint(f"{i=} {_subpath_p=}")
+    else:
+        return False
+
+    while i < window:
+        i += 1
+        _intron_next = [
+            get_outgoing_nodes(links, x, segments=segments, rc=rc) for x in _intron_next
+        ]
+        _intron_prev = [
+            get_incoming_nodes(links, x, segments=segments, rc=rc) for x in _intron_prev
+        ]
+        # flatten lists
+        _intron_next = [x for y in _intron_next for x in y]
+        _intron_prev = [x for y in _intron_prev for x in y]
+        _intron_next = set(_intron_next) - set(ix_j)
+        _intron_prev = set(_intron_prev) - set(ix_j)
+
+        eprint(f"{i=} {_intron_next=}")
+        eprint(f"{i=} {_intron_prev=}")
+
+        if len(_intron_next & _intron_prev) > 0:
+            _max_n = max(
+                [(x, segments[x]["NC"]) for x in _intron_next & _intron_prev],
+                key=lambda x: x[1],
+            )
+            _subpath_n.append(_max_n[0])
+            _subpath_count += _max_n[1]
+            i = window
+            break
+
+        if len(_intron_next) > 0 and len(_intron_prev) > 0:
+            _max_n = max(
+                [(x, segments[x]["NC"]) for x in _intron_next], key=lambda x: x[1]
+            )
+            _max_p = max(
+                [(x, segments[x]["NC"]) for x in _intron_prev], key=lambda x: x[1]
+            )
+
+            _subpath_n.append(_max_n[0])
+            _subpath_p.append(_max_p[0])
+            _subpath_count += _max_n[1] + _max_p[1]
+
+            eprint(f"{i=} {_subpath_n=}")
+            eprint(f"{i=} {_subpath_p=}")
+
+            if len(set(_subpath_n) & set(_subpath_p)) > 1:
+                i = window
+                break
+
+        else:
+            break
+
+    if i == window:
+        return True
+    return False
 
 
 def main(args):
@@ -669,7 +766,7 @@ def main(args):
                         )
                         ex_prev_n1 = [get_set_exons(gfaS, x) for x in prev_n1]
                         cap_ir = set().intersection(
-                           exons_n0, exons_n1, *ex_next_n0, *ex_prev_n1
+                            exons_n0, exons_n1, *ex_next_n0, *ex_prev_n1
                         )
                         eprint(f"EX {cap_ir=}")
 
@@ -708,7 +805,11 @@ def main(args):
                                 )
 
                     # Check A3 - before
-                    if len(exons_n1) == 0:
+                    # if len(exons_n1) == 0:
+                    if (
+                        len(set(get_transcript_from_exons(exons_n1)) - transcripts_n0)
+                        == 0
+                    ):
                         # n1 is an intron, check if there is a junction
                         # from n0 to somewhere else
 
@@ -732,6 +833,18 @@ def main(args):
                                 )
                                 assert len(_fex0) == len(_fex1) == 1
 
+                                _fnX = [
+                                    x
+                                    for x in nX
+                                    if any(
+                                        map(
+                                            lambda y: y.startswith(_tr),
+                                            get_set_exons(gfaS, x),
+                                        )
+                                    )
+                                ]
+                                eprint(f"{_fnX=}")
+
                                 _tex0 = int(_fex0[0].split(".")[-1])
                                 _texX = int(_fexX[0].split(".")[-1])
 
@@ -747,8 +860,13 @@ def main(args):
                                             nX_j,
                                         )
                                     )
-                                    eprint(f"{_a_j=} {gfaL[_a_j[0]]=}")
-                                    if len(_a_j) == 1:
+                                    if len(_a_j) == 1 and any(
+                                        check_junction(
+                                            [ix_j[0], _x], gfaS, gfaL, args.irw, args.rc
+                                        )
+                                        for _x in _fnX
+                                    ):
+                                        eprint(f"{_a_j=} {gfaL[_a_j[0]]=}")
                                         _a_j = _a_j[0]
                                         _a_j_name = [
                                             x
@@ -781,7 +899,11 @@ def main(args):
                                         )
 
                     # Chek A5 - after
-                    if len(exons_n0) == 0:
+                    # if len(exons_n0) == 0:
+                    if (
+                        len(set(get_transcript_from_exons(exons_n0)) - transcripts_n1)
+                        == 0
+                    ):
                         # n0 is an intron, check if there is a junction
                         # to n1 from somewhere else
 
@@ -796,17 +918,29 @@ def main(args):
                             )
                             eprint(f"{transcripts_nX=}")
 
-                            for _tr in transcripts_nX & transcripts_n0:
+                            for _tr in transcripts_nX & transcripts_n1:
                                 eprint(f"{_tr=}")
                                 _fex0 = list(
-                                    filter(lambda x: x.startswith(_tr), exons_n0)
+                                    filter(lambda x: x.startswith(_tr), exons_n1)
                                 )
                                 _fexX = list(
                                     filter(lambda x: x.startswith(_tr), *exons_nX)
                                 )
                                 eprint(f"{_fex0=}")
-                                eprint(f"{_fex1=}")
-                                assert len(_fex0) == len(_fex1) == 1
+                                eprint(f"{_fexX=}")
+                                assert len(_fex0) == len(_fexX) == 1
+
+                                _fnX = [
+                                    x
+                                    for x in nX
+                                    if any(
+                                        map(
+                                            lambda y: y.startswith(_tr),
+                                            get_set_exons(gfaS, x),
+                                        )
+                                    )
+                                ]
+                                eprint(f"{_fnX=}")
 
                                 _tex0 = int(_fex0[0].split(".")[-1])
                                 _texX = int(_fexX[0].split(".")[-1])
@@ -823,8 +957,13 @@ def main(args):
                                             nX_j,
                                         )
                                     )
-                                    eprint(f"{_a_j=}  {gfaL[_a_j[0]]=}")
-                                    if len(_a_j) == 1:
+                                    if len(_a_j) == 1 and any(
+                                        check_junction(
+                                            [_x, ix_j[1]], gfaS, gfaL, args.irw, args.rc
+                                        )
+                                        for _x in _fnX
+                                    ):
+                                        eprint(f"{_a_j=}  {gfaL[_a_j[0]]=}")
                                         _a_j = _a_j[0]
                                         _a_j_name = [
                                             x
@@ -843,11 +982,11 @@ def main(args):
                                             genestrand[transcript2gene[_tr]],
                                             "?",  # _j,
                                             ">".join(ix_j),
-                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j, jn_w=junc['RC'])}",
                                             junc["RC"],
                                             _a_j_name[0],
                                             ">".join(_a_j),
-                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j)}",
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j, jn_w=gfaL[_a_j]['RC'])}",
                                             gfaL[_a_j]["RC"],
                                             ".",
                                             ".",
@@ -885,12 +1024,12 @@ def main(args):
                     if len(nX) > 0 and len(nY) > 0:
                         eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
                         eprint(
-                            f"n0>nX= " +
-                            f"{[(x, gfaL[x]) for x in noveljunctions if x[0] == ix_j[0]]}"
+                            f"n0>nX= "
+                            + f"{[(x, gfaL[x]) for x in noveljunctions if x[0] == ix_j[0]]}"
                         )
                         eprint(
-                            f"nY>n1= " +
-                            f"{[(x, gfaL[x]) for x in noveljunctions if x[1] == ix_j[1]]}"
+                            f"nY>n1= "
+                            + f"{[(x, gfaL[x]) for x in noveljunctions if x[1] == ix_j[1]]}"
                         )
                         eprint(f"{nX=}")
                         eprint(f"{nY=}")
@@ -898,7 +1037,7 @@ def main(args):
                         eprint(f"exons_nx: {_enx}")
                         _eny = get_set_exons(gfaS, ix_j[1])
                         eprint(f"exons_ny: {_eny}")
-                        
+
                         for _nx, _ny in itertools.product(nX, nY):
                             eprint(f"pair: {_nx} - {_ny}")
 

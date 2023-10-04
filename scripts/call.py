@@ -68,16 +68,6 @@ def get_set_exons(nodes: dict, nid: str) -> set:
 def get_transcript_from_exons(exons) -> map:
     return map(lambda x: ".".join(x.split(".")[:-1]), exons)
 
-
-# def traverse_se(links: dict, start: str, end: str):
-#     out_curr = get_outgoing_nodes(links, start)
-#     print(f"[traverse s:{start}-{end}] curr: {start} out: {out_curr}")
-#     if end == start:
-#         return
-#     for n in out_curr:
-#         traverse_se(links, n, end)
-
-
 def get_path_transcript(path: dict, pid: str, start=None, end=None):
     _key = pid
     if not pid.endswith("_R1"):
@@ -175,8 +165,6 @@ def main(args):
                 _trjunc = set(map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"]))
                 eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
 
-                # exons_n0 = set(gfaS[ix_j[0]]["EX"])
-                # exons_n1 = set(gfaS[ix_j[1]]["EX"])
                 exons_n0 = get_set_exons(gfaS, ix_j[0])
                 exons_n1 = get_set_exons(gfaS, ix_j[1])
                 transcripts_n0 = set(
@@ -196,7 +184,7 @@ def main(args):
 
                     eprint("cap:", cap)
 
-                    # Checking for non-novel ES https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Exon-skipping
+                    # Checking for non-novel ES
                     for _tr in cap:
                         _fex0 = list(filter(lambda x: x.startswith(_tr), exons_n0))
                         _fex1 = list(filter(lambda x: x.startswith(_tr), exons_n1))
@@ -251,7 +239,7 @@ def main(args):
                                             sep=",",
                                         )
 
-                    # Checking for non-novel A5 https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Alternative-5%E2%80%99
+                    # Checking for non-novel A5
                     # this is A5 on + / A3 on -
                     for n in get_outgoing_nodes(gfaL, ix_j[0]):
                         if (
@@ -316,7 +304,7 @@ def main(args):
                                                 sep=",",
                                             )
 
-                    # Checking for non-novel A3 https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Alternative-3%E2%80%99
+                    # Checking for non-novel A3
                     # this is A3 on + / A5 on -
                     for n in get_incoming_nodes(gfaL, ix_j[1]):
                         if (
@@ -385,7 +373,7 @@ def main(args):
                                                 sep=",",
                                             )
 
-                    # Checking for non-novel IR https://hackmd.io/DoQzt8ceThOwyIdUvQZN3w#Intron-retention
+                    # Checking for non-novel IR
                     next_n0 = get_outgoing_nodes(gfaL, ix_j[0])
                     ex_next_n0 = [get_set_exons(gfaS, x) for x in next_n0]
                     prev_n1 = get_incoming_nodes(gfaL, ix_j[1])
@@ -393,7 +381,6 @@ def main(args):
                     cap_ir = exons_n0.intersection(exons_n1, *ex_next_n0, *ex_prev_n1)
 
                     if len(cap_ir) > 0:
-                        # cap_ir = set(map(lambda x: ".".join(x.split(".")[:-1]), cap_ir))
                         # Checking that the trascripts belong to the same gene
                         for _j, _e in itertools.product(junc["JN"], cap_ir):
                             _tj = ".".join(_j.split(".")[:-2])
@@ -592,7 +579,6 @@ def main(args):
                                         for x in get_incoming_nodes(gfaL, ix_j[1])
                                     ]
                                 )
-                                # eprint(f"prev n1 {get_incoming_nodes(gfaL, ix_j[1], segments=gfaS, rc=-1)}")
                                 eprint(f"check A3a {ex_prev_n1=}")
                                 if _fex1[0] in ex_prev_n1:
                                     _a_j = [x for x in junctions if x[0] == ix_j[0]]
@@ -773,7 +759,6 @@ def main(args):
                         # n0 is an intron, check if there is a junction
                         # to n1 from somewhere else
 
-                        # nX = [x[0] for x in junctions if x[1] == ix_j[1]]
                         nX_j = [x for x in junctions if x[1] == ix_j[1]]
                         nX = [x[0] for x in nX_j if gfaS[x[0]].get("NC", 0) > args.rc]
                         if len(nX) > 0:
@@ -797,12 +782,10 @@ def main(args):
                                 eprint("fex1", _fex1)
                                 assert len(_fex0) == len(_fex1) == 1
 
-                                # TODO: this has not been tested. Is not present in the example I am using
                                 _tex0 = int(_fex0[0].split(".")[-1])
                                 _texX = int(_fexX[0].split(".")[-1])
 
                                 if abs(_tex0 - _texX) == 1:
-                                    # NOTE: this has not been tested (no events to check)
                                     _a_j = list(
                                         filter(
                                             lambda x: any(
@@ -1090,9 +1073,6 @@ def main(args):
             if i == args.irw:
                 _subpath = _subpath_n + _subpath_p[::-1]
                 _subpath_name = ">".join(_subpath_n + ["?"] + _subpath_p[::-1])
-                eprint("POTENTIAL")
-                # eprint(f"{i=} {_intron_next=}")
-                # eprint(f"{i=} {_intron_prev=}")
                 eprint(f"{i=} {_subpath_n=}")
                 eprint(f"{i=} {_subpath_p=}")
                 eprint(f"{i=} {_subpath=}")
@@ -1118,7 +1098,7 @@ def main(args):
                         f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
                         junc["RC"],
                         "?",  # ex_ir,
-                        _subpath_name,  # ">".join(_subpath),
+                        _subpath_name,
                         ".",
                         _subpath_avg,
                         ".",

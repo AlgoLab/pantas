@@ -35,7 +35,7 @@ def get_refpos(segments: dict, start: str, end: str):
             + f"{segments[end]['RP'] + segments[end].get('MAXIL', 0)}"
         )
     else:
-        return "?:?"
+        return "?-?"
 
 
 def get_outgoing_nodes(
@@ -317,8 +317,8 @@ def main(args):
                                                 genestrand[transcript2gene[_tj]],
                                                 _j,
                                                 ">".join(ix_j),
-                                                junc["RC"],
                                                 f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
+                                                junc["RC"],
                                                 _a_j_name[0],
                                                 ">".join(_a_j),
                                                 f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j)}",
@@ -668,8 +668,8 @@ def main(args):
                             gfaL, ix_j[1], segments=gfaS, rc=args.rc
                         )
                         ex_prev_n1 = [get_set_exons(gfaS, x) for x in prev_n1]
-                        cap_ir = exons_n0.intersection(
-                            exons_n1, *ex_next_n0, *ex_prev_n1
+                        cap_ir = set().intersection(
+                           exons_n0, exons_n1, *ex_next_n0, *ex_prev_n1
                         )
                         eprint(f"EX {cap_ir=}")
 
@@ -894,12 +894,13 @@ def main(args):
                         )
                         eprint(f"{nX=}")
                         eprint(f"{nY=}")
+                        _enx = get_set_exons(gfaS, ix_j[0])
+                        eprint(f"exons_nx: {_enx}")
+                        _eny = get_set_exons(gfaS, ix_j[1])
+                        eprint(f"exons_ny: {_eny}")
+                        
                         for _nx, _ny in itertools.product(nX, nY):
                             eprint(f"pair: {_nx} - {_ny}")
-                            _enx = get_set_exons(gfaS, ix_j[0])
-                            eprint(f"exons_nx: {_enx}")
-                            _eny = get_set_exons(gfaS, ix_j[1])
-                            eprint(f"exons_ny: {_eny}")
 
                             _tnx = set(get_transcript_from_exons(_enx))
                             eprint(f"TR_nx: {_tnx}")

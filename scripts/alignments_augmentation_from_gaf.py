@@ -50,6 +50,15 @@ def cigar_clipping(cigar_list, start_pos, end_pos):
     return cigar_list_new, new_start, new_end
 
 
+def no_good_cigar(cigar_list, c_thr=3):
+    no_good = False
+    for c in cigar_list:
+        if (c[0] == "+" and c[1] > c_thr) or (c[0] == "-" and c[1] > c_thr):
+            no_good = True
+            break
+    return no_good
+
+
 ## TODO add handle of multiple * at begin
 def compact_align(align):
     new_al = []
@@ -150,6 +159,16 @@ def main(argv):
             else:
                 cigar = "*"
 
+            cigar_vals = parse_cigar(cigar)
+            # handle clipping
+            if len(cigar_vals) == 2:
+                cigar_vals, start_pos, end_pos_rel = cigar_clipping(
+                    cigar_vals, start_pos, end_pos_rel
+                )
+
+            if no_good_cigar(cigar_vals):
+                rej = rej + 1
+                continue
             dv_re = re.search(
                 r"dv:f:(\d+(\.\d+)?)", " ".join(item for item in tokens[12:])
             )
@@ -170,12 +189,6 @@ def main(argv):
                 rev = True
                 # nodes.reverse()
             # print(nodes)
-            cigar_vals = parse_cigar(cigar)
-            # handle clipping
-            if len(cigar_vals) == 2:
-                cigar_vals, start_pos, end_pos_rel = cigar_clipping(
-                    cigar_vals, start_pos, end_pos_rel
-                )
 
             # print(cigar_vals)
 
@@ -269,7 +282,7 @@ def main(argv):
                                 else:
                                     nodes_info[node_id][1][0][seq_len] = 1
                             if i != len(final_align) - 1 and j == len(cigar_values) - 1:
-                                seq_len = nodes_info[node_id][0] - c[1] + 1
+                                seq_len = nodes_info[node_id][0] - c[1] - 1
                                 if seq_len in nodes_info[node_id][1][1].keys():
                                     nodes_info[node_id][1][1][seq_len] = (
                                         nodes_info[node_id][1][1][seq_len] + 1
@@ -297,7 +310,7 @@ def main(argv):
                     else:
                         if c[0] == "-":
                             if i != 0 and j == 0:
-                                seq_len = c[1]
+                                seq_len = nodes_info[node_id][0] - 1 - c[1]
                                 if seq_len in nodes_info[node_id][1][1].keys():
                                     nodes_info[node_id][1][1][seq_len] = (
                                         nodes_info[node_id][1][1][seq_len] + 1
@@ -305,7 +318,7 @@ def main(argv):
                                 else:
                                     nodes_info[node_id][1][1][seq_len] = 1
                             if i != len(final_align) - 1 and j == len(cigar_values) - 1:
-                                seq_len = nodes_info[node_id][0] - c[1] + 1
+                                seq_len = c[1]
                                 if seq_len in nodes_info[node_id][1][0].keys():
                                     nodes_info[node_id][1][0][seq_len] = (
                                         nodes_info[node_id][1][0][seq_len] + 1
@@ -410,3 +423,4 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
+

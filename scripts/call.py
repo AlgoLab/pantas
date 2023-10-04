@@ -19,15 +19,20 @@ def build_attrs(fields: str):
             attrs[name] = value.split(",")
 
             _v = [x for x in value.split(",")]
-            _v = [list(map(int, x.split('.'))) for x in _v]
-            attrs[f"MAX{name}"] = max(_v, key= lambda x: x[1])[0]
+            _v = [list(map(int, x.split("."))) for x in _v]
+            attrs[f"MAX{name}"] = max(_v, key=lambda x: x[1])[0]
         else:
             attrs[name] = value.split(",")
     return attrs
 
-def get_refpos(segments:dict, start:str, end:str):
+
+def get_refpos(segments: dict, start: str, end: str):
     # TODO: check OL and IL
-    return f"{segments[start]['RP']+segments[start]['MAXOL']+1}" + "-" + f"{segments[end]['RP']+segments[end].get('MAXIL', 0)}"
+    return (
+        f"{segments[start]['RP'] + segments[start].get('MAXOL', segments[start]['LN']) + 1}"
+        + "-"
+        + f"{segments[end]['RP'] + segments[end].get('MAXIL', 0)}"
+    )
 
 
 def get_outgoing_nodes(
@@ -417,7 +422,7 @@ def main(args):
                                     junc["RC"],
                                     _e,
                                     ">".join(_subpath),
-                                    ".", # CHECKME: this should not be needed
+                                    ".",  # CHECKME: this should not be needed
                                     _count_sum // len(_subpath),
                                     ".",
                                     ".",
@@ -486,7 +491,7 @@ def main(args):
 
                                 _n_j1 = [x for x in junctions if x[0] == ix_j[0]]
                                 _n_j2 = [x for x in junctions if x[1] == ix_j[1]]
-                                
+
                                 _es_j1 = [
                                     x for x in _n_j1 if _es_j1_name in gfaL[x]["JN"]
                                 ]
@@ -530,9 +535,7 @@ def main(args):
                                 ex_next_n0 = set().union(
                                     *[
                                         get_set_exons(gfaS, x)
-                                        for x in get_outgoing_nodes(
-                                            gfaL, ix_j[0]
-                                        )
+                                        for x in get_outgoing_nodes(gfaL, ix_j[0])
                                     ]
                                 )
                                 eprint(f"check A5b {ex_next_n0=}")
@@ -586,9 +589,7 @@ def main(args):
                                 ex_prev_n1 = set().union(
                                     *[
                                         get_set_exons(gfaS, x)
-                                        for x in get_incoming_nodes(
-                                            gfaL, ix_j[1]
-                                        )
+                                        for x in get_incoming_nodes(gfaL, ix_j[1])
                                     ]
                                 )
                                 # eprint(f"prev n1 {get_incoming_nodes(gfaL, ix_j[1], segments=gfaS, rc=-1)}")
@@ -685,7 +686,7 @@ def main(args):
                                     junc["RC"],
                                     ex_ir,
                                     ">".join(_subpath),
-                                    ".", # CHECKME: this should not be needed
+                                    ".",  # CHECKME: this should not be needed
                                     _count_sum // len(_subpath),
                                     ".",
                                     ".",
@@ -985,8 +986,8 @@ def main(args):
             #         ) == 0, prev_n1)
             # )
 
-            _intron_next =set(next_n0) - set(ix_j)
-            _intron_prev =set(prev_n1) - set(ix_j)
+            _intron_next = set(next_n0) - set(ix_j)
+            _intron_prev = set(prev_n1) - set(ix_j)
             i = 0
             eprint(f"{i=} {_intron_next=}")
             eprint(f"{i=} {_intron_prev=}")

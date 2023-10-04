@@ -2,9 +2,9 @@ import itertools
 import re
 import sys
 from functools import partial
+import logging
 
-eprint = partial(print, file=sys.stderr)
-# eprint = print
+eprint = logging.debug
 
 
 def build_attrs(fields: str):
@@ -67,6 +67,7 @@ def get_set_exons(nodes: dict, nid: str) -> set:
 
 def get_transcript_from_exons(exons) -> map:
     return map(lambda x: ".".join(x.split(".")[:-1]), exons)
+
 
 def get_path_transcript(path: dict, pid: str, start=None, end=None):
     _key = pid
@@ -182,7 +183,7 @@ def main(args):
                     # 1. visit n0 and n1
                     # 2. are not part of the junction (n0, n1)
 
-                    eprint("cap:", cap)
+                    eprint(f"{cap=}")
 
                     # Checking for non-novel ES
                     for _tr in cap:
@@ -432,17 +433,17 @@ def main(args):
                     eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
 
                     exons_n0 = get_set_exons(gfaS, ix_j[0])
-                    eprint("exons_n0:", exons_n0)
+                    eprint(f"{exons_n0=}")
                     exons_n1 = get_set_exons(gfaS, ix_j[1])
-                    eprint("exons_n1:", exons_n1)
+                    eprint(f"{exons_n1=}")
                     transcripts_n0 = set(
                         map(lambda x: ".".join(x.split(".")[:-1]), exons_n0)
                     )
-                    eprint("transcripts_n0:", transcripts_n0)
+                    eprint(f"{transcripts_n0=}")
                     transcripts_n1 = set(
                         map(lambda x: ".".join(x.split(".")[:-1]), exons_n1)
                     )
-                    eprint("transcripts_n1:", transcripts_n1)
+                    eprint(f"{transcripts_n1=}")
 
                     if (
                         len(
@@ -455,7 +456,7 @@ def main(args):
                         # cap contains all the trascripts that:
                         # 1. visit n0 and n1
 
-                        eprint("cap:", cap)
+                        eprint(f"{cap=}")
 
                         # Checking for novel ES
                         for _tr in cap:
@@ -645,7 +646,7 @@ def main(args):
                         cap_ir = exons_n0.intersection(
                             exons_n1, *ex_next_n0, *ex_prev_n1
                         )
-                        eprint("cap_ir EX:", cap_ir)
+                        eprint(f"EX {cap_ir=}")
 
                         if len(cap_ir) > 0:
                             for ex_ir in cap_ir:
@@ -689,13 +690,13 @@ def main(args):
                         nX_j = [x for x in junctions if x[0] == ix_j[0]]
                         nX = [x[1] for x in nX_j if gfaS[x[1]].get("NC", 0) > args.rc]
                         if len(nX) > 0:
-                            eprint("nX:", nX)
+                            eprint(f"{nX=}")
                             exons_nX = [get_set_exons(gfaS, x) for x in nX]
-                            eprint("exons_nx:", exons_nX)
+                            eprint(f"{exons_nX=}")
                             transcripts_nX = set(
                                 *[list(get_transcript_from_exons(x)) for x in exons_nX]
                             )
-                            eprint("TR_nx:", transcripts_nX)
+                            eprint(f"{transcripts_nX=}")
 
                             for _tr in transcripts_nX & transcripts_n0:
                                 _fex0 = list(
@@ -721,7 +722,7 @@ def main(args):
                                             nX_j,
                                         )
                                     )
-                                    eprint("_a_j:", _a_j, gfaL[_a_j[0]])
+                                    eprint(f"{_a_j=} {gfaL[_a_j[0]]=}")
                                     if len(_a_j) == 1:
                                         _a_j = _a_j[0]
                                         _a_j_name = [
@@ -762,24 +763,24 @@ def main(args):
                         nX_j = [x for x in junctions if x[1] == ix_j[1]]
                         nX = [x[0] for x in nX_j if gfaS[x[0]].get("NC", 0) > args.rc]
                         if len(nX) > 0:
-                            eprint("nX:", nX)
+                            eprint(f"{nX=}")
                             exons_nX = [get_set_exons(gfaS, x) for x in nX]
-                            eprint("exons_nx:", exons_nX)
+                            eprint(f"{exons_nX=}")
                             transcripts_nX = set(
                                 *[list(get_transcript_from_exons(x)) for x in exons_nX]
                             )
-                            eprint("TR_nx:", transcripts_nX)
+                            eprint(f"{transcripts_nX=}")
 
                             for _tr in transcripts_nX & transcripts_n0:
-                                eprint("_tr", _tr)
+                                eprint(f"{_tr=}")
                                 _fex0 = list(
                                     filter(lambda x: x.startswith(_tr), exons_n0)
                                 )
                                 _fexX = list(
                                     filter(lambda x: x.startswith(_tr), *exons_nX)
                                 )
-                                eprint("fex0", _fex0)
-                                eprint("fex1", _fex1)
+                                eprint(f"{_fex0=}")
+                                eprint(f"{_fex1=}")
                                 assert len(_fex0) == len(_fex1) == 1
 
                                 _tex0 = int(_fex0[0].split(".")[-1])
@@ -797,7 +798,7 @@ def main(args):
                                             nX_j,
                                         )
                                     )
-                                    eprint("_a_j:", _a_j, gfaL[_a_j[0]])
+                                    eprint(f"{_a_j=}  {gfaL[_a_j[0]]=}")
                                     if len(_a_j) == 1:
                                         _a_j = _a_j[0]
                                         _a_j_name = [
@@ -859,26 +860,26 @@ def main(args):
                     if len(nX) > 0 and len(nY) > 0:
                         eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
                         eprint(
-                            "n0>nX",
-                            [(x, gfaL[x]) for x in noveljunctions if x[0] == ix_j[0]],
+                            f"n0>nX= " +
+                            f"{[(x, gfaL[x]) for x in noveljunctions if x[0] == ix_j[0]]}"
                         )
                         eprint(
-                            "nY>n1",
-                            [(x, gfaL[x]) for x in noveljunctions if x[1] == ix_j[1]],
+                            f"nY>n1= " +
+                            f"{[(x, gfaL[x]) for x in noveljunctions if x[1] == ix_j[1]]}"
                         )
-                        eprint("nX:", nX)
-                        eprint("nY:", nY)
+                        eprint(f"{nX=}")
+                        eprint(f"{nY=}")
                         for _nx, _ny in itertools.product(nX, nY):
-                            eprint("pair:", _nx, _ny)
+                            eprint(f"pair: {_nx} - {_ny}")
                             _enx = get_set_exons(gfaS, ix_j[0])
-                            eprint("exons_nx:", _enx)
+                            eprint(f"exons_nx: {_enx}")
                             _eny = get_set_exons(gfaS, ix_j[1])
-                            eprint("exons_ny:", _eny)
+                            eprint(f"exons_ny: {_eny}")
 
                             _tnx = set(get_transcript_from_exons(_enx))
-                            eprint("TR_nx:", _tnx)
+                            eprint(f"TR_nx: {_tnx}")
                             _tny = set(get_transcript_from_exons(_eny))
-                            eprint("TR_ny:", _tny)
+                            eprint(f"TR_ny: {_tny}")
 
                             for _tr in _tnx & _tny:
                                 _fex0 = list(filter(lambda x: x.startswith(_tr), _enx))
@@ -1063,7 +1064,6 @@ def main(args):
 
                     if len(set(_subpath_n) & set(_subpath_p)) > 1:
                         _subpath_total = True
-                        eprint(_subpath_count)
                         i = args.irw
                         break
 
@@ -1159,5 +1159,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     if args.debug:
-        eprint = print
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     main(args)

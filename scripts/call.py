@@ -3,11 +3,22 @@ import re
 import sys
 from functools import partial
 import logging
+from math import floor
 
 eprint = logging.debug
 
 
+def collapse_linkcounts(lc: list):
+    count = sum([x[1] for x in lc])
+    # weighted sum of positions
+    r = [(x[0] * x[1]) / count for x in lc]
+    pos = int(floor(sum(r)))
+    # eprint(f"{lc=} {count=} {pos=}")
+    return [pos, count]
+
+
 def build_attrs(fields: str):
+    d = 3
     attrs = dict()
     for f in fields:
         name, _, value = f.split(":")
@@ -16,10 +27,37 @@ def build_attrs(fields: str):
         elif name == "RC" or name == "NC":
             attrs[name] = int(value)
         elif name == "IL" or name == "OL":
-            # attrs[name] = value.split(",")
-
             _v = [x for x in value.split(",")]
             _v = [list(map(int, x.split("."))) for x in _v]
+            eprint(f"{_v=}")
+            if len(_v) >= 2:
+                minv = min(_v, key=lambda x: x[0])
+                k1 = [minv.copy()]
+                maxv = max(_v, key=lambda x: x[0])
+                k2 = [maxv.copy()]
+                eprint(f"{minv=} {maxv=}")
+
+                if abs(minv[0] - maxv[0]) < d:
+                    # collapse all
+                    _v = [collapse_linkcounts(_v)]
+                else:
+                    for x in _v:
+                        if x == minv or x == maxv:
+                            continue
+                        dmin = abs(x[0] - minv[0])
+                        dmax = abs(x[0] - maxv[0])
+
+                        if dmin < dmax:
+                            k1.append(x)
+                        else:
+                            k2.append(x)
+
+                        # eprint(f"{x=}, {dmin=}, {dmax=}")
+                    k1 = collapse_linkcounts(k1)
+                    k2 = collapse_linkcounts(k2)
+                    _v = [k1, k2]
+                # eprint(f"{k1=} {k2=}")
+
             attrs[name] = _v
             attrs[f"MAX{name}"] = max(_v, key=lambda x: x[1])[0]
         else:
@@ -76,6 +114,8 @@ def get_refpos_node(segments: dict, nid: str, key: str, jn_w: int = -1):
             add = segments[nid].get("MAXIL", 0)
         elif key == "RP":
             add = 0
+        eprint(f"[get_refpos_node]: {nid}= {segments[nid]}")
+        eprint(f"[get_refpos_node]: {add=}")
         return f"{segments[nid]['RP'] + add}"
     else:
         return "?"
@@ -701,7 +741,7 @@ def main(args):
                                         assert len(_a_j_name) == 1
 
                                         # A5b+ / A3a-
-                                        eprint("A5b")
+                                        eprint("A5b: A5b+ / A3a-")
                                         print(
                                             "A5"
                                             if genestrand[transcript2gene[_tr]] == "+"
@@ -761,7 +801,7 @@ def main(args):
                                         # and the second is the one containing the event
 
                                         # A3a+ / A5b-
-                                        eprint("A3a")
+                                        eprint("A3a: A3a+ / A5b-")
                                         print(
                                             "A3"
                                             if genestrand[transcript2gene[_tr]] == "+"
@@ -812,6 +852,12 @@ def main(args):
                                 for _in in _subpath:
                                     _count_sum += gfaS[_in].get("NC", 0)
                                 eprint("IRr")
+
+                                if genestrand[transcript2gene[_tr]] == "+":
+                                    _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}"
+                                else:
+                                    _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[1], 'LN')}-{get_refpos_node(gfaS, ix_j[0], 'RP')}"
+
                                 print(
                                     "IR",
                                     "novel",
@@ -820,7 +866,7 @@ def main(args):
                                     genestrand[transcript2gene[_tr]],
                                     "?",  # _j,
                                     ">".join(ix_j),
-                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'OL', junc['RC'])}-{get_refpos_node(gfaS, ix_j[1], 'IL', junc['RC'])}",
+                                    _refpos,
                                     junc["RC"],
                                     ex_ir,
                                     ">".join(_subpath),
@@ -903,7 +949,7 @@ def main(args):
                                             if x.startswith(_tr)
                                         ]
                                         assert len(_a_j_name) == 1
-                                        eprint("A3b")
+                                        eprint("A3b: A3b+ / A5a-")
                                         print(
                                             "A3"
                                             if genestrand[transcript2gene[_tr]] == "+"
@@ -1000,7 +1046,7 @@ def main(args):
                                             if x.startswith(_tr)
                                         ]
                                         assert len(_a_j_name) == 1
-                                        eprint("A5a")
+                                        eprint("A5a: A5a+ / A3b-")
                                         print(
                                             "A5"
                                             if genestrand[transcript2gene[_tr]] == "+"
@@ -1282,6 +1328,12 @@ def main(args):
 
                 for _j in junc["JN"]:
                     _tr = ".".join(_j.split(".")[:-2])
+                    
+                    if genestrand[transcript2gene[_tr]] == "+":
+                        _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}"
+                    else:
+                        _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[1], 'LN')}-{get_refpos_node(gfaS, ix_j[0], 'RP')}"
+
                     eprint("IR")
                     print(
                         "IR",
@@ -1291,7 +1343,7 @@ def main(args):
                         genestrand[transcript2gene[_tr]],
                         _j,
                         ">".join(ix_j),
-                        f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}",
+                        _refpos,
                         junc["RC"],
                         "?",  # ex_ir,
                         _subpath_name,

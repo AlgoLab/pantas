@@ -27,7 +27,11 @@ def build_attrs(fields: str):
     return attrs
 
 
-def get_refpos(segments: dict, start: str, end: str,):
+def get_refpos(
+    segments: dict,
+    start: str,
+    end: str,
+):
     if "RP" in segments[start] and "RP" in segments[end]:
         add_start = segments[start].get("LN")
         add_end = 0
@@ -1118,16 +1122,17 @@ def main(args):
                                         f"{_tr}.{min(_tex0, _tex1)}.{max(_tex0, _tex1)}",
                                         ">".join(ix_j),
                                         f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}",
+                                        junc["RC"],
                                         # Cassette junction 1
                                         "?",
                                         ">".join(_nx),
-                                        #CHECKME: maybe this is not alway true, but yes
+                                        # CHECKME: maybe this is not alway true, but yes
                                         f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _nx[0], 'LN')}-{get_refpos_node(gfaS, _nx[1], 'IL', junc['RC'])}",
                                         gfaL[_nx]["RC"],
                                         # Cassette junction 2
                                         "?",
                                         ">".join(_ny),
-                                        #CHECKME: maybe this is not alway true, but yes
+                                        # CHECKME: maybe this is not alway true, but yes
                                         f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _ny[0], 'OL', junc['RC'])}-{get_refpos_node(gfaS, _ny[1], 'RP')}",
                                         gfaL[_ny]["RC"],
                                         sep=",",

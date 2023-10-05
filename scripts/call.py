@@ -17,8 +17,7 @@ def collapse_linkcounts(lc: list):
     return [pos, count]
 
 
-def build_attrs(fields: str):
-    d = 3
+def build_attrs(fields: str, d: int):
     attrs = dict()
     for f in fields:
         name, _, value = f.split(":")
@@ -261,7 +260,7 @@ def main(args):
         line = line.strip()
         if line.startswith("S"):
             _, nid, seq, *fields = line.split()
-            gfaS[nid] = build_attrs(fields)
+            gfaS[nid] = build_attrs(fields, args.d)
             # TODO: uncomment if needed
             # gfaS[nid]['seq'] = seq
         elif line.startswith("P"):
@@ -284,7 +283,7 @@ def main(args):
                 overlap,
                 *fields,
             ) = line.split()
-            gfaL[(nid_from, nid_to)] = build_attrs(fields)
+            gfaL[(nid_from, nid_to)] = build_attrs(fields, args.d)
             # TODO: uncomment if needed
             # gfaL[(nid_from, nid_to)]['overlap'] = overlap
             if "JN" in gfaL[(nid_from, nid_to)]:
@@ -1392,11 +1391,18 @@ if __name__ == "__main__":
         default=False,
     )
     parser.add_argument(
-        "--irw",
+        "--w",
         dest="irw",
-        help="Novel intron retention search window, larger values reduce FP but increase time (default: 5)",
+        help="Intronic search window for novel events, larger values reduce FP but increase time (default: 5)",
         type=int,
         default=5,
+    )
+    parser.add_argument(
+        "--d",
+        dest="d",
+        help="Maximum distance for OL/IL 2-clustering position collapsing (default: 3)",
+        type=int,
+        default=3,
     )
     parser.add_argument(
         "--debug",

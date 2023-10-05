@@ -31,20 +31,20 @@ def get_refpos(segments: dict, start: str, end: str, jn_w: int = -1):
     # TODO: check OL and IL
     if "RP" in segments[start] and "RP" in segments[end]:
         if jn_w > 0:
-            # eprint(f"{jn_w=}")
-            # eprint(f"{segments[start]['OL']=}")
-            # eprint(f"{segments[end]['IL']=}")
+            eprint(f"{jn_w=}")
+            eprint(f"{segments[start]=}")
+            eprint(f"{segments[end]=}")
             add_end = min(
                 [(x[0], abs(jn_w - x[1])) for x in segments[start]["OL"]]
                 if "OL" in segments[start]
-                else (segments[start]["LN"], 1),
-                key=lambda x: x[1],
+                else [(segments[start]["LN"], 0)],
+                key=lambda y: y[1],
             )[0]
             add_start = min(
                 [(x[0], abs(jn_w - x[1])) for x in segments[end]["IL"]]
                 if "IL" in segments[end]
-                else (0, 1),
-                key=lambda x: x[1],
+                else [(0, 1)],
+                key=lambda y: y[1],
             )[0]
         else:
             add_start = segments[start].get("MAXOL", segments[start]["LN"])

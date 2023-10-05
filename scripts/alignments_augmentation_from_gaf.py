@@ -298,7 +298,7 @@ def main(argv):
                                 else:
                                     nodes_info[node_id][1][0][0] = 1
                             if i != len(final_align) - 1:
-                                seq_len = nodes_info[node_id][0]
+                                seq_len = nodes_info[node_id][0] - 1
                                 if seq_len in nodes_info[node_id][1][1].keys():
                                     nodes_info[node_id][1][1][seq_len] = (
                                         nodes_info[node_id][1][1][seq_len] + 1
@@ -336,7 +336,7 @@ def main(argv):
                                     nodes_info[node_id][1][0][0] = 1
 
                             if i != 0:
-                                seq_len = nodes_info[node_id][0]
+                                seq_len = nodes_info[node_id][0] - 1
                                 if seq_len in nodes_info[node_id][1][1].keys():
                                     nodes_info[node_id][1][1][seq_len] = (
                                         nodes_info[node_id][1][1][seq_len] + 1

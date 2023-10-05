@@ -105,10 +105,24 @@ rule rna:
         """
 
 
+rule tsort:
+    input:
+        pg=pjoin(WD, "chroms", "{c}", "spliced-pangenome.pg"),
+    output:
+        pg=pjoin(WD, "chroms", "{c}", "spliced-pangenome.tsorted.pg"),
+    benchmark:
+        pjoin(WD, "benchmarks", "{c}", "2a-tsort.txt")
+    threads: 1
+    shell:
+        """
+        vg ids -s {input.pg} {input.pg} > {output.pg}
+        """
+
+
 # Prune complex regions and remove alt paths (those starting with _alt_ see https://github.com/vgteam/vg/blob/bcd57125c236782c3f964db10fa581c523ae8e1f/src/path.cpp#L10)
 rule prune:
     input:
-        pg=rules.rna.output.pg,
+        pg=rules.tsort.output.pg,
     output:
         pg=pjoin(WD, "chroms", "{c}", "spliced-pangenome.pruned.pg"),
     benchmark:
@@ -123,7 +137,7 @@ rule prune:
 # Here the assumption is: thanks to --restore-paths, we have the reference/transcipt paths in the graph, but not the P line
 rule reintroduce_paths:
     input:
-        gfa=pjoin(WD, "chroms", "{c}", "spliced-pangenome.gfa"),
+        gfa=pjoin(WD, "chroms", "{c}", "spliced-pangenome.tsorted.gfa"),
         pgfa=pjoin(WD, "chroms", "{c}", "spliced-pangenome.pruned.gfa"),
     output:
         pg=pjoin(WD, "chroms", "{c}", "spliced-pangenome.pruned.wpaths.pg"),

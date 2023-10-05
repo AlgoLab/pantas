@@ -18,14 +18,21 @@ def get_interval_s(c, s, e):
 
 def parse_truth(truth_path, novel):
     truth = {x: set() for x in ETYPES}
+    truth_w = {x: {} for x in ETYPES}
+
     for line in open(truth_path):
         etype, chrom, gene, strand, i1, i2, i3, W1, W2, psi1, psi2 = line.strip(
             "\n"
         ).split(",")
-        if psi1 == "NaN" or psi2 == "NaN":
+        if psi1 == "NaN" and psi2 == "NaN":
             continue
         k = None
         if novel:
+            # if any([int(x) == 0 for x in W1.split("/")]) or any(
+            #     [int(x) == 0 for x in W2.split("/")]
+            # ):
+            if W1[-2:] == "/0" or W2[-2:] == "/0":
+                continue
             if i3 == ".":
                 k = (chrom, i1, i2)
             else:
@@ -43,7 +50,8 @@ def parse_truth(truth_path, novel):
             elif etype == "IR":
                 k = f"{chrom}:{i2[0]}-{i1[0]}-{i1[1]}-{i2[1]}"
         truth[etype].add(k)
-    return truth
+        truth_w[etype][k] = (W1, W2)
+    return truth, truth_w
 
 
 def parse_rmats_se(fpath, novel, pvalue=0.05):
@@ -191,7 +199,7 @@ def parse_rmats_a3(fpath, novel, pvalue=0.05):
         k = ""
         if strand == "+":
             # assert longer_intron[0] == shorter_intron[0]
-            k = f"{chrom}:{longer_intron[0]}-{shorter_intron[1]}-{longer_intron[1]}"
+            k = f"{chrom}:{longer_intron[0]}-{shorter_intron[1]+1}-{longer_intron[1]-1}"
         else:
             # assert longer_intron[1] == shorter_intron[1]
             k = f"{chrom}:{longer_intron[0]}-{shorter_intron[0]}-{longer_intron[1]}"
@@ -281,7 +289,7 @@ def parse_rmats_a5(fpath, novel, pvalue=0.05):
         if strand == "+":
             k = f"{chrom}:{longer_intron[0]}-{shorter_intron[0]}-{longer_intron[1]}"
         else:
-            k = f"{chrom}:{longer_intron[0]}-{shorter_intron[1]}-{longer_intron[1]}"
+            k = f"{chrom}:{longer_intron[0]}-{shorter_intron[1]+1}-{longer_intron[1]-1}"
         if novel:
             k = tuple(
                 [
@@ -374,7 +382,7 @@ def parse_rmats_ri(fpath, novel, pvalue=0.05):
 
 
 def main_anno(truth_path, rmats_prefix, min_pvalue):
-    truth = parse_truth(truth_path, False)
+    truth, truth_w = parse_truth(truth_path, False)
 
     rmats = {x: set() for x in ETYPES}
     rmats["ES"] = parse_rmats_se(rmats_prefix + "/SE.MATS.JC.txt", False, min_pvalue)
@@ -382,7 +390,7 @@ def main_anno(truth_path, rmats_prefix, min_pvalue):
     rmats["A5"] = parse_rmats_a5(rmats_prefix + "/A5SS.MATS.JC.txt", False, min_pvalue)
     rmats["IR"] = parse_rmats_ri(rmats_prefix + "/RI.MATS.JC.txt", False, min_pvalue)
 
-    print("Event", "TP", "FP", "FN", "P", "R", "F1", sep=",")
+    print("Event", "C", "T", "TP", "FP", "FN", "P", "R", "F1", sep=",")
     for etype in ETYPES:
         # print(rmats[etype])
         # print(truth[etype])
@@ -399,7 +407,14 @@ def main_anno(truth_path, rmats_prefix, min_pvalue):
         P = round(P, 3)
         R = round(R, 3)
         F1 = round(F1, 3)
-        print(etype, TP, FP, FN, P, R, F1, sep=",")
+        print(
+            etype, len(rmats[etype]), len(truth[etype]), TP, FP, FN, P, R, F1, sep=","
+        )
+
+        for e in rmats[etype] - truth[etype]:
+            print("FP", e, file=sys.stderr)
+        for e in truth[etype] - rmats[etype]:
+            print("FN", e, file=sys.stderr)
 
 
 def relaxed_intersect(t1, t2, relax=3):
@@ -422,7 +437,7 @@ def relaxed_intersect(t1, t2, relax=3):
 
 
 def main_novel(truth_path, rmats_prefix, min_pvalue):
-    truth = parse_truth(truth_path, True)
+    truth, truth_w = parse_truth(truth_path, True)
 
     rmats = {x: set() for x in ETYPES}
     rmats["ES"] = parse_rmats_se(rmats_prefix + "/SE.MATS.JC.txt", True, min_pvalue)
@@ -466,7 +481,7 @@ def main_novel(truth_path, rmats_prefix, min_pvalue):
         parse_rmats_se(rmats_prefix + "/fromGTF.novelJunction.RI.txt", True, min_pvalue)
     )
 
-    print("Event", "TP", "FP", "FN", "P", "R", "F1", sep=",")
+    print("Event", "C", "T", "TP", "FP", "FN", "P", "R", "F1", sep=",")
     for etype in ETYPES:
         TP = 0
         for e1 in rmats[etype]:
@@ -483,7 +498,7 @@ def main_novel(truth_path, rmats_prefix, min_pvalue):
             if hit:
                 TP += 1
             else:
-                pass  # print(etype, e1)
+                print(etype, e1, file=sys.stderr)
         FP = len(rmats[etype]) - TP
         FN = len(truth[etype]) - TP
         P = TP / (TP + FP) if TP + FP != 0 else 0
@@ -492,7 +507,23 @@ def main_novel(truth_path, rmats_prefix, min_pvalue):
         P = round(P, 3)
         R = round(R, 3)
         F1 = round(F1, 3)
-        print(etype, TP, FP, FN, P, R, F1, sep=",")
+        print(
+            etype, len(rmats[etype]), len(truth[etype]), TP, FP, FN, P, R, F1, sep=","
+        )
+
+        for e1 in truth[etype]:
+            hit = False
+            for e2 in rmats[etype]:
+                if e1[0] != e2[0]:
+                    # different chrom
+                    continue
+                if (
+                    relaxed_intersect(e1, e2) >= len(e2) / 2
+                ):  # /2 to check for half junctions, 2 for SE, 1 for others
+                    hit = True
+                    break
+            if not hit:
+                print("FN", etype, e1, file=sys.stderr)
 
 
 if __name__ == "__main__":

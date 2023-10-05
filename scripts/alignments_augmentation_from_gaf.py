@@ -166,9 +166,9 @@ def main(argv):
                     cigar_vals, start_pos, end_pos_rel
                 )
 
-            if no_good_cigar(cigar_vals):
-                rej = rej + 1
-                continue
+            # if no_good_cigar(cigar_vals):
+            #     rej = rej + 1
+            #     continue
             dv_re = re.search(
                 r"dv:f:(\d+(\.\d+)?)", " ".join(item for item in tokens[12:])
             )

@@ -853,10 +853,10 @@ def main(args):
                                     _count_sum += gfaS[_in].get("NC", 0)
                                 eprint("IRr")
 
-                                if genestrand[transcript2gene[_tr]] == "+":
-                                    _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}"
-                                else:
-                                    _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[1], 'LN')}-{get_refpos_node(gfaS, ix_j[0], 'RP')}"
+                                # if genestrand[transcript2gene[_tr]] == "+":
+                                _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}"
+                                # else:
+                                #     _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[1], 'LN')}-{get_refpos_node(gfaS, ix_j[0], 'RP')}"
 
                                 print(
                                     "IR",
@@ -1328,11 +1328,11 @@ def main(args):
 
                 for _j in junc["JN"]:
                     _tr = ".".join(_j.split(".")[:-2])
-                    
-                    if genestrand[transcript2gene[_tr]] == "+":
-                        _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}"
-                    else:
-                        _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[1], 'LN')}-{get_refpos_node(gfaS, ix_j[0], 'RP')}"
+
+                    # if genestrand[transcript2gene[_tr]] == "+":
+                    _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}"
+                    # else:
+                    #     _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[1], 'LN')}-{get_refpos_node(gfaS, ix_j[0], 'RP')}"
 
                     eprint("IR")
                     print(

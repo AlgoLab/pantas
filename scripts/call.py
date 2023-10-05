@@ -27,28 +27,10 @@ def build_attrs(fields: str):
     return attrs
 
 
-def get_refpos(segments: dict, start: str, end: str, jn_w: int = -1):
-    # TODO: check OL and IL
+def get_refpos(segments: dict, start: str, end: str,):
     if "RP" in segments[start] and "RP" in segments[end]:
-        if jn_w > 0:
-            eprint(f"{jn_w=}")
-            eprint(f"{segments[start]=}")
-            eprint(f"{segments[end]=}")
-            add_end = min(
-                [(x[0], abs(jn_w - x[1])) for x in segments[start]["OL"]]
-                if "OL" in segments[start]
-                else [(segments[start]["LN"], 0)],
-                key=lambda y: y[1],
-            )[0]
-            add_start = min(
-                [(x[0], abs(jn_w - x[1])) for x in segments[end]["IL"]]
-                if "IL" in segments[end]
-                else [(0, 1)],
-                key=lambda y: y[1],
-            )[0]
-        else:
-            add_start = segments[start].get("MAXOL", segments[start]["LN"])
-            add_end = segments[end].get("MAXIL", 0)
+        add_start = segments[start].get("LN")
+        add_end = 0
         # eprint(f"{add_start=}")
         # eprint(f"{add_end=}")
         return (
@@ -58,6 +40,41 @@ def get_refpos(segments: dict, start: str, end: str, jn_w: int = -1):
         )
     else:
         return "?-?"
+
+
+def get_refpos_node(segments: dict, nid: str, key: str, jn_w: int = -1):
+    if "RP" in segments[nid]:
+        if key == "LN":
+            add = segments[nid]["LN"] + 1
+            # return f"{segments[nid]['RP'] + segments[nid]['LN'] + 1}"
+        elif key == "OL":
+            assert jn_w > 0
+            add = (
+                min(
+                    [(x[0], abs(jn_w - x[1])) for x in segments[nid]["OL"]]
+                    if "OL" in segments[nid]
+                    else [(segments[nid]["LN"], 0)],
+                    key=lambda y: y[1],
+                )[0]
+                + 1
+            )
+        elif key == "MAXOL":
+            add = segments[nid].get("MAXOL", segments[nid]["LN"]) + 1
+        elif key == "IL":
+            assert jn_w > 0
+            add = min(
+                [(x[0], abs(jn_w - x[1])) for x in segments[nid]["IL"]]
+                if "IL" in segments[nid]
+                else [(0, 1)],
+                key=lambda y: y[1],
+            )[0]
+        elif key == "MAXIL":
+            add = segments[nid].get("MAXIL", 0)
+        elif key == "RP":
+            add = 0
+        return f"{segments[nid]['RP'] + add}"
+    else:
+        return "?"
 
 
 def get_outgoing_nodes(
@@ -625,15 +642,15 @@ def main(args):
                                     genestrand[transcript2gene[_tr]],
                                     "?",  # _j,
                                     ">".join(ix_j),
-                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j, jn_w=junc['RC'])}",
+                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}",
                                     junc["RC"],
                                     _es_j1_name,
                                     ">".join(_es_j1[0]),
-                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_es_j1[0], jn_w=gfaL[_es_j1[0]]['RC'])}",
+                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _es_j1[0][0], 'LN')}-{get_refpos_node(gfaS, _es_j1[0][1], 'RP')}",
                                     gfaL[_es_j1[0]]["RC"],
                                     _es_j2_name,
                                     ">".join(_es_j2[0]),
-                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_es_j2[0], jn_w=gfaL[_es_j2[0]]['RC'])}",
+                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _es_j2[0][0], 'LN')}-{get_refpos_node(gfaS, _es_j2[0][1], 'RP')}",
                                     gfaL[_es_j2[0]]["RC"],
                                     sep=",",
                                 )
@@ -691,11 +708,11 @@ def main(args):
                                             genestrand[transcript2gene[_tr]],
                                             "?",  # _j,
                                             ">".join(ix_j),
-                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j, jn_w=junc['RC'])}",
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'OL', junc['RC'])}-{get_refpos_node(gfaS, ix_j[1], 'RP')}",
                                             junc["RC"],
                                             _a_j_name[0],
                                             ">".join(_a_j),
-                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j, jn_w=gfaL[_a_j]['RC'])}",
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _a_j[0], 'LN')}-{get_refpos_node(gfaS, _a_j[1], 'RP')}",
                                             gfaL[_a_j]["RC"],
                                             ".",
                                             ".",
@@ -751,11 +768,11 @@ def main(args):
                                             genestrand[transcript2gene[_tr]],
                                             _a_j_name[0],
                                             ">".join(_a_j),
-                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j, jn_w=gfaL[_a_j]['RC'])}",
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _a_j[0], 'LN')}-{get_refpos_node(gfaS, _a_j[1], 'RP')}",
                                             gfaL[_a_j]["RC"],
                                             "?",  # _j,
                                             ">".join(ix_j),
-                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j, jn_w=junc['RC'])}",
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'IL', junc['RC'])}",
                                             junc["RC"],
                                             ".",
                                             ".",
@@ -799,7 +816,7 @@ def main(args):
                                     genestrand[transcript2gene[_tr]],
                                     "?",  # _j,
                                     ">".join(ix_j),
-                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j, jn_w=junc['RC'])}",
+                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'OL', junc['RC'])}-{get_refpos_node(gfaS, ix_j[1], 'IL', junc['RC'])}",
                                     junc["RC"],
                                     ex_ir,
                                     ">".join(_subpath),
@@ -893,11 +910,11 @@ def main(args):
                                             genestrand[transcript2gene[_tr]],
                                             _a_j_name[0],
                                             ">".join(_a_j),
-                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j, jn_w=gfaL[_a_j]['RC'])}",
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _a_j[0], 'LN')}-{get_refpos_node(gfaS, _a_j[1], 'RP')}",
                                             gfaL[_a_j]["RC"],
                                             "?",  # _j,
                                             ">".join(ix_j),
-                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j, jn_w=junc['RC'])}",
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'IL', junc['RC'])}",
                                             junc["RC"],
                                             ".",
                                             ".",
@@ -990,11 +1007,11 @@ def main(args):
                                             genestrand[transcript2gene[_tr]],
                                             "?",  # _j,
                                             ">".join(ix_j),
-                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j, jn_w=junc['RC'])}",
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'OL', junc['RC'])}-{get_refpos_node(gfaS, ix_j[1], 'RP')}",
                                             junc["RC"],
                                             _a_j_name[0],
                                             ">".join(_a_j),
-                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j, jn_w=gfaL[_a_j]['RC'])}",
+                                            f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _a_j[0], 'LN')}-{get_refpos_node(gfaS, _a_j[1], 'RP')}",
                                             gfaL[_a_j]["RC"],
                                             ".",
                                             ".",
@@ -1100,17 +1117,18 @@ def main(args):
                                         # Intron on annotation
                                         f"{_tr}.{min(_tex0, _tex1)}.{max(_tex0, _tex1)}",
                                         ">".join(ix_j),
-                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j, jn_w=junc['RC'])}",
-                                        junc["RC"],
+                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}",
                                         # Cassette junction 1
                                         "?",
                                         ">".join(_nx),
-                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_nx, jn_w=gfaL[_nx]['RC'])}",
+                                        #CHECKME: maybe this is not alway true, but yes
+                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _nx[0], 'LN')}-{get_refpos_node(gfaS, _nx[1], 'IL', junc['RC'])}",
                                         gfaL[_nx]["RC"],
                                         # Cassette junction 2
                                         "?",
                                         ">".join(_ny),
-                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_ny, jn_w=gfaL[_ny]['RC'])}",
+                                        #CHECKME: maybe this is not alway true, but yes
+                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _ny[0], 'OL', junc['RC'])}-{get_refpos_node(gfaS, _ny[1], 'RP')}",
                                         gfaL[_ny]["RC"],
                                         sep=",",
                                     )
@@ -1268,7 +1286,7 @@ def main(args):
                         genestrand[transcript2gene[_tr]],
                         _j,
                         ">".join(ix_j),
-                        f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j, jn_w=junc['RC'])}",
+                        f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}",
                         junc["RC"],
                         "?",  # ex_ir,
                         _subpath_name,

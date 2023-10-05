@@ -129,9 +129,10 @@ def get_referencebased_coordinates(splicedfa_path):
     return exons, introns
 
 
-def parse_pantas(fpath, rep, nreps, exons, introns):
+def parse_pantas(fpath, rep, nreps, exons):
     pantas = {x: set() for x in ETYPES}
     for line in open(fpath):
+        print(line, file=sys.stderr)
         (
             etype,
             novel,
@@ -140,48 +141,64 @@ def parse_pantas(fpath, rep, nreps, exons, introns):
             strand,
             i1,
             n1,
+            p1,
             w1,
             i2,
             n2,
+            p2,
             w2,
             i3,
             n3,
+            p3,
             w3,
         ) = line.strip("\n").split(",")
-        w1, w2, w3 = int(w1), int(w2), int(w3) if w3 != "." else "."
+        w1, w2, w3 = (
+            int(w1),
+            int(w2) if w2 != "?" else "?",
+            int(w3) if w3 != "." else ".",
+        )
+        if p1.endswith("?"):
+            continue
         if etype == "IR":
+            if p2 == ".":
+                if i2 == "?":
+                    t, e1, e2 = i1.split(".")
+                    s, e = exons[t + "." + e1], exons[t + "." + e2]
+                    if strand == "-":
+                        s, e = exons[t + "." + e2], exons[t + "." + e1]
+                    s, e = get_interval(s)[0], get_interval(e)[1]
+                    p2 = f"{chrom}:{s}-{e}"
+                else:
+                    p2 = exons[i2]
             # one is exon, other is intron
             # we force i1 to be intron
-            if i1 not in introns:
-                i1, i2, i3 = introns[i2], exons[i1], "."
-            else:
-                i1, i2, i3 = introns[i1], exons[i2], "."
+            i1, i2, i3 = p2, p1, p3
+            w1, w2, w3 = w2, w1, w3
         else:
             # SE/A3/A5
-            i1, i2, i3 = introns[i1], introns[i2], introns[i3] if i3 in introns else "."
+            i1, i2, i3 = p1, p2, p3
         if etype not in pantas:
             print(f"Skipping {etype}..", file=sys.stderr)
         else:
-            pantas[etype].add(
-                Event(
-                    etype,
-                    novel,
-                    chrom,
-                    gene,
-                    strand,
-                    i1,
-                    i2,
-                    i3,
-                    n1,
-                    n2,
-                    n3,
-                    w1,
-                    w2,
-                    w3,
-                    rep,
-                    nreps,
-                )
+            e = Event(
+                etype,
+                novel,
+                chrom,
+                gene,
+                strand,
+                i1,
+                i2,
+                i3,
+                n1,
+                n2,
+                n3,
+                w1,
+                w2,
+                w3,
+                rep,
+                nreps,
             )
+            pantas[etype].add(e)
     return pantas
 
 
@@ -192,12 +209,10 @@ def main():
     c2_paths = pantas_paths[int(len(pantas_paths) / 2) :]
 
     exons, introns = get_referencebased_coordinates(splicedfa_path)
-    introns["."] = "."
-    introns["?"] = "?"
 
     events_1 = {x: set() for x in ETYPES}
     for i, fpath in enumerate(c1_paths):
-        events = parse_pantas(fpath, i, len(c1_paths), exons, introns)
+        events = parse_pantas(fpath, i, len(c1_paths), exons)
         for etype in events:
             for new_e in events[etype]:
                 if new_e not in events_1[etype]:
@@ -212,7 +227,7 @@ def main():
                             break
     events_2 = {x: set() for x in ETYPES}
     for i, fpath in enumerate(c2_paths):
-        events = parse_pantas(fpath, i, len(c2_paths), exons, introns)
+        events = parse_pantas(fpath, i, len(c2_paths), exons)
         for etype in events:
             for new_e in events[etype]:
                 if new_e not in events_2[etype]:
@@ -308,11 +323,11 @@ def main():
                     + "-".join([str(w) for w in e1.w2])
                     + "/"
                     + "-".join([str(w) for w in e1.w3]),
-                    "-".join([str(w) for w in e2.w1])
+                    "-".join(["NaN" for w in e1.w1])
                     + "/"
-                    + "-".join([str(w) for w in e2.w2])
+                    + "-".join(["NaN" for w in e1.w2])
                     + "/"
-                    + "-".join([str(w) for w in e2.w3]),
+                    + "-".join(["NaN" for w in e1.w3]),
                     "/".join([str(x) for x in e1.psi]),
                     "/".join(["NaN" for x in e1.psi]),
                     "NaN",
@@ -333,11 +348,11 @@ def main():
                     # e2.nodes1,
                     # e2.nodes2,
                     # e2.nodes3,
-                    "-".join([str(w) for w in e1.w1])
+                    "-".join(["NaN" for w in e2.w1])
                     + "/"
-                    + "-".join([str(w) for w in e1.w2])
+                    + "-".join(["NaN" for w in e2.w2])
                     + "/"
-                    + "-".join([str(w) for w in e1.w3]),
+                    + "-".join(["NaN" for w in e2.w3]),
                     "-".join([str(w) for w in e2.w1])
                     + "/"
                     + "-".join([str(w) for w in e2.w2])

@@ -75,7 +75,11 @@ def main(args):
             for m in [mate1, mate2]:
                 # for m in [mate1]:
                 # print(rname, mate1, mate2)
-                s, e = m.split(":")[1].split("-")
+                se = m.split(":")[1].split("-")
+                if len(se) != 2:
+                    print("Read mate with -", file=sys.stderr)
+                    continue
+                s, e = se
                 s = int(s)
                 e = int(e)
                 qres = sorted(genes[geneid][transcriptid][s:e])

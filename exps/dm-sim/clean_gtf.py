@@ -16,7 +16,7 @@ def main():
             continue
         if chrom not in trees:
             trees[chrom] = IntervalTree()
-        trees[chrom][s:e] = 1
+        trees[chrom][s:e] = len(trees[chrom][s:e]) > 0
 
     p = False
     for line in open(gtf):
@@ -28,7 +28,8 @@ def main():
         if t == "gene":
             pflag = len(trees[chrom][s:e]) == 1
         if pflag:
-            print(line, end="")
+            if not list(trees[chrom][s:e])[0].data:
+                print(line, end="")
 
 
 if __name__ == "__main__":

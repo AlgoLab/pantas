@@ -45,7 +45,7 @@ def parse_truth(truth_path, novel):
 def get_interval(region):
     if region == ".":
         return region
-    s, e = [int(x) for x in region.split(":")[1].split("-")]
+    s, e = [int(x) if x != "?" else -1 for x in region.split(":")[1].split("-")]
     return s, e
 
 

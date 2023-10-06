@@ -14,6 +14,8 @@ def parse_event_annotation(fpath):
             continue
         etype, tvar, templ, gs, ge, ts, te = line.strip("\n").split("\t")
         gs, ge = int(gs), int(ge)
+        if gs == ge:
+            continue
         assert gs < ge
         events[tvar] = (gs, ge)
     return events
@@ -66,6 +68,8 @@ def main():
     for gene_id, template in templates.items():
         strand = strands[gene_id]
         for transcript_id, alternate in alternates[gene_id].items():
+            if transcript_id not in events:
+                continue
             if transcript_id.endswith("es"):
                 skipped_exon = events[transcript_id]
                 chrom = None

@@ -881,7 +881,7 @@ def main(args):
                     # Check A3 - before
                     # if len(exons_n1) == 0:
                     if (
-                        set(get_transcript_from_exons(exons_n1)) != transcripts_n0
+                        len(set(get_transcript_from_exons(exons_n1)) & transcripts_n0) == 0
                     ):
                         # n1 is an intron, check if there is a junction
                         # from n0 to somewhere else
@@ -974,7 +974,7 @@ def main(args):
                     # Chek A5 - after
                     # if len(exons_n0) == 0:
                     if (
-                        set(get_transcript_from_exons(exons_n0)) != transcripts_n1
+                        len(set(get_transcript_from_exons(exons_n0)) & transcripts_n1) == 0
                     ):
                         # n0 is an intron, check if there is a junction
                         # to n1 from somewhere else

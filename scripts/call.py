@@ -881,8 +881,7 @@ def main(args):
                     # Check A3 - before
                     # if len(exons_n1) == 0:
                     if (
-                        len(set(get_transcript_from_exons(exons_n1)) - transcripts_n0)
-                        == 0
+                        set(get_transcript_from_exons(exons_n1)) != transcripts_n0
                     ):
                         # n1 is an intron, check if there is a junction
                         # from n0 to somewhere else
@@ -936,7 +935,7 @@ def main(args):
                                     )
                                     if len(_a_j) == 1 and any(
                                         check_junction(
-                                            [ix_j[0], _x], gfaS, gfaL, args.irw, args.rc
+                                            [ix_j[1], _x], gfaS, gfaL, args.irw, args.rc
                                         )
                                         for _x in _fnX
                                     ):
@@ -975,8 +974,7 @@ def main(args):
                     # Chek A5 - after
                     # if len(exons_n0) == 0:
                     if (
-                        len(set(get_transcript_from_exons(exons_n0)) - transcripts_n1)
-                        == 0
+                        set(get_transcript_from_exons(exons_n0)) != transcripts_n1
                     ):
                         # n0 is an intron, check if there is a junction
                         # to n1 from somewhere else
@@ -1033,7 +1031,7 @@ def main(args):
                                     )
                                     if len(_a_j) == 1 and any(
                                         check_junction(
-                                            [_x, ix_j[1]], gfaS, gfaL, args.irw, args.rc
+                                            [_x, ix_j[0]], gfaS, gfaL, args.irw, args.rc
                                         )
                                         for _x in _fnX
                                     ):

@@ -669,6 +669,10 @@ def main(args):
 
                                 _n_j1 = [x for x in junctions if x[0] == ix_j[0]]
                                 _n_j2 = [x for x in junctions if x[1] == ix_j[1]]
+                                eprint(f"{_n_j1=}")
+                                eprint(f"{_n_j2=}")
+                                eprint(f"{_es_j1_name=}")
+                                eprint(f"{_es_j2_name=}")
 
                                 _es_j1 = [
                                     x for x in _n_j1 if _es_j1_name in gfaL[x]["JN"]
@@ -676,27 +680,30 @@ def main(args):
                                 _es_j2 = [
                                     x for x in _n_j2 if _es_j2_name in gfaL[x]["JN"]
                                 ]
+                                eprint(f"{_es_j1=}")
+                                eprint(f"{_es_j2=}")
 
-                                print(
-                                    "ES",
-                                    "novel",
-                                    genechr[transcript2gene[_tr]],
-                                    transcript2gene[_tr],
-                                    genestrand[transcript2gene[_tr]],
-                                    "?",  # _j,
-                                    ">".join(ix_j),
-                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}",
-                                    junc["RC"],
-                                    _es_j1_name,
-                                    ">".join(_es_j1[0]),
-                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _es_j1[0][0], 'LN')}-{get_refpos_node(gfaS, _es_j1[0][1], 'RP')}",
-                                    gfaL[_es_j1[0]]["RC"],
-                                    _es_j2_name,
-                                    ">".join(_es_j2[0]),
-                                    f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _es_j2[0][0], 'LN')}-{get_refpos_node(gfaS, _es_j2[0][1], 'RP')}",
-                                    gfaL[_es_j2[0]]["RC"],
-                                    sep=",",
-                                )
+                                if len(_es_j1) > 0 and len(_es_j2) > 0:
+                                    print(
+                                        "ES",
+                                        "novel",
+                                        genechr[transcript2gene[_tr]],
+                                        transcript2gene[_tr],
+                                        genestrand[transcript2gene[_tr]],
+                                        "?",  # _j,
+                                        ">".join(ix_j),
+                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}",
+                                        junc["RC"],
+                                        _es_j1_name,
+                                        ">".join(_es_j1[0]),
+                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _es_j1[0][0], 'LN')}-{get_refpos_node(gfaS, _es_j1[0][1], 'RP')}",
+                                        gfaL[_es_j1[0]]["RC"],
+                                        _es_j2_name,
+                                        ">".join(_es_j2[0]),
+                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _es_j2[0][0], 'LN')}-{get_refpos_node(gfaS, _es_j2[0][1], 'RP')}",
+                                        gfaL[_es_j2[0]]["RC"],
+                                        sep=",",
+                                    )
 
                         # Checking for novel A5+ before / A3- after
                         for _tr in cap:

@@ -6,7 +6,7 @@ ETYPES = ["ES", "CE", "IR", "A3", "A5"]
 def get_interval(region):
     if region in [".", "?"]:
         return region
-    s, e = [int(x) for x in region.split(":")[1].split("-")]
+    s, e = [int(x) if x != "?" else -1 for x in region.split(":")[1].split("-")]
     return s, e
 
 

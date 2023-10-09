@@ -1,0 +1,11 @@
+name: pantas2
+channels:
+  - bioconda
+dependencies:
+  - python=3.9
+  - biopython
+  - gffutils
+  - gffread
+  - vg
+  - csvkit
+  - snakemake-minimal

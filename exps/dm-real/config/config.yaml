@@ -1,0 +1,18 @@
+software : software_sim
+res : results
+input : input
+odir : output_sim
+fa : /home/cozzi/pantas2/exps/dm-real/input/4.fa
+gtf : /home/cozzi/pantas2/exps/dm-real/input/output_sim/splicing_variants.gtf
+vcf : /home/cozzi/pantas2/exps/dm-real/input/4.vcf.gz
+L : 150
+N : 150
+s1 :
+  - sample_01,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_01_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_01_2.clean.fq
+  - sample_02,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_02_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_02_2.clean.fq
+  - sample_03,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_03_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_03_2.clean.fq
+s2 :
+  - sample_04,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_04_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_04_2.clean.fq
+  - sample_05,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_05_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_05_2.clean.fq
+  - sample_06,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_06_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_06_2.clean.fq
+

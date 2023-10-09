@@ -1,0 +1,6 @@
+name: star
+channels:
+  - bioconda
+dependencies:
+  - star
+  - samtools

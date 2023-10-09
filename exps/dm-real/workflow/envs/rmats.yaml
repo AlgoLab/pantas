@@ -1,0 +1,5 @@
+name: rmats
+channels:
+  - bioconda
+dependencies:
+  - rmats

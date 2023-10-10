@@ -352,7 +352,7 @@ def main(args):
     def check_nonnovel():
         for ix_j in junctions:
             junc = gfaL[ix_j]
-            if junc["RC"] > args.rc:
+            if junc["RC"] > args.rca:
                 _trjunc = set(map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"]))
                 eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
 
@@ -1377,6 +1377,14 @@ if __name__ == "__main__":
         "--rc",
         help="Minimum read count (default: -1)",
         dest="rc",
+        type=int,
+        required=False,
+        default=-1,
+    )
+    parser.add_argument(
+        "--rca",
+        help="Minimum read count for annotated events (default: -1)",
+        dest="rca",
         type=int,
         required=False,
         default=-1,

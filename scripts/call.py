@@ -1375,11 +1375,11 @@ if __name__ == "__main__":
     parser.add_argument("GTF", help="Annotation in GTF format")
     parser.add_argument(
         "--rc",
-        help="Minimum read count (default: -1)",
+        help="Minimum read count (default: 3)",
         dest="rc",
         type=int,
         required=False,
-        default=-1,
+        default=3,
     )
     parser.add_argument(
         "--rca",

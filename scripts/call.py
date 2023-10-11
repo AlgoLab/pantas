@@ -28,13 +28,13 @@ def build_attrs(fields: str, d: int):
         elif name == "IL" or name == "OL":
             _v = [x for x in value.split(",")]
             _v = [list(map(int, x.split("."))) for x in _v]
-            eprint(f"{_v=}")
+            # eprint(f"{_v=}")
             if len(_v) >= 2:
                 minv = min(_v, key=lambda x: x[0])
                 k1 = [minv.copy()]
                 maxv = max(_v, key=lambda x: x[0])
                 k2 = [maxv.copy()]
-                eprint(f"{minv=} {maxv=}")
+                # eprint(f"{minv=} {maxv=}")
 
                 if abs(minv[0] - maxv[0]) < d:
                     # collapse all
@@ -569,7 +569,15 @@ def main(args):
                     ex_next_n0 = [get_set_exons(gfaS, x) for x in next_n0]
                     prev_n1 = get_incoming_nodes(gfaL, ix_j[1])
                     ex_prev_n1 = [get_set_exons(gfaS, x) for x in prev_n1]
-                    cap_ir = exons_n0.intersection(exons_n1, *ex_next_n0, *ex_prev_n1)
+                    ex_next_n0 = set().union(*ex_next_n0)
+                    ex_prev_n1 = set().union(*ex_prev_n1)
+                    cap_ir = set.intersection(exons_n0, exons_n1, ex_next_n0, ex_prev_n1)
+                    
+                    eprint(f"{exons_n0=}")
+                    eprint(f"{exons_n1=}")
+                    eprint(f"{ex_next_n0=}")
+                    eprint(f"{ex_prev_n1=}")
+                    eprint(f"{cap_ir=}")
 
                     if len(cap_ir) > 0:
                         # Checking that the trascripts belong to the same gene
@@ -840,8 +848,12 @@ def main(args):
                             gfaL, ix_j[1], segments=gfaS, rc=args.rc
                         )
                         ex_prev_n1 = [get_set_exons(gfaS, x) for x in prev_n1]
-                        cap_ir = set().intersection(
-                            exons_n0, exons_n1, *ex_next_n0, *ex_prev_n1
+
+                        ex_next_n0 = set().union(*ex_next_n0)
+                        ex_prev_n1 = set().union(*ex_prev_n1)
+
+                        cap_ir = set.intersection(
+                            exons_n0, exons_n1, ex_next_n0, ex_prev_n1
                         )
                         eprint(f"EX {cap_ir=}")
 

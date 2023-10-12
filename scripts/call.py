@@ -255,7 +255,7 @@ def main(args):
     gfaP = dict()
     junctions = list()
     noveljunctions = list()
-    refpath = []
+    refpaths = []
     for line in open(args.GFA, "r"):
         line = line.strip()
         if line.startswith("S"):
@@ -272,7 +272,7 @@ def main(args):
                 gfaP[pid] = {"path": p[:-1].split("-,")}
                 gfaP[pid]["reverse"] = True
             if not "_R1" in pid:
-                refpath = gfaP[pid]["path"]
+                refpaths.append(gfaP[pid]["path"])
         elif line.startswith("L"):
             (
                 _,
@@ -291,10 +291,12 @@ def main(args):
             if "ID" in gfaL[(nid_from, nid_to)]:
                 noveljunctions.append((nid_from, nid_to))
 
-    curr = 0
-    for n in refpath:
-        gfaS[n]["RP"] = curr
-        curr += gfaS[n]["LN"]
+    eprint(f"Found {len(refpaths)} reference paths.")
+    for refpath in refpaths:
+        curr = 0
+        for n in refpath:
+            gfaS[n]["RP"] = curr
+            curr += gfaS[n]["LN"]
 
     transcript2gene = dict()
     genestrand = dict()

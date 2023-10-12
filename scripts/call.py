@@ -120,7 +120,7 @@ def get_refpos_node(segments: dict, nid: str, key: str, jn_w: int = -1):
         return "?"
 
 
-def get_outgoing_nodes(
+def get_outgoing_nodes_old(
     links: dict, nid: str, segments: dict = None, rc: int = -1
 ) -> list:
     ret = [k[1] for k in links.keys() if k[0] == nid]
@@ -128,8 +128,16 @@ def get_outgoing_nodes(
         ret = [x for x in ret if segments[x]["NC"] > rc]
     return ret
 
+def get_outgoing_nodes(
+    segments: dict, nid: str, rc: int = -1
+) -> list:
+    ret = segments[nid]['O']
+    if segments:
+        ret = [x for x in ret if segments[x]["NC"] > rc]
+    return ret
 
-def get_incoming_nodes(
+
+def get_incoming_nodes_old(
     links: dict, nid: str, segments: dict = None, rc: int = -1
 ) -> list:
     ret = [k[0] for k in links.keys() if k[1] == nid]
@@ -137,13 +145,21 @@ def get_incoming_nodes(
         ret = [x for x in ret if segments[x]["NC"] > rc]
     return ret
 
+def get_incoming_nodes(
+    segments: dict, nid: str, rc: int = -1
+) -> list:
+    ret = segments[nid]['I']
+    if segments:
+        ret = [x for x in ret if segments[x]["NC"] > rc]
+    return ret
 
-def get_outgoing_links(links: dict, nid: str) -> list:
-    return [k for k in links.keys() if k[0] == nid]
+
+# def get_outgoing_links(links: dict, nid: str) -> list:
+#     return [k for k in links.keys() if k[0] == nid]
 
 
-def get_incoming_links(links: dict, nid: str) -> list:
-    return [k for k in links.keys() if k[1] == nid]
+# def get_incoming_links(links: dict, nid: str) -> list:
+#     return [k for k in links.keys() if k[1] == nid]
 
 
 def get_set_exons(nodes: dict, nid: str) -> set:
@@ -167,8 +183,8 @@ def get_path_transcript(path: dict, pid: str, start=None, end=None):
 
 
 def check_junction(ix_j: tuple, segments: dict, links: dict, window: int, rc: int):
-    next_n0 = get_outgoing_nodes(links, ix_j[0], segments=segments, rc=rc)
-    prev_n1 = get_incoming_nodes(links, ix_j[1], segments=segments, rc=rc)
+    next_n0 = get_outgoing_nodes(segments, ix_j[0], rc=rc)
+    prev_n1 = get_incoming_nodes(segments, ix_j[1], rc=rc)
 
     eprint(f"pre {next_n0=}")
     eprint(f"pre {prev_n1=}")
@@ -198,10 +214,10 @@ def check_junction(ix_j: tuple, segments: dict, links: dict, window: int, rc: in
     while i < window:
         i += 1
         _intron_next = [
-            get_outgoing_nodes(links, x, segments=segments, rc=rc) for x in _intron_next
+            get_outgoing_nodes(segments, x, rc=rc) for x in _intron_next
         ]
         _intron_prev = [
-            get_incoming_nodes(links, x, segments=segments, rc=rc) for x in _intron_prev
+            get_incoming_nodes(segments, x, rc=rc) for x in _intron_prev
         ]
         # flatten lists
         _intron_next = [x for y in _intron_next for x in y]
@@ -263,6 +279,8 @@ def main(args):
             gfaS[nid] = build_attrs(fields, args.d)
             # TODO: uncomment if needed
             # gfaS[nid]['seq'] = seq
+            gfaS[nid]['I'] = []
+            gfaS[nid]['O'] = []
         elif line.startswith("P"):
             _, pid, p, _ = line.split()
             if "+," in p[:-1]:
@@ -284,6 +302,8 @@ def main(args):
                 *fields,
             ) = line.split()
             gfaL[(nid_from, nid_to)] = build_attrs(fields, args.d)
+            gfaS[nid_from]['O'].append(nid_to)
+            gfaS[nid_to]['I'].append(nid_from)
             # TODO: uncomment if needed
             # gfaL[(nid_from, nid_to)]['overlap'] = overlap
             if "JN" in gfaL[(nid_from, nid_to)]:
@@ -327,6 +347,21 @@ def main(args):
             transcript2gene[tidx] = gidx
             genestrand[gidx] = line[6]
             genechr[gidx] = line[0]
+
+    suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+    def humansize(nbytes):
+        i = 0
+        while nbytes >= 1024 and i < len(suffixes)-1:
+            nbytes /= 1024.
+            i += 1
+        f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
+        return '%s %s' % (f, suffixes[i])
+
+    print(f"Size of gfaS:\t\t{humansize(sys.getsizeof(gfaS))}\t\t{len(gfaS)=}")
+    print(f"Size of gfaL:\t\t{humansize(sys.getsizeof(gfaL))}\t\t{len(gfaL)=}")
+    print(f"Size of gfaP:\t\t{humansize(sys.getsizeof(gfaP))}\t\t{len(gfaP)=}")
+    print(f"Size of anno_j:\t\t{humansize(sys.getsizeof(junctions))}\t\t{len(junctions)=}")
+    print(f"Size of novel_J:\t{humansize(sys.getsizeof(noveljunctions))}\t\t{len(noveljunctions)=}")
 
     if args.header:
         print(
@@ -434,7 +469,7 @@ def main(args):
 
                     # Checking for non-novel A5
                     # this is A5 on + / A3 on -
-                    for n in get_outgoing_nodes(gfaL, ix_j[0]):
+                    for n in get_outgoing_nodes(gfaS, ix_j[0]):
                         if (
                             len(
                                 cap_a5_ex := (
@@ -499,7 +534,7 @@ def main(args):
 
                     # Checking for non-novel A3
                     # this is A3 on + / A5 on -
-                    for n in get_incoming_nodes(gfaL, ix_j[1]):
+                    for n in get_incoming_nodes(gfaS, ix_j[1]):
                         if (
                             len(
                                 cap_a3_ex := (
@@ -567,9 +602,9 @@ def main(args):
                                             )
 
                     # Checking for non-novel IR
-                    next_n0 = get_outgoing_nodes(gfaL, ix_j[0])
+                    next_n0 = get_outgoing_nodes(gfaS, ix_j[0])
                     ex_next_n0 = [get_set_exons(gfaS, x) for x in next_n0]
-                    prev_n1 = get_incoming_nodes(gfaL, ix_j[1])
+                    prev_n1 = get_incoming_nodes(gfaS, ix_j[1])
                     ex_prev_n1 = [get_set_exons(gfaS, x) for x in prev_n1]
                     ex_next_n0 = set().union(*ex_next_n0)
                     ex_prev_n1 = set().union(*ex_prev_n1)
@@ -730,7 +765,7 @@ def main(args):
                                 ex_next_n0 = set().union(
                                     *[
                                         get_set_exons(gfaS, x)
-                                        for x in get_outgoing_nodes(gfaL, ix_j[0])
+                                        for x in get_outgoing_nodes(gfaS, ix_j[0])
                                     ]
                                 )
                                 eprint(f"check A5b {ex_next_n0=}")
@@ -784,7 +819,7 @@ def main(args):
                                 ex_prev_n1 = set().union(
                                     *[
                                         get_set_exons(gfaS, x)
-                                        for x in get_incoming_nodes(gfaL, ix_j[1])
+                                        for x in get_incoming_nodes(gfaS, ix_j[1])
                                     ]
                                 )
                                 eprint(f"check A3a {ex_prev_n1=}")
@@ -843,11 +878,11 @@ def main(args):
 
                         # Checking for novel IR reverse
                         next_n0 = get_outgoing_nodes(
-                            gfaL, ix_j[0], segments=gfaS, rc=args.rc
+                            gfaS, ix_j[0], rc=args.rc
                         )
                         ex_next_n0 = [get_set_exons(gfaS, x) for x in next_n0]
                         prev_n1 = get_incoming_nodes(
-                            gfaL, ix_j[1], segments=gfaS, rc=args.rc
+                            gfaS, ix_j[1], rc=args.rc
                         )
                         ex_prev_n1 = [get_set_exons(gfaS, x) for x in prev_n1]
 
@@ -1212,8 +1247,8 @@ def main(args):
             _trjunc = set(map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"]))
             eprint(f"[IIR Checking junction {ix_j}]: {junc}, {_trjunc}")
 
-            next_n0 = get_outgoing_nodes(gfaL, ix_j[0], segments=gfaS, rc=args.rc)
-            prev_n1 = get_incoming_nodes(gfaL, ix_j[1], segments=gfaS, rc=args.rc)
+            next_n0 = get_outgoing_nodes(gfaS, ix_j[0], rc=args.rc)
+            prev_n1 = get_incoming_nodes(gfaS, ix_j[1], rc=args.rc)
 
             eprint(f"pre {next_n0=}")
             eprint(f"pre {prev_n1=}")
@@ -1261,11 +1296,11 @@ def main(args):
             while i < args.irw:
                 i += 1
                 _intron_next = [
-                    get_outgoing_nodes(gfaL, x, segments=gfaS, rc=args.rc)
+                    get_outgoing_nodes(gfaS, x, rc=args.rc)
                     for x in _intron_next
                 ]
                 _intron_prev = [
-                    get_incoming_nodes(gfaL, x, segments=gfaS, rc=args.rc)
+                    get_incoming_nodes(gfaS, x, rc=args.rc)
                     for x in _intron_prev
                 ]
                 # flatten lists

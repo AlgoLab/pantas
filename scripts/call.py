@@ -132,7 +132,7 @@ def get_outgoing_nodes(
     segments: dict, nid: str, rc: int = -1
 ) -> list:
     ret = segments[nid]['O']
-    if segments:
+    if rc > 0:
         ret = [x for x in ret if segments[x]["NC"] > rc]
     return ret
 
@@ -149,7 +149,7 @@ def get_incoming_nodes(
     segments: dict, nid: str, rc: int = -1
 ) -> list:
     ret = segments[nid]['I']
-    if segments:
+    if rc > 0:
         ret = [x for x in ret if segments[x]["NC"] > rc]
     return ret
 

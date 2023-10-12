@@ -1,11 +1,11 @@
 import itertools
 import re
 import sys
-from functools import partial
-import logging
 from math import floor
 
-eprint = logging.debug
+def dopass(*args):
+    pass
+eprint = dopass
 
 
 def collapse_linkcounts(lc: list):
@@ -347,7 +347,7 @@ def main(args):
             transcript2gene[tidx] = gidx
             genestrand[gidx] = line[6]
             genechr[gidx] = line[0]
-
+    
     suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
     def humansize(nbytes):
         i = 0
@@ -1183,34 +1183,6 @@ def main(args):
                                 _tex1 = int(_fex1[0].split(".")[-1])
 
                                 if abs(_tex0 - _tex1) == 1:
-                                    # TODO: get sequence if necessary
-
-                                    # _ce_trs = set(
-                                    #     get_transcript_from_exons(
-                                    #         get_set_exons(gfaS, _nx[1])
-                                    #     )
-                                    # ) | set(
-                                    #     get_transcript_from_exons(
-                                    #         get_set_exons(gfaS, _ny[0])
-                                    #     )
-                                    # )
-                                    # for x in _ce_trs:
-                                    #     try:
-                                    #         _subpath = get_path_transcript(
-                                    #             gfaP, x, start=_nx[1], end=_ny[0]
-                                    #         )
-                                    #         seq_ce = "".join([gfaS[x]["seq"] for x in _subpath])
-                                    #         break
-                                    #     except:
-                                    #         continue
-                                    # else:
-                                    #     # this might be because:
-                                    #     # 1. the nodes are intronic or
-                                    #     # 2. the assumption of nX and nY for the CE is not valid:
-                                    #     #   e.g. there is more than one jump, it might jump onto different genes/transcripts
-                                    #     #       maybe we can check and differentiate the two cases and treat them differently
-                                    #     seq_ce = "?"
-
                                     print(
                                         "CE",
                                         "novel",
@@ -1252,18 +1224,6 @@ def main(args):
 
             eprint(f"pre {next_n0=}")
             eprint(f"pre {prev_n1=}")
-
-            # filter only intronic
-            # _intron_next = set(
-            #     filter(lambda x: len(
-            #         set(get_transcript_from_exons(get_set_exons(gfaS, x))) - _trjunc
-            #         ) == 0, next_n0)
-            # )
-            # _intron_prev = set(
-            #     filter(lambda x: len(
-            #         set(get_transcript_from_exons(get_set_exons(gfaS, x))) - _trjunc
-            #         ) == 0, prev_n1)
-            # )
 
             _intron_next = set(next_n0) - set(ix_j)
             _intron_prev = set(prev_n1) - set(ix_j)
@@ -1312,24 +1272,6 @@ def main(args):
                 eprint(f"{i=} {_intron_next=}")
                 eprint(f"{i=} {_intron_prev=}")
 
-                # _intron_next = set(
-                #     filter(
-                #         lambda x: len(
-                #             set(get_transcript_from_exons(get_set_exons(gfaS, x))) - _trjunc
-                #             ) == 0,
-                #         _intron_next,
-                #     )
-                # )
-                # _intron_prev = set(
-                #     filter(
-                #         lambda x: len(
-                #             set(get_transcript_from_exons(get_set_exons(gfaS, x))) - _trjunc
-                #                       ) == 0,
-                #         _intron_prev,
-                #     )
-                # )
-                eprint(f"{i=} {_intron_next=}")
-                eprint(f"{i=} {_intron_prev=}")
 
                 if len(_intron_next & _intron_prev) > 0:
                     _subpath_total = True
@@ -1382,10 +1324,7 @@ def main(args):
                 for _j in junc["JN"]:
                     _tr = ".".join(_j.split(".")[:-2])
 
-                    # if genestrand[transcript2gene[_tr]] == "+":
                     _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}"
-                    # else:
-                    #     _refpos = f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[1], 'LN')}-{get_refpos_node(gfaS, ix_j[0], 'RP')}"
 
                     eprint("IR")
                     print(
@@ -1482,6 +1421,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     if args.debug:
-        # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
         eprint = print
     main(args)

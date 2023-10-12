@@ -348,21 +348,6 @@ def main(args):
             genestrand[gidx] = line[6]
             genechr[gidx] = line[0]
     
-    suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
-    def humansize(nbytes):
-        i = 0
-        while nbytes >= 1024 and i < len(suffixes)-1:
-            nbytes /= 1024.
-            i += 1
-        f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
-        return '%s %s' % (f, suffixes[i])
-
-    eprint(f"Size of gfaS:\t\t{humansize(sys.getsizeof(gfaS))}\t\t{len(gfaS)=}")
-    eprint(f"Size of gfaL:\t\t{humansize(sys.getsizeof(gfaL))}\t\t{len(gfaL)=}")
-    eprint(f"Size of gfaP:\t\t{humansize(sys.getsizeof(gfaP))}\t\t{len(gfaP)=}")
-    eprint(f"Size of anno_j:\t\t{humansize(sys.getsizeof(junctions))}\t\t{len(junctions)=}")
-    eprint(f"Size of novel_J:\t{humansize(sys.getsizeof(noveljunctions))}\t\t{len(noveljunctions)=}")
-
     if args.header:
         print(
             "event_type",

@@ -863,11 +863,11 @@ def main(args):
 
                         # Checking for novel IR reverse
                         next_n0 = get_outgoing_nodes(
-                            gfaS, ix_j[0], rc=args.rc
+                            gfaS, ix_j[0]
                         )
                         ex_next_n0 = [get_set_exons(gfaS, x) for x in next_n0]
                         prev_n1 = get_incoming_nodes(
-                            gfaS, ix_j[1], rc=args.rc
+                            gfaS, ix_j[1]
                         )
                         ex_prev_n1 = [get_set_exons(gfaS, x) for x in prev_n1]
 
@@ -928,7 +928,7 @@ def main(args):
                         # from n0 to somewhere else
 
                         nX_j = [x for x in junctions if x[0] == ix_j[0]]
-                        nX = [x[1] for x in nX_j if gfaS[x[1]].get("NC", 0) > args.rc]
+                        nX = [x[1] for x in nX_j]
                         if len(nX) > 0:
                             eprint(f"{nX=}")
                             exons_nX = [get_set_exons(gfaS, x) for x in nX]
@@ -1021,7 +1021,7 @@ def main(args):
                         # to n1 from somewhere else
 
                         nX_j = [x for x in junctions if x[1] == ix_j[1]]
-                        nX = [x[0] for x in nX_j if gfaS[x[0]].get("NC", 0) > args.rc]
+                        nX = [x[0] for x in nX_j]
                         if len(nX) > 0:
                             eprint(f"{nX=}")
                             exons_nX = [get_set_exons(gfaS, x) for x in nX]
@@ -1112,95 +1112,91 @@ def main(args):
 
         from_single_novel_junctions()
 
-        # Check potential CE
-        # Known junctions (n0 > n1) that have novel junctions (n0 > nX) and (nY > n1)
-        def from_novel_inside_nonnovel():
-            for ix_j in junctions:
-                junc = gfaL[ix_j]
-                if junc["RC"] > args.rc:
-                    _trjunc = set(
-                        map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"])
-                    )
-                    # nX = [x[1] for x in noveljunctions if x[0] == ix_j[0]]
-                    # nY = [x[0] for x in noveljunctions if x[1] == ix_j[1]]
-                    nX = [
-                        x
-                        for x in noveljunctions
-                        if x[0] == ix_j[0] and gfaS[x[0]].get("NC", 0) > args.rc
-                    ]
-                    nY = [
-                        x
-                        for x in noveljunctions
-                        if x[1] == ix_j[1] and gfaS[x[1]].get("NC", 0) > args.rc
-                    ]
-
-                    if len(nX) > 0 and len(nY) > 0:
-                        eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
-                        eprint(
-                            f"n0>nX= "
-                            + f"{[(x, gfaL[x]) for x in noveljunctions if x[0] == ix_j[0]]}"
-                        )
-                        eprint(
-                            f"nY>n1= "
-                            + f"{[(x, gfaL[x]) for x in noveljunctions if x[1] == ix_j[1]]}"
-                        )
-                        eprint(f"{nX=}")
-                        eprint(f"{nY=}")
-                        _enx = get_set_exons(gfaS, ix_j[0])
-                        eprint(f"exons_nx: {_enx}")
-                        _eny = get_set_exons(gfaS, ix_j[1])
-                        eprint(f"exons_ny: {_eny}")
-
-                        for _nx, _ny in itertools.product(nX, nY):
-                            eprint(f"pair: {_nx} - {_ny}")
-
-                            _tnx = set(get_transcript_from_exons(_enx))
-                            eprint(f"TR_nx: {_tnx}")
-                            _tny = set(get_transcript_from_exons(_eny))
-                            eprint(f"TR_ny: {_tny}")
-
-                            for _tr in _tnx & _tny:
-                                _fex0 = list(filter(lambda x: x.startswith(_tr), _enx))
-                                _fex1 = list(filter(lambda x: x.startswith(_tr), _eny))
-                                assert len(_fex0) == len(_fex1) == 1
-
-                                _tex0 = int(_fex0[0].split(".")[-1])
-                                _tex1 = int(_fex1[0].split(".")[-1])
-
-                                if abs(_tex0 - _tex1) == 1:
-                                    print(
-                                        "CE",
-                                        "novel",
-                                        genechr[transcript2gene[_tr]],
-                                        transcript2gene[_tr],
-                                        genestrand[transcript2gene[_tr]],
-                                        # Intron on annotation
-                                        f"{_tr}.{min(_tex0, _tex1)}.{max(_tex0, _tex1)}",
-                                        ">".join(ix_j),
-                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}",
-                                        junc["RC"],
-                                        # Cassette junction 1
-                                        "?",
-                                        ">".join(_nx),
-                                        # CHECKME: maybe this is not alway true, but yes
-                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _nx[0], 'LN')}-{get_refpos_node(gfaS, _nx[1], 'IL', junc['RC'])}",
-                                        gfaL[_nx]["RC"],
-                                        # Cassette junction 2
-                                        "?",
-                                        ">".join(_ny),
-                                        # CHECKME: maybe this is not alway true, but yes
-                                        f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _ny[0], 'OL', junc['RC'])}-{get_refpos_node(gfaS, _ny[1], 'RP')}",
-                                        gfaL[_ny]["RC"],
-                                        sep=",",
-                                    )
-
-                        eprint("-" * 15)
-
-        from_novel_inside_nonnovel()
-
-        # checking for IR
         for ix_j in junctions:
             junc = gfaL[ix_j]
+
+            # Check potential CE
+            # Known junctions (n0 > n1) that have novel junctions (n0 > nX) and (nY > n1)
+
+            _trjunc = set(
+                map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"])
+            )
+            # nX = [x[1] for x in noveljunctions if x[0] == ix_j[0]]
+            # nY = [x[0] for x in noveljunctions if x[1] == ix_j[1]]
+            nX = [
+                x
+                for x in noveljunctions
+                if x[0] == ix_j[0] and gfaS[x[0]].get("NC", 0) > args.rc
+            ]
+            nY = [
+                x
+                for x in noveljunctions
+                if x[1] == ix_j[1] and gfaS[x[1]].get("NC", 0) > args.rc
+            ]
+
+            if len(nX) > 0 and len(nY) > 0:
+                eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
+                eprint(
+                    f"n0>nX= "
+                    + f"{[(x, gfaL[x]) for x in noveljunctions if x[0] == ix_j[0]]}"
+                )
+                eprint(
+                    f"nY>n1= "
+                    + f"{[(x, gfaL[x]) for x in noveljunctions if x[1] == ix_j[1]]}"
+                )
+                eprint(f"{nX=}")
+                eprint(f"{nY=}")
+                _enx = get_set_exons(gfaS, ix_j[0])
+                eprint(f"exons_nx: {_enx}")
+                _eny = get_set_exons(gfaS, ix_j[1])
+                eprint(f"exons_ny: {_eny}")
+
+                for _nx, _ny in itertools.product(nX, nY):
+                    eprint(f"pair: {_nx} - {_ny}")
+
+                    _tnx = set(get_transcript_from_exons(_enx))
+                    eprint(f"TR_nx: {_tnx}")
+                    _tny = set(get_transcript_from_exons(_eny))
+                    eprint(f"TR_ny: {_tny}")
+
+                    for _tr in _tnx & _tny:
+                        _fex0 = list(filter(lambda x: x.startswith(_tr), _enx))
+                        _fex1 = list(filter(lambda x: x.startswith(_tr), _eny))
+                        assert len(_fex0) == len(_fex1) == 1
+
+                        _tex0 = int(_fex0[0].split(".")[-1])
+                        _tex1 = int(_fex1[0].split(".")[-1])
+
+                        if abs(_tex0 - _tex1) == 1:
+                            print(
+                                "CE",
+                                "novel",
+                                genechr[transcript2gene[_tr]],
+                                transcript2gene[_tr],
+                                genestrand[transcript2gene[_tr]],
+                                # Intron on annotation
+                                f"{_tr}.{min(_tex0, _tex1)}.{max(_tex0, _tex1)}",
+                                ">".join(ix_j),
+                                f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, ix_j[0], 'LN')}-{get_refpos_node(gfaS, ix_j[1], 'RP')}",
+                                junc["RC"],
+                                # Cassette junction 1
+                                "?",
+                                ">".join(_nx),
+                                # CHECKME: maybe this is not alway true, but yes
+                                f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _nx[0], 'LN')}-{get_refpos_node(gfaS, _nx[1], 'IL', junc['RC'])}",
+                                gfaL[_nx]["RC"],
+                                # Cassette junction 2
+                                "?",
+                                ">".join(_ny),
+                                # CHECKME: maybe this is not alway true, but yes
+                                f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _ny[0], 'OL', junc['RC'])}-{get_refpos_node(gfaS, _ny[1], 'RP')}",
+                                gfaL[_ny]["RC"],
+                                sep=",",
+                            )
+
+                eprint("-" * 15)
+
+            # checking for IR
             _trjunc = set(map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"]))
             eprint(f"[IIR Checking junction {ix_j}]: {junc}, {_trjunc}")
 

@@ -24,7 +24,7 @@ tabix -p vcf DGRP2.SNPs_only.genes.norm.vcf.gz
 
 wget https://resources.aertslab.org/DGRP2/BCM-HGSC/final/dm6/DGRP2.source_BCM-HGSC.dm6.final.vcf.gz
 tabix -p vcf DGRP2.source_BCM-HGSC.dm6.final.vcf.gz
-bcftools view -R genes.chroms.bed -c 1 -q 0.01 -Oz DGRP2.source_BCM-HGSC.dm6.final.vcf.gz > DGRP2.genes.vcf.gz
+bcftools view -R genes.bed -c 1 -q 0.01 -Oz DGRP2.source_BCM-HGSC.dm6.final.vcf.gz > DGRP2.genes.vcf.gz
 tabix -p vcf DGRP2.genes.vcf.gz
 python3 fix_vidx.py DGRP2.genes.vcf.gz | bcftools norm -d all -Oz -f ref.chroms.fa > DGRP2.genes.norm.vcf.gz
 tabix -p vcf DGRP2.genes.norm.vcf.gz
@@ -57,17 +57,21 @@ snakemake -c16 --config fa=/path/to/reference.fa gtf=/path/to/annotation.gtf vcf
 wget https://ftp.ensembl.org/pub/release-109/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
 gunzip Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
 samtools faidx Homo_sapiens.GRCh38.dna.primary_assembly.fa $(seq 1 22) X Y > reference.chroms.fa
+sed -i "s/^>/>chr/g" reference.chroms.fa
+samtools faidx reference.chroms.fa
 
 wget https://ftp.ensembl.org/pub/release-109/gtf/homo_sapiens/Homo_sapiens.GRCh38.109.gtf.gz
-for c in $(seq 1 22) X Y ; do zgrep -P "^$c\t" Homo_sapiens.GRCh38.109.gtf.gz ; done > annotation.chroms.gtf
+for c in $(seq 1 22) X Y ; do zgrep -P "^$c\t" Homo_sapiens.GRCh38.109.gtf.gz | grep "protein_coding" ; done > annotation.gtf
 
 mkdir 1kgp-GRCh38
 cd 1kgp-GRCh38
 # get all VCF from ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV/
 mv 1kGP_high_coverage_Illumina.chrX.filtered.SNV_INDEL_SV_phased_panel.v2.vcf.gz 1kGP_high_coverage_Illumina.chrX.filtered.SNV_INDEL_SV_phased_panel.vcf.gz
 mv 1kGP_high_coverage_Illumina.chrX.filtered.SNV_INDEL_SV_phased_panel.v2.vcf.gz.tbi 1kGP_high_coverage_Illumina.chrX.filtered.SNV_INDEL_SV_phased_panel.vcf.gz.tbi
-
-for chr in $(seq 1 22) X ; do bcftools view -c 1 -q 0.001 1kGP_high_coverage_Illumina.chr$c.filtered.SNV_INDEL_SV_phased_panel.vcf.gz -Oz | python3 ~/code/pantas2/exps/fix_vidx.py | bcftools norm -d all -Oz -f ../reference.chroms.fa > $c-mod.vcf.gz ; tabix -p vcf $c-mod.vcf.gz ; done
-bcftools concat -Oz *-mod.vcf.gz > ../1kgp-GRCh38.vcf.gz
+for c in $(seq 1 22) X ; do echo $c ; bcftools view -c 1 -q 0.001 1kGP_high_coverage_Illumina.chr$c.filtered.SNV_INDEL_SV_phased_panel.vcf.gz -Oz | bcftools norm -d all -Oz -f ../reference.chroms.fa > chr$c-mod.vcf.gz ; tabix -p vcf chr$c-mod.vcf.gz ; done
+bcftools concat -Oz chr*-mod.vcf.gz > ../1kgp-GRCh38.vcf.gz
 tabix -p vcf ../1kgp-GRCh38.vcf.gz
+
+# get SRX651011 project
+for fq in $(ls *.fastq) ; do bn=$(basename $fq .fastq) ; echo $bn ; /usr/bin/python3 clean_reads_from_N.py $bn.fastq > $bn.clean.fq ; done
 ```

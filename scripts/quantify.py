@@ -106,7 +106,10 @@ def get_referencebased_coordinates(splicedfa_path):
         if not line.startswith(">"):
             continue
         line = line[1:]
-        transcript, loc, exs, segs = line.split(" ")
+        try:
+            transcript, loc, exs, segs = line.split(" ")
+        except ValueError:
+            transcript, cds, loc, exs, segs = line.split(" ")
         # print(transcript, loc, exs, segs)
 
         chrom = loc.split(":")[1].split("|")[0]

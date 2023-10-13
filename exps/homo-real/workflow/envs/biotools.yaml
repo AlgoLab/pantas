@@ -1,0 +1,7 @@
+name: biotools
+channels:
+  - bioconda
+dependencies:
+  - samtools
+  - bcftools
+  - tabix

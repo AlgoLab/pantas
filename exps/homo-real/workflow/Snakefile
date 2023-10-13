@@ -1,0 +1,35 @@
+from snakemake.utils import min_version
+import os
+
+
+##### config file #####
+configfile: "config/config.yaml"
+
+
+##### set minimum snakemake version #####
+min_version("6.4.1")
+
+
+##### include rules #####
+# global variables and download input
+include: "rules/common.smk"
+# rmats rules
+include: "rules/rmats.smk"
+# whippet rules
+include: "rules/whippet.smk"
+# salmon+suppa rules
+# include: "rules/salmon_suppa.smk"
+# # pantas rules
+include: "rules/pantas.smk"
+
+
+# # merge results and make plots/tables
+# include: "rules/results.smk"
+
+
+# ##### target rules #####
+rule all:
+    input:
+        expand(pjoin(ODIR, "pantas2", "quant.w{w}.csv"), w=Ws),
+        pjoin(ODIR, "rMATS", "summary.txt"),
+        pjoin(ODIR, "whippet", "psi.diff"),

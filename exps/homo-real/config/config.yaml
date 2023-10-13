@@ -1,0 +1,11 @@
+fa : /home/ld/data/pantas2/4.fa
+gtf : /home/ld/data/pantas2/4.gtf
+vcf : /home/ld/data/pantas2/4.norm.snp.vcf.gz
+odir : /home/ld/data/pantas2/homo-real-out
+glist: /home/ld/data/pantas2/4.genes.list
+L : 150
+software : software
+s1 :
+  - sample_01,/home/ld/data/pantas2/sample_01_1.clean.fq,/home/ld/data/pantas2/sample_01_2.clean.fq
+s2 :
+  - sample_02,/home/ld/data/pantas2/sample_01_1.clean.fq,/home/ld/data/pantas2/sample_01_2.clean.fq

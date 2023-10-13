@@ -29,7 +29,7 @@ rule STAR_map:
         pjoin(ODIR, "bench", "STAR", "map.{sample}.time"),
     shell:
         """
-        /usr/bin/time -vo {log} STAR --runThreadN {threads} --genomeDir {input.index} --readFilesIn {input.fq1} {input.fq2} --outFileNamePrefix {params.oprefix} --outSAMtype BAM SortedByCoordinate --outSAMattributes All --limitBAMsortRAM 53687091200
+        /usr/bin/time -vo {log} STAR --runThreadN {threads} --genomeDir {input.index} --readFilesIn {input.fq1} {input.fq2} --outFileNamePrefix {params.oprefix} --outSAMtype BAM SortedByCoordinate --outSAMattributes All --limitBAMsortRAM 53687091200  --readFilesCommand zcat
         samtools index {output.bam}
         """
 

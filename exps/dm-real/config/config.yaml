@@ -1,18 +1,15 @@
-software : software_sim
-res : results
-input : input
-odir : output_sim
-fa : /home/cozzi/pantas2/exps/dm-real/input/4.fa
-gtf : /home/cozzi/pantas2/exps/dm-real/input/output_sim/splicing_variants.gtf
-vcf : /home/cozzi/pantas2/exps/dm-real/input/4.vcf.gz
-L : 150
-N : 150
+software : /data/drosmel/software
+odir : /data/drosmel/output_8750000
+fa : /data/drosmel/ref.chroms.fa
+gtf : /data/drosmel/genes.chroms.gtf
+vcf : /data/drosmel/DGRP2.SNPs_only.genes.norm.vcf.gz
 s1 :
-  - sample_01,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_01_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_01_2.clean.fq
-  - sample_02,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_02_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_02_2.clean.fq
-  - sample_03,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_03_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_03_2.clean.fq
+  - SRR14101759,/data/drosmel/samples_8750000/SRR14101759_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101759_l150_2_clean.fq.gz
+  - SRR14101760,/data/drosmel/samples_8750000/SRR14101760_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101760_l150_2_clean.fq.gz
+  - SRR14101761,/data/drosmel/samples_8750000/SRR14101761_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101761_l150_2_clean.fq.gz
 s2 :
-  - sample_04,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_04_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_04_2.clean.fq
-  - sample_05,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_05_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_05_2.clean.fq
-  - sample_06,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_06_1.clean.fq,/home/cozzi/pantas2/exps/dm-real/input/output_sim/sample_06_2.clean.fq
+  - SRR14101762,/data/drosmel/samples_8750000/SRR14101762_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101762_l150_2_clean.fq.gz
+  - SRR14101763,/data/drosmel/samples_8750000/SRR14101763_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101763_l150_2_clean.fq.gz
+  - SRR14101764,/data/drosmel/samples_8750000/SRR14101764_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101764_l150_2_clean.fq.gz
+
 

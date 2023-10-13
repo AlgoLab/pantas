@@ -30,14 +30,15 @@ def parse_time_verbose(time_file, tool):
 
 
 def main(argv):
-    bench_dir = argv[0]
+    bench_dir = snakemake.params.bench_dir
     if bench_dir.endswith("/"):
         bench_dir = bench_dir[:-1]
-    output_dir = argv[1]
+    output_dir = snakemake.params.res_dir
     if output_dir.endswith("/"):
         output_dir = output_dir[:-1]
 
-    w = argv[2]
+    # w = argv[2]
+    Ws = snakemake.params.Ws
     output = f"{output_dir}"
 
     df = pd.DataFrame(
@@ -114,24 +115,26 @@ def main(argv):
     pantas_bench_call_files = {}
     for file in os.listdir(pantas_bench_dir):
         filename = os.fsdecode(file)
-        if filename.endswith(f"{w}.time") and filename.startswith("call"):
-            w = filename.split(".")[1][1:]
-            if w not in pantas_bench_call_files.keys():
-                pantas_bench_call_files[w] = [f"{pantas_bench_dir}/{filename}"]
-            else:
-                pantas_bench_call_files[w].append(f"{pantas_bench_dir}/{filename}")
+        for w in Ws:
+            if filename.endswith(f"{w}.time") and filename.startswith("call"):
+                # w = filename.split(".")[1][1:]
+                if w not in pantas_bench_call_files.keys():
+                    pantas_bench_call_files[w] = [f"{pantas_bench_dir}/{filename}"]
+                else:
+                    pantas_bench_call_files[w].append(f"{pantas_bench_dir}/{filename}")
     for w in pantas_bench_call_files.keys():
         pantas_bench_call_files[w].sort()
 
     pantas_bench_quant_files = {}
     for file in os.listdir(pantas_bench_dir):
         filename = os.fsdecode(file)
-        if filename.endswith(f"{w}.time") and filename.startswith("quant"):
-            w = filename.split(".")[1][1:]
-            if w not in pantas_bench_quant_files.keys():
-                pantas_bench_quant_files[w] = [f"{pantas_bench_dir}/{filename}"]
-            else:
-                pantas_bench_quant_files[w].append(f"{pantas_bench_dir}/{filename}")
+        for w in Ws:
+            if filename.endswith(f"{w}.time") and filename.startswith("quant"):
+                # w = filename.split(".")[1][1:]
+                if w not in pantas_bench_quant_files.keys():
+                    pantas_bench_quant_files[w] = [f"{pantas_bench_dir}/{filename}"]
+                else:
+                    pantas_bench_quant_files[w].append(f"{pantas_bench_dir}/{filename}")
     for w in pantas_bench_quant_files.keys():
         pantas_bench_quant_files[w].sort()
 
@@ -178,7 +181,7 @@ def main(argv):
                 axis=0,
             )
 
-    df.to_csv(f"{output}/bench_{w}.csv", index=False)
+    df.to_csv(f"{output}/bench.csv", index=False)
 
 
 if __name__ == "__main__":

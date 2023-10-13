@@ -1,11 +1,15 @@
 name: pantas2
 channels:
   - bioconda
+  - conda-forge
 dependencies:
   - python=3.9
   - biopython
+  - bcftools
+  - samtools
+  - tabix
   - gffutils
   - gffread
-  - vg
   - csvkit
   - snakemake-minimal
+  - vg=1.50.1

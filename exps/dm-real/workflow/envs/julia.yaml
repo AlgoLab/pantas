@@ -1,3 +1,5 @@
 name: julia
+channels:
+  - conda-forge
 dependencies:
   - julia=1.8.0

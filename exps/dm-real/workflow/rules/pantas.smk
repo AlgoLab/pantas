@@ -28,11 +28,12 @@ rule pantas2_index:
         wd=pjoin(ODIR,  "pantas2", "index"),
     log:
         time=pjoin(ODIR, "bench", "pantas2", "index.time"),
+    threads: workflow.cores
     conda: "../envs/pantas2.yaml"
     shell:
         """
         curr_dir=$(pwd)
-        /usr/bin/time -vo {log.time} bash {input.exe} index {input.fa} {input.gtf} {input.vcf} $curr_dir/{params.wd} {threads}
+        /usr/bin/time -vo {log.time} bash {input.exe} index {input.fa} {input.gtf} {input.vcf} {params.wd} {threads}
         """
 
 
@@ -53,24 +54,6 @@ rule pantas2_mpmap:
     shell:
         """
         /usr/bin/time -vo {log} vg mpmap -x {input.xg} -g {input.gcsa} -d {input.dist} -f {input.fq1} -f {input.fq2} -F GAF --threads {threads} > {output.gaf}
-        """
-
-
-rule pantas2_mpmap_bam:
-    input:
-        xg=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.xg"),
-        gcsa=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.gcsa"),
-        dist=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.dist"),
-        fq1=lambda wildcards: FQs[wildcards.sample][0],
-        fq2=lambda wildcards: FQs[wildcards.sample][1],
-    output:
-        bam=pjoin(ODIR, "pantas2", "{sample}.bam"),
-    threads: workflow.cores
-    conda: "../envs/pantas2.yaml"
-    shell:
-        """
-        vg mpmap -x {input.xg} -g {input.gcsa} -d {input.dist} -f {input.fq1} -f {input.fq2} -F BAM --threads {threads} | samtools sort > {output.bam}
-        samtools index {output.bam}
         """
 
 rule pantas_weight:

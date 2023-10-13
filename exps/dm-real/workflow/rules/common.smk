@@ -4,15 +4,8 @@ from os.path import join as pjoin
 from os.path import isfile
 import gzip
 
-## params
-seed = 23
-iterations = 1
-
-random.seed(seed)
 
 software_folder = config["software"]
-#input_folder = config["input"]
-results_folder = config["res"]
 
 ODIR = config["odir"]
 
@@ -24,16 +17,12 @@ VCF = config["vcf"]
 S1 = config["s1"]
 S2 = config["s2"]
 
-L = config["L"]
-N = config["N"]
+Ws = [-1, 5, 10]
 
-Ks = [31]
-#Ws = [-1, 1, 3, 5, 10]
-Ws = [-1,2]
-# if not isfile(FA + ".fai"):
-#     print("\n\nInput reference not indexed, please index with samtools faidx\n\n")
-#     sys.exit(1)
-
+p_value = 10,
+min_dpsi = -1,
+min_prob = -1,
+relax = 4
 chroms = []
 for line in open(FA + ".fai"):
     chroms.append(line.split("\t")[0])

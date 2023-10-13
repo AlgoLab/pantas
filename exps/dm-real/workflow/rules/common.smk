@@ -27,14 +27,6 @@ chroms = []
 for line in open(FA + ".fai"):
     chroms.append(line.split("\t")[0])
 
-samples = []
-with gzip.open(VCF, "rt") as fin:
-    for line in fin:
-        if line.startswith("#C"):
-            samples = random.sample(line.split("\t")[9:], iterations)
-            break
-assert samples != []
-
 FQs = {}
 C1 = {}
 for fq in S1:

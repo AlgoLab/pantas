@@ -31,5 +31,5 @@ include: "rules/pantas.smk"
 rule all:
     input:
         expand(pjoin(ODIR, "pantas2", "quant.w{w}.csv"), w=Ws),
-        pjoin(ODIR, "rMATS", "summary.txt"),
-        pjoin(ODIR, "whippet", "psi.diff"),
+        # pjoin(ODIR, "rMATS", "summary.txt"),
+        # pjoin(ODIR, "whippet", "psi.diff"),

@@ -17,6 +17,18 @@ rule download_pantas:
         """
 
 
+rule sub_fa:
+    input:
+        fa=FA,
+        bed=pjoin(ODIR, "pantas2", "genes.bed"),
+    output:
+        fa=pjoin(ODIR, "pantas2", "ref.fa"),
+    shell:
+        """
+        cut -f1 {input.bed} | sort -u | while read chr ; do samtools faidx {input.fa} ${{chr}} ; done > {output.fa}
+        """
+
+
 rule sub_gtf:
     input:
         gtf=GTF,
@@ -81,7 +93,7 @@ rule shark:
 
 rule pantas2_index:
     input:
-        fa=FA,
+        fa=pjoin(ODIR, "pantas2", "ref.fa"),
         gtf=pjoin(ODIR, "pantas2", "genes.gtf"),
         vcf=pjoin(ODIR, "pantas2", "variations.vcf.gz"),
         exe=rules.download_pantas.output.sh,

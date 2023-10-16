@@ -308,7 +308,7 @@ def main(args):
             eqs = [
                 x
                 for x in events_2[etype]
-                if eq_event(e1, x, relax=min(1, RELAX * (len(args.c2) - 1)))
+                if eq_event(e1, x, relax=min(0, RELAX * (len(args.c2) - 1)))
             ]
             if len(eqs) > 0:
                 assert len(eqs) == 1
@@ -332,7 +332,7 @@ def main(args):
             eqs = [
                 x
                 for x in events_1[etype]
-                if eq_event(e2, x, relax=min(1, RELAX * (len(args.c2) - 1)))
+                if eq_event(e2, x, relax=min(0, RELAX * (len(args.c2) - 1)))
             ]
             if len(eqs) == 0:
                 print(e2.to_csv(), "W1", "W2", "NaN", e2.psi(), "NaN", sep=",")

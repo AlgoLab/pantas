@@ -59,7 +59,7 @@ rule extract_chrom_gtf:
         pjoin(WD, "chroms", "{c}.gtf"),
     shell:
         """
-        grep -P "^{wildcards.c}\t" {input} > {output}
+        grep -P "^{wildcards.c}\\t" {input} > {output}
         """
 
 

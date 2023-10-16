@@ -28,7 +28,7 @@ def calc_psi(event_cov: int, canonic_cov: int, mode: str = "canonic"):
     else:
         raise TypeError
 
-    return float(num) / den
+    return float(num) / den if den != 0 else -1
 
 
 class Event:
@@ -312,13 +312,18 @@ def main(args):
             ]
             if len(eqs) > 0:
                 assert len(eqs) == 1
+                psi1 = e1.psi()
+                psi2 = eqs[0].psi()
+                dpsi = max(0, psi1) - max(0, psi2)
+                if psi1 == -1 and psi2 == -1:
+                    dpsi = -1
                 print(
                     e1.to_csv(),
                     "W1",
                     "W2",
-                    psi1 := e1.psi(),
-                    psi2 := eqs[0].psi(),
-                    psi1 - psi2,
+                    psi1,
+                    psi2,
+                    dpsi,
                     sep=",",
                 )
             else:

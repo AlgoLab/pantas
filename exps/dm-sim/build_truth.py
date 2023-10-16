@@ -14,9 +14,9 @@ def parse_event_annotation(fpath):
             continue
         etype, tvar, templ, gs, ge, ts, te = line.strip("\n").split("\t")
         gs, ge = int(gs), int(ge)
-        if gs == ge:
-            continue
-        assert gs < ge
+        # if gs == ge:
+        #     continue
+        # assert gs < ge
         events[tvar] = (gs, ge)
     return events
 
@@ -26,6 +26,7 @@ def main():
     # TODO: get diff?
     event_annotation_path = sys.argv[1]
     counts = sys.argv[2]
+    min_supp = -1
 
     events = parse_event_annotation(event_annotation_path)
     templates = {}
@@ -85,6 +86,12 @@ def main():
                         if s == j1[0] and e == j2[1]:
                             jj = (s, e, rc1, rc2)
                 assert j1 != None and j2 != None and jj != None
+
+                if any(
+                    [x < min_supp for x in [j1[2], j2[2], jj[2], j1[3], j2[3], jj[3]]]
+                ):
+                    continue
+
                 w1, w2, w3 = j1[2], j2[2], jj[2]
                 try:
                     psi1 = ((w1 + w2) / 2) / ((w1 + w2) / 2 + w3)
@@ -131,6 +138,10 @@ def main():
                             lj = (s, e, rc1, rc2)
                 assert sj != None and lj != None
                 assert sj[1] == lj[1]
+
+                if any([x < min_supp for x in [sj[2], lj[2], sj[3], lj[3]]]):
+                    continue
+
                 try:
                     psi1 = sj[2] / (sj[2] + lj[2])
                 except ZeroDivisionError:
@@ -175,6 +186,10 @@ def main():
                             lj = (s, e, rc1, rc2)
                 assert sj != None and lj != None
                 assert sj[0] == lj[0]
+
+                if any([x < min_supp for x in [sj[2], lj[2], sj[3], lj[3]]]):
+                    continue
+
                 try:
                     psi1 = sj[2] / (sj[2] + lj[2])
                 except ZeroDivisionError:
@@ -226,6 +241,10 @@ def main():
 
                 assert sj != None and exon != (0, 0, 0, 0)
                 assert exon[0] < sj[0] and sj[0] < sj[1] and sj[1] < exon[1]
+
+                if any([x < min_supp for x in [sj[2], exon[2], sj[3], exon[3]]]):
+                    continue
+
                 try:
                     psi1 = sj[2] / (sj[2] + exon[2])
                 except ZeroDivisionError:

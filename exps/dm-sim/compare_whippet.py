@@ -65,31 +65,36 @@ def main():
         etype = EMAP[etype]
         whippet[etype].add(region)
 
-    print("Event", "TP", "FP", "FN", "P", "R", "F1", sep=",")
-    for e in ETYPES:
-        TP = len(whippet[e] & truth[e])
-        FP = len(whippet[e] - truth[e])
-        FN = len(truth[e] - whippet[e])
+    print("Event", "C", "T", "TP", "FP", "FN", "P", "R", "F1", sep=",")
+    for etype in ETYPES:
+        TP = len(whippet[etype] & truth[etype])
+        FP = len(whippet[etype] - truth[etype])
+        FN = len(truth[etype] - whippet[etype])
         if relax > 0:
             TP = 0
             FP = 0
             FN = 0
-            for c in whippet[e]:
+            for c in whippet[etype]:
                 c1, c2 = get_interval(c)
                 hit = False
-                for t in truth[e]:
+                for t in truth[etype]:
                     t1, t2 = get_interval(t)
                     if abs(t1 - c1) <= relax and abs(t2 - c2) <= relax:
                         hit = True
                         break
                 if hit:
                     TP += 1
-            FP = len(whippet[e]) - TP
-            FN = len(truth[e]) - TP
+            FP = len(whippet[etype]) - TP
+            FN = len(truth[etype]) - TP
         P = TP / (TP + FP) if TP + FP != 0 else 0
         R = TP / (TP + FN) if TP + FN != 0 else 0
         F1 = 2 * (P * R) / (P + R) if (P + R) != 0 else 0
-        print(e, TP, FP, FN, P, R, F1, sep=",")
+        P = round(P * 100, 2)
+        R = round(R * 100, 2)
+        F1 = round(F1 * 100, 2)
+        print(
+            etype, len(whippet[etype]), len(truth[etype]), TP, FP, FN, P, R, F1, sep=","
+        )
 
 
 if __name__ == "__main__":

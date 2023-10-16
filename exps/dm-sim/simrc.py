@@ -33,8 +33,7 @@ def main(args):
 
             exonsinfo[geneid][transcriptid][exon_num]["genome"] = data[:3]
             exonsinfo[geneid][transcriptid][exon_num]["tr"] = [trstart, trend]
-
-            genes[geneid][transcriptid][trstart:trend] = exon_num
+            genes[geneid][transcriptid][trstart : trend + 1] = exon_num
             # print(geneid, transcriptid,exon_num,trstart, trend)
 
     # print(genes["FBgn0039900"]["FBgn0039900_template"][20:50])

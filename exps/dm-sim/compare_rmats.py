@@ -24,13 +24,10 @@ def parse_truth(truth_path, novel):
         etype, chrom, gene, strand, i1, i2, i3, W1, W2, psi1, psi2 = line.strip(
             "\n"
         ).split(",")
-        if psi1 == "NaN" and psi2 == "NaN":
+        if psi1 == "NaN" or psi2 == "NaN":
             continue
         k = None
         if novel:
-            # if any([int(x) == 0 for x in W1.split("/")]) or any(
-            #     [int(x) == 0 for x in W2.split("/")]
-            # ):
             if W1[-2:] == "/0" or W2[-2:] == "/0":
                 continue
             if i3 == ".":
@@ -172,12 +169,12 @@ def parse_rmats_a3(fpath, novel, pvalue=0.05):
                 gene_sym,
                 chrom,
                 strand,
+                lex_s,
+                lex_e,
+                sex_s,
+                sex_e,
                 ex_s,
                 ex_e,
-                usex_s,
-                usex_e,
-                dsex_s,
-                dsex_e,
             ) = line.strip("\n").split("\t")
 
         # Starts are 0-based, ends aren't (or they are exclusive)
@@ -257,12 +254,12 @@ def parse_rmats_a5(fpath, novel, pvalue=0.05):
                 gene_sym,
                 chrom,
                 strand,
+                lex_s,
+                lex_e,
+                sex_s,
+                sex_e,
                 ex_s,
                 ex_e,
-                usex_s,
-                usex_e,
-                dsex_s,
-                dsex_e,
             ) = line.strip("\n").split("\t")
 
         # Starts are 0-based, ends aren't (or they are exclusive)
@@ -273,10 +270,6 @@ def parse_rmats_a5(fpath, novel, pvalue=0.05):
         sex_s += 1
 
         chrom = chrom[3:]
-
-        pv = float(pv)
-        if pv > pvalue:
-            continue
 
         # strand +
         longer_intron = (int(sex_e), int(ex_s))
@@ -344,12 +337,12 @@ def parse_rmats_ri(fpath, novel, pvalue=0.05):
                 gene_sym,
                 chrom,
                 strand,
-                ex_s,
+                ex_s,  # retained exon
                 ex_e,
-                usex_s,
-                usex_e,
-                dsex_s,
-                dsex_e,
+                fex_s,  # first exon
+                fex_e,
+                sex_s,  # second exon
+                sex_e,
             ) = line.strip("\n").split("\t")
 
         # Starts are 0-based, ends aren't (or they are exclusive)
@@ -361,10 +354,6 @@ def parse_rmats_ri(fpath, novel, pvalue=0.05):
         fex_s += 1
 
         chrom = chrom[3:]
-
-        pv = float(pv)
-        if pv > pvalue:
-            continue
 
         assert ex_s == fex_s and ex_e == sex_e
         # strand +
@@ -386,9 +375,21 @@ def main_anno(truth_path, rmats_prefix, min_pvalue):
 
     rmats = {x: set() for x in ETYPES}
     rmats["ES"] = parse_rmats_se(rmats_prefix + "/SE.MATS.JC.txt", False, min_pvalue)
+    rmats["ES-all"] = parse_rmats_se(
+        rmats_prefix + "/fromGTF.SE.txt", False, min_pvalue
+    )
     rmats["A3"] = parse_rmats_a3(rmats_prefix + "/A3SS.MATS.JC.txt", False, min_pvalue)
+    rmats["A3-all"] = parse_rmats_a3(
+        rmats_prefix + "/fromGTF.A3SS.txt", False, min_pvalue
+    )
     rmats["A5"] = parse_rmats_a5(rmats_prefix + "/A5SS.MATS.JC.txt", False, min_pvalue)
+    rmats["A5-all"] = parse_rmats_a5(
+        rmats_prefix + "/fromGTF.A5SS.txt", False, min_pvalue
+    )
     rmats["IR"] = parse_rmats_ri(rmats_prefix + "/RI.MATS.JC.txt", False, min_pvalue)
+    rmats["IR-all"] = parse_rmats_ri(
+        rmats_prefix + "/fromGTF.RI.txt", False, min_pvalue
+    )
 
     print("Event", "C", "T", "TP", "FP", "FN", "P", "R", "F1", sep=",")
     for etype in ETYPES:
@@ -404,9 +405,9 @@ def main_anno(truth_path, rmats_prefix, min_pvalue):
         P = TP / (TP + FP) if TP + FP != 0 else 0
         R = TP / (TP + FN) if TP + FN != 0 else 0
         F1 = 2 * (P * R) / (P + R) if (P + R) != 0 else 0
-        P = round(P, 3)
-        R = round(R, 3)
-        F1 = round(F1, 3)
+        P = round(P * 100, 2)
+        R = round(R * 100, 2)
+        F1 = round(F1 * 100, 2)
         print(
             etype, len(rmats[etype]), len(truth[etype]), TP, FP, FN, P, R, F1, sep=","
         )
@@ -415,6 +416,40 @@ def main_anno(truth_path, rmats_prefix, min_pvalue):
             print("FP", e, file=sys.stderr)
         for e in truth[etype] - rmats[etype]:
             print("FN", e, file=sys.stderr)
+
+    for etype in ETYPES:
+        # print(rmats[etype])
+        # print(truth[etype])
+        TP = len(rmats[etype + "-all"] & truth[etype])
+        # print("TP:", rmats[etype] & truth[etype])
+        FP = len(rmats[etype + "-all"] - truth[etype])
+        # print("FP:", rmats[etype] - truth[etype])
+        FN = len(truth[etype] - rmats[etype + "-all"])
+        # print("FN:", truth[etype] - rmats[etype])
+        # TODO: can we relax this too? (see compare_whippet.py)
+        P = TP / (TP + FP) if TP + FP != 0 else 0
+        R = TP / (TP + FN) if TP + FN != 0 else 0
+        F1 = 2 * (P * R) / (P + R) if (P + R) != 0 else 0
+        P = round(P * 100, 2)
+        R = round(R * 100, 2)
+        F1 = round(F1 * 100, 2)
+        print(
+            etype + "-all",
+            len(rmats[etype + "-all"]),
+            len(truth[etype]),
+            TP,
+            FP,
+            FN,
+            P,
+            R,
+            F1,
+            sep=",",
+        )
+
+        # for e in rmats[etype + "-all"] - truth[etype]:
+        #     print("FP", e, file=sys.stderr)
+        # for e in truth[etype] - rmats[etype + "-all"]:
+        #     print("FN", e, file=sys.stderr)
 
 
 def relaxed_intersect(t1, t2, relax=3):
@@ -439,46 +474,42 @@ def relaxed_intersect(t1, t2, relax=3):
 def main_novel(truth_path, rmats_prefix, min_pvalue):
     truth, truth_w = parse_truth(truth_path, True)
 
-    rmats = {x: set() for x in ETYPES}
+    rmats = {}
     rmats["ES"] = parse_rmats_se(rmats_prefix + "/SE.MATS.JC.txt", True, min_pvalue)
-    rmats["ES"].union(
+    rmats["ES-all"] = parse_rmats_se(rmats_prefix + "/fromGTF.SE.txt", True, min_pvalue)
+    rmats["ES-all"].union(
         parse_rmats_se(
             rmats_prefix + "/fromGTF.novelSpliceSite.SE.txt", True, min_pvalue
         )
     )
-    rmats["ES"].union(
+    rmats["ES-all"].union(
         parse_rmats_se(rmats_prefix + "/fromGTF.novelJunction.SE.txt", True, min_pvalue)
     )
+
     rmats["A3"] = parse_rmats_a3(rmats_prefix + "/A3SS.MATS.JC.txt", True, min_pvalue)
-    rmats["A3"].union(
-        parse_rmats_se(
-            rmats_prefix + "/fromGTF.novelSpliceSite.A3SS.txt", True, min_pvalue
-        )
+    rmats["A3-all"] = parse_rmats_a3(
+        rmats_prefix + "/fromGTF.novelSpliceSite.A3SS.txt", True, min_pvalue
     )
-    rmats["A3"].union(
-        parse_rmats_se(
+    rmats["A3-all"].union(
+        parse_rmats_a3(
             rmats_prefix + "/fromGTF.novelJunction.A3SS.txt", True, min_pvalue
         )
     )
     rmats["A5"] = parse_rmats_a5(rmats_prefix + "/A5SS.MATS.JC.txt", True, min_pvalue)
-    rmats["A5"].union(
-        parse_rmats_se(
-            rmats_prefix + "/fromGTF.novelSpliceSite.A5SS.txt", True, min_pvalue
-        )
+    rmats["A5-all"] = parse_rmats_a5(
+        rmats_prefix + "/fromGTF.novelSpliceSite.A5SS.txt", True, min_pvalue
     )
-    rmats["A5"].union(
-        parse_rmats_se(
+    rmats["A5-all"].union(
+        parse_rmats_a5(
             rmats_prefix + "/fromGTF.novelJunction.A5SS.txt", True, min_pvalue
         )
     )
     rmats["IR"] = parse_rmats_ri(rmats_prefix + "/RI.MATS.JC.txt", True, min_pvalue)
-    rmats["IR"].union(
-        parse_rmats_se(
-            rmats_prefix + "/fromGTF.novelSpliceSite.RI.txt", True, min_pvalue
-        )
+    rmats["IR-all"] = parse_rmats_ri(
+        rmats_prefix + "/fromGTF.novelSpliceSite.RI.txt", True, min_pvalue
     )
-    rmats["IR"].union(
-        parse_rmats_se(rmats_prefix + "/fromGTF.novelJunction.RI.txt", True, min_pvalue)
+    rmats["IR-all"].union(
+        parse_rmats_ri(rmats_prefix + "/fromGTF.novelJunction.RI.txt", True, min_pvalue)
     )
 
     print("Event", "C", "T", "TP", "FP", "FN", "P", "R", "F1", sep=",")
@@ -504,9 +535,9 @@ def main_novel(truth_path, rmats_prefix, min_pvalue):
         P = TP / (TP + FP) if TP + FP != 0 else 0
         R = TP / (TP + FN) if TP + FN != 0 else 0
         F1 = 2 * (P * R) / (P + R) if (P + R) != 0 else 0
-        P = round(P, 3)
-        R = round(R, 3)
-        F1 = round(F1, 3)
+        P = round(P * 100, 2)
+        R = round(R * 100, 2)
+        F1 = round(F1 * 100, 2)
         print(
             etype, len(rmats[etype]), len(truth[etype]), TP, FP, FN, P, R, F1, sep=","
         )
@@ -523,7 +554,47 @@ def main_novel(truth_path, rmats_prefix, min_pvalue):
                     hit = True
                     break
             if not hit:
-                print("FN", etype, e1, file=sys.stderr)
+                print("FN", etype, e1, truth_w[etype][e1], file=sys.stderr)
+            else:
+                print("TP", etype, e1, file=sys.stderr)
+
+    for etype in ETYPES:
+        TP = 0
+        for e1 in rmats[etype + "-all"]:
+            hit = False
+            for e2 in truth[etype]:
+                if e1[0] != e2[0]:
+                    # different chrom
+                    continue
+                if (
+                    relaxed_intersect(e1, e2) >= len(e1) / 2
+                ):  # /2 to check for half junctions, 2 for SE, 1 for others
+                    hit = True
+                    break
+            if hit:
+                TP += 1
+            else:
+                pass  # print(etype, e1, file=sys.stderr)
+        FP = len(rmats[etype + "-all"]) - TP
+        FN = len(truth[etype]) - TP
+        P = TP / (TP + FP) if TP + FP != 0 else 0
+        R = TP / (TP + FN) if TP + FN != 0 else 0
+        F1 = 2 * (P * R) / (P + R) if (P + R) != 0 else 0
+        P = round(P * 100, 2)
+        R = round(R * 100, 2)
+        F1 = round(F1 * 100, 2)
+        print(
+            etype + "-all",
+            len(rmats[etype + "-all"]),
+            len(truth[etype]),
+            TP,
+            FP,
+            FN,
+            P,
+            R,
+            F1,
+            sep=",",
+        )
 
 
 if __name__ == "__main__":

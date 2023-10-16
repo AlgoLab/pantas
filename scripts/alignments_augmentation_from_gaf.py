@@ -245,7 +245,7 @@ def main(argv):
                         cigar_vals.pop(0)
                     if len(cigar_vals) == 0:
                         if len(align) != len(nodes):
-                            print("warning", file=sys.stderr)
+                            pass # print("warning", file=sys.stderr)
                         break
 
             final_align = clear_align(align)

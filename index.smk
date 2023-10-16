@@ -196,7 +196,7 @@ rule index:
     threads: workflow.cores
     shell:
         """
-        vg index --progress --threads {threads} --temp-dir {params.tmpd} --gcsa-out {output.gcsa2} --dist-name {output.dist} {input.xg}
+        vg index --progress --threads {threads} --temp-dir {params.tmpd} --size-limit 100 --gcsa-out {output.gcsa2} --dist-name {output.dist} {input.xg}
         """
 
 

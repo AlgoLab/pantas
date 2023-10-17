@@ -46,22 +46,19 @@ rule pantas2_mpmap:
         fq1=lambda wildcards: FQs[wildcards.sample][0],
         fq2=lambda wildcards: FQs[wildcards.sample][1],
     output:
-        pjoin(ODIR,  "pantas2", "done.txt")
-        #gaf=pjoin(ODIR,  "pantas2", "{sample}.gaf"),
+        gaf=pjoin(ODIR,  "pantas2", "{sample}.gaf"),
     threads: workflow.cores
     log:
         pjoin(ODIR, "bench", "pantas2", "mpmap.time"),
     conda: "../envs/pantas2.yaml"
     shell:
         """
-        #/usr/bin/time -vo {log} vg mpmap -x {input.xg} -g {input.gcsa} -d {input.dist} -f {input.fq1} -f {input.fq2} -F GAF --threads {threads} > {output.gaf}
-	touch {output}
+        /usr/bin/time -vo {log} vg mpmap -x {input.xg} -g {input.gcsa} -d {input.dist} -f {input.fq1} -f {input.fq2} -F GAF --threads {threads} > {output.gaf}
         """
 
 rule pantas_weight:
     input:
-        i=pjoin(ODIR,  "pantas2", "done.txt"),
-        #gfa=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.annotated.gfa"),
+        gfa=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.annotated.gfa"),
         gaf=pjoin(ODIR,  "pantas2", "{sample}.gaf"),
         augm=pjoin(software_folder, "pantas2", "scripts", "alignments_augmentation_from_gaf.py"),
     output:

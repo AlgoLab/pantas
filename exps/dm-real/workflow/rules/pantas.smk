@@ -49,7 +49,7 @@ rule pantas2_mpmap:
         gaf=pjoin(ODIR,  "pantas2", "{sample}.gaf"),
     threads: workflow.cores
     log:
-        pjoin(ODIR, "bench", "pantas2", "mpmap.time"),
+        pjoin(ODIR, "bench", "pantas2", "mpmap{sample}.time"),
     conda: "../envs/pantas2.yaml"
     shell:
         """

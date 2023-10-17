@@ -1,5 +1,6 @@
 name: samtools
 channels:
   - bioconda
+  - conda-forge
 dependencies:
   - samtools

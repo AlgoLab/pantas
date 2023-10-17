@@ -1,3 +1,5 @@
 name: whippet
+channels:
+  - conda-forge
 dependencies:
   - julia

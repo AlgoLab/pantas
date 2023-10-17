@@ -3,7 +3,7 @@ rule download_pantas:
         exe=pjoin(software_folder, "pantas2", "pantas2.sh"),
         augm=pjoin(software_folder, "pantas2", "scripts", "alignments_augmentation_from_gaf.py"),
         call=pjoin(software_folder, "pantas2", "scripts", "call.py"),
-        quant=pjoin(software_folder, "pantas2", "scripts", "quantify.py"),
+        quant=pjoin(software_folder, "pantas2", "scripts", "quantify3.py"),
         outd=directory(pjoin(software_folder, "pantas2")),
     shell:
         """
@@ -46,19 +46,22 @@ rule pantas2_mpmap:
         fq1=lambda wildcards: FQs[wildcards.sample][0],
         fq2=lambda wildcards: FQs[wildcards.sample][1],
     output:
-        gaf=pjoin(ODIR,  "pantas2", "{sample}.gaf"),
+        pjoin(ODIR,  "pantas2", "done.txt")
+        #gaf=pjoin(ODIR,  "pantas2", "{sample}.gaf"),
     threads: workflow.cores
     log:
-        pjoin(ODIR, "bench", "pantas2", "mpmap{sample}.time"),
+        pjoin(ODIR, "bench", "pantas2", "mpmap.time"),
     conda: "../envs/pantas2.yaml"
     shell:
         """
-        /usr/bin/time -vo {log} vg mpmap -x {input.xg} -g {input.gcsa} -d {input.dist} -f {input.fq1} -f {input.fq2} -F GAF --threads {threads} > {output.gaf}
+        #/usr/bin/time -vo {log} vg mpmap -x {input.xg} -g {input.gcsa} -d {input.dist} -f {input.fq1} -f {input.fq2} -F GAF --threads {threads} > {output.gaf}
+	touch {output}
         """
 
 rule pantas_weight:
     input:
-        gfa=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.annotated.gfa"),
+        i=pjoin(ODIR,  "pantas2", "done.txt"),
+        #gfa=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.annotated.gfa"),
         gaf=pjoin(ODIR,  "pantas2", "{sample}.gaf"),
         augm=pjoin(software_folder, "pantas2", "scripts", "alignments_augmentation_from_gaf.py"),
     output:
@@ -114,17 +117,17 @@ rule c2_csv:
 
 rule pantas_quant:
     input:
-        splicedfa=pjoin(ODIR, "pantas2", "index", "genes.spliced.fa"),
         csv1s=expand(pjoin(ODIR, "pantas2", "{w}", "events_{sample}.csv"), sample
                = C1.keys(), w="{w}"),
         csv2s=expand(pjoin(ODIR, "pantas2", "{w}", "events_{sample}.csv"), sample
                = C2.keys(), w="{w}"),
-        quant=pjoin(software_folder, "pantas2", "scripts", "quantify.py"),
+        quant=pjoin(software_folder, "pantas2", "scripts", "quantify3.py"),
     output:
         csv=pjoin(ODIR, "pantas2", "quant.w{w}.csv"),
     log:
         pjoin(ODIR, "bench", "pantas2", "quant.w{w}.time"),
+    conda: "../envs/pantas2.yaml"
     shell:
         """
-        /usr/bin/time -vo {log} python3 {input.quant} {input.splicedfa} {input.csv1s} {input.csv2s} > {output.csv}
+        /usr/bin/time -vo {log} python3 {input.quant} -c1 {input.csv1s} -c2 {input.csv2s} > {output.csv}
         """

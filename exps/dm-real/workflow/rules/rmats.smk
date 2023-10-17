@@ -72,5 +72,6 @@ rule rmats:
     log: pjoin(ODIR, "bench", "rmats.time")
     shell:
         """
+	rmats.py --version
         /usr/bin/time -vo {log} rmats.py --gtf {input.gtf} --b1 {input.c1txt} --b2 {input.c2txt} --od {params.outd} --tmp {params.tmpd} --readLength {L} --nthread {threads} -t paired
         """

@@ -13,7 +13,7 @@ FA = config["fa"]
 GTF = config["gtf"]
 VCF = config["vcf"]
 
-
+L = config["L"]
 S1 = config["s1"]
 S2 = config["s2"]
 

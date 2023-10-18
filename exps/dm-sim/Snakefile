@@ -365,7 +365,7 @@ rule pantas_quant:
         pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "quant.w{w}.time"),
     shell:
         """
-        /usr/bin/time -vo {log} python3 {input.py} -c1 {input.csv1} -c2 {input.csv2} --minj {wildcards.w} > {output.csv} 2> /dev/null
+        /usr/bin/time -vo {log} python3 {input.py} -c1 {input.csv1} -c2 {input.csv2} --minj 3 > {output.csv} 2> /dev/null
         """
 
 

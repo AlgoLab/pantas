@@ -47,7 +47,7 @@ rule whippet_quant:
         pjoin(ODIR, "bench", "whippet", "quant-{sample}.time"),
     shell:
         """
-        /usr/bin/time -vo {log} julia {input.exe} --index {params.index_prefix} --out {params.output_prefix} --biascorrect {input.fq1} {input.fq2}
+        /usr/bin/time -vo {log} julia {input.exe} --index {params.index_prefix} --out {params.output_prefix} {input.fq1} {input.fq2}
         """
 
 

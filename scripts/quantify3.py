@@ -92,6 +92,10 @@ class Event:
                     parse_region(self.junction3_refpos),
                 ]
 
+                self.csv_j1 = junction1_refpos
+                self.csv_j2 = junction2_refpos
+                self.csv_j3 = junction3_refpos
+
                 if self.event_j[1] - self.event_j[0] < min_junction_len:
                     self.valid = False
             case "A5":
@@ -100,11 +104,19 @@ class Event:
                     self.event_j = parse_region(self.junction1_refpos)
                     self.canonic_cov = self.junction2_coverage
                     self.canonic_j = parse_region(self.junction2_refpos)
+
+                    self.csv_j1 = junction1_refpos
+                    self.csv_j2 = junction2_refpos
+                    self.csv_j3 = junction3_refpos
                 else:
                     self.event_cov = self.junction2_coverage
                     self.event_j = parse_region(self.junction2_refpos)
                     self.canonic_cov = self.junction1_coverage
                     self.canonic_j = parse_region(self.junction1_refpos)
+
+                    self.csv_j1 = junction2_refpos
+                    self.csv_j2 = junction1_refpos
+                    self.csv_j3 = junction3_refpos
 
                 if self.event_j[1] - self.event_j[0] < min_junction_len:
                     self.valid = False
@@ -114,11 +126,19 @@ class Event:
                     self.event_j = parse_region(self.junction2_refpos)
                     self.canonic_cov = self.junction1_coverage
                     self.canonic_j = parse_region(self.junction1_refpos)
+
+                    self.csv_j1 = junction2_refpos
+                    self.csv_j2 = junction1_refpos
+                    self.csv_j3 = junction3_refpos
                 else:
                     self.event_cov = self.junction1_coverage
                     self.event_j = parse_region(self.junction1_refpos)
                     self.canonic_cov = self.junction2_coverage
                     self.canonic_j = parse_region(self.junction2_refpos)
+
+                    self.csv_j1 = junction1_refpos
+                    self.csv_j2 = junction2_refpos
+                    self.csv_j3 = junction3_refpos
 
                 if self.event_j[1] - self.event_j[0] < min_junction_len:
                     self.valid = False
@@ -131,6 +151,10 @@ class Event:
                     self.canonic_j = parse_region(self.junction1_refpos)
                     if self.canonic_j[1] - self.canonic_j[0] < min_junction_len:
                         self.valid = False
+
+                    self.csv_j1 = junction2_refpos
+                    self.csv_j2 = junction1_refpos
+                    self.csv_j3 = junction3_refpos
                 else:
                     self.event_cov = self.junction1_coverage
                     self.event_j = parse_region(self.junction1_refpos)
@@ -139,6 +163,10 @@ class Event:
 
                     if self.event_j[1] - self.event_j[0] < min_junction_len:
                         self.valid = False
+
+                    self.csv_j1 = junction1_refpos
+                    self.csv_j2 = junction2_refpos
+                    self.csv_j3 = junction3_refpos
             case "CE":
                 self.event_cov = (
                     self.junction2_coverage + self.junction3_coverage
@@ -155,6 +183,10 @@ class Event:
                 if self.event_j[1][1] - self.event_j[1][0] < min_junction_len:
                     self.valid = False
 
+                self.csv_j1 = junction2_refpos
+                self.csv_j2 = junction3_refpos
+                self.csv_j3 = junction1_refpos
+
         self.add_replicate(self.event_cov, self.canonic_cov)
 
     def __repr__(self) -> str:
@@ -170,11 +202,11 @@ class Event:
                     self.chrom,
                     self.gene,
                     self.strand,
-                    self.junction1_refpos,
+                    self.csv_j1,
                     # self.junction1_coverage,
-                    self.junction2_refpos,
+                    self.csv_j2,
                     # self.junction2_coverage,
-                    self.junction3_refpos,
+                    self.csv_j3,
                     # self.junction3_coverage,
                 ],
             )
@@ -295,7 +327,7 @@ def main(args):
         "W1",
         "W2",
         "psi_c1",
-        "ps1_c2",
+        "psi_c2",
         "dpsi",
         sep=",",
     )
@@ -327,14 +359,15 @@ def main(args):
                     sep=",",
                 )
             else:
-                print(e1.to_csv(), "W1", "W2", e1.psi(), "NaN", "NaN", sep=",")
+                if not e1.psi() == -1:
+                    print(e1.to_csv(), "W1", "W2", e1.psi(), "NaN", "NaN", sep=",")
         for e2 in events_2[etype]:
             eqs = [
                 x
                 for x in events_1[etype]
                 if eq_event(e2, x, relax=min(0, RELAX * (len(args.c2) - 1)))
             ]
-            if len(eqs) == 0:
+            if len(eqs) == 0 and not e2.psi() == -1:
                 print(e2.to_csv(), "W1", "W2", "NaN", e2.psi(), "NaN", sep=",")
 
     # for etype in ETYPES:

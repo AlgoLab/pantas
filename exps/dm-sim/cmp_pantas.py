@@ -60,21 +60,22 @@ def main(args):
         event_rmats[e.etype].append(e)
 
     event_whippet = {x: [] for x in ETYPES}
-    for line in open(args.w, "r"):
-        if line.startswith("Gene"):
-            # header
-            continue
-        line = line.strip()
-        _e = line.split("\t")
-        _e[4] = EMAP_WHIPPET.get(_e[4], _e[4])
-        if _e[4] not in ETYPES:
-            continue
-        e = eparser.EventWhippet(*_e, "anno")
-        if isnan(e.psi_c1) or isnan(e.psi_c2):
-            continue
-        if abs(e.dpsi) < FILTER:
-            continue
-        event_whippet[e.etype].append(e)
+    if args.w:
+        for line in open(args.w, "r"):
+            if line.startswith("Gene"):
+                # header
+                continue
+            line = line.strip()
+            _e = line.split("\t")
+            _e[4] = EMAP_WHIPPET.get(_e[4], _e[4])
+            if _e[4] not in ETYPES:
+                continue
+            e = eparser.EventWhippet(*_e, "anno")
+            if isnan(e.psi_c1) or isnan(e.psi_c2):
+                continue
+            if abs(e.dpsi) < FILTER:
+                continue
+            event_whippet[e.etype].append(e)
 
     TP_PANTAS = {x: 0 for x in ETYPES}
     FN_PANTAS = {x: 0 for x in ETYPES}
@@ -186,13 +187,18 @@ def main(args):
                 FP_WHIPPET[etype] += 1
                 # print("FP-WHIPPET", e2.to_csv())
 
+    print("PANTAS")
     print("etype", "TP", "FN", "FP", sep=",")
     for etype in ETYPES:
         print(etype, TP_PANTAS[etype], FN_PANTAS[etype], FP_PANTAS[etype], sep=",")
 
+    print("RMATS")
+    print("etype", "TP", "FN", "FP", sep=",")
     for etype in ETYPES:
         print(etype, TP_RMATS[etype], FN_RMATS[etype], FP_RMATS[etype], sep=",")
 
+    print("WHIPPET")
+    print("etype", "TP", "FN", "FP", sep=",")
     for etype in ETYPES:
         print(etype, TP_WHIPPET[etype], FN_WHIPPET[etype], FP_WHIPPET[etype], sep=",")
 
@@ -230,7 +236,7 @@ if __name__ == "__main__":
         help="Whippet psi file",
         dest="w",
         type=str,
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--relax",

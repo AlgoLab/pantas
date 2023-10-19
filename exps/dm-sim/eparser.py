@@ -230,16 +230,83 @@ class EventTruth(Event):
                 ]
                 self.canonic_j = parse_region(self.junction1_refpos)
 
+class EventWhippet(Event):
+    def __init__(
+        self,
+        gene: str,
+        t1: str,
+        junction1_refpos: str,
+        strand: str,
+        event_type: str,
+        psi_c1: str,
+        psi_c2: str,
+        dpsi: str,
+        t2: str,
+        t3: str,
+        t4: str,
+        annotation_type: str,
+    ):
+        super().__init__(
+            event_type,
+            annotation_type,
+            junction1_refpos.split(":")[0],
+            gene,
+            strand,
+            junction1_refpos,
+            ".",
+            ".",
+            "W1",
+            "W2",
+            psi_c1,
+            psi_c2,
+            dpsi,
+        )
+
+    def build_conditions(self):
+        match self.etype:
+            case "ES":
+                self.event_j = parse_region(self.junction1_refpos)
+                # self.canonic_j = [math.nan, math.nan]
+                self.canonic_j = "."
+            case "A5":
+                self.event_j = parse_region(self.junction1_refpos)
+                self.canonic_j = "."
+
+            case "A3":
+                self.event_j = parse_region(self.junction1_refpos)
+                self.canonic_j = "."
+
+            case "IR":
+                reg = parse_region(self.junction1_refpos)
+                self.event_j = [reg[0] - 1, reg[1] + 1]
+                self.canonic_j = "."
+
+            case "CE":
+                self.event_j = parse_region(self.junction1_refpos)
+                self.canonic_j = "."
+
 
 def eq_event(e1: Event, e2: Event, relax: int = 0, reverse: bool = False):
     if e1.etype != e2.etype:
         return False
     if e1.gene != e2.gene:
         return False
-    e1_canonic_j = e1.canonic_j
-    e1_event_j = e1.event_j
-    e2_canonic_j = e2.canonic_j
-    e2_event_j = e2.event_j
+    if type(e1).__name__ == "EventWhippet" and type(e2).__name__ != "EventWhippet":
+        e1_canonic_j = e2.canonic_j
+        e1_event_j = e1.event_j
+        e2_canonic_j = e2.canonic_j
+        e2_event_j = e2.event_j
+    elif type(e1).__name__ != "EventWhippet" and type(e2).__name__ == "EventWhippet":
+        e1_canonic_j = e1.canonic_j
+        e1_event_j = e1.event_j
+        e2_canonic_j = e1.canonic_j
+        e2_event_j = e2.event_j
+    else:
+        e1_canonic_j = e1.canonic_j
+        e1_event_j = e1.event_j
+        e2_canonic_j = e2.canonic_j
+        e2_event_j = e2.event_j
+
     if reverse:
         e1_canonic_j = e1.event_j
         e1_event_j = e1.canonic_j
@@ -252,68 +319,102 @@ def eq_event(e1: Event, e2: Event, relax: int = 0, reverse: bool = False):
         de01 = abs(e1_event_j[0][1] - e2_event_j[0][1]) <= relax
         de10 = abs(e1_event_j[1][0] - e2_event_j[1][0]) <= relax
         de11 = abs(e1_event_j[1][1] - e2_event_j[1][1]) <= relax
+
         return dt0 & dt1 & de00 & de01 & de10 & de11
     elif e1.etype == "ES":
-        de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
-        de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
-        dt00 = abs(e1_canonic_j[0][0] - e2_canonic_j[0][0]) <= relax
-        dt01 = abs(e1_canonic_j[0][1] - e2_canonic_j[0][1]) <= relax
-        dt10 = abs(e1_canonic_j[1][0] - e2_canonic_j[1][0]) <= relax
-        dt11 = abs(e1_canonic_j[1][1] - e2_canonic_j[1][1]) <= relax
-        return de0 & de1 & dt00 & dt01 & dt10 & dt11
+        if type(e1).__name__ == "EventWhippet" and type(e2).__name__ != "EventWhippet":
+            dt00 = abs(e1_event_j[0] - 1 - e2_canonic_j[0][1]) <= relax
+            dt01 = abs(e1_event_j[1] + 1 - e2_canonic_j[1][0]) <= relax
+            return dt00 & dt01
+        elif (
+            type(e1).__name__ != "EventWhippet" and type(e2).__name__ == "EventWhippet"
+        ):
+            dt00 = abs(e2_event_j[0] - 1 - e1_canonic_j[0][1]) <= relax
+            dt01 = abs(e2_event_j[1] + 1 - e1_canonic_j[1][0]) <= relax
+            return dt00 & dt01
+        else:
+            de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
+            de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
+            dt00 = abs(e1_canonic_j[0][0] - e2_canonic_j[0][0]) <= relax
+            dt01 = abs(e1_canonic_j[0][1] - e2_canonic_j[0][1]) <= relax
+            dt10 = abs(e1_canonic_j[1][0] - e2_canonic_j[1][0]) <= relax
+            dt11 = abs(e1_canonic_j[1][1] - e2_canonic_j[1][1]) <= relax
+
+            return de0 & de1 & dt00 & dt01 & dt10 & dt11
     elif e1.etype == "IR":
-        # print(e1_event_j, e2_event_j)
-        de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
-        de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
-        return de0 & de1
+        if type(e1).__name__ == "EventWhippet" and type(e2).__name__ != "EventWhippet":
+            dt00 = abs(e1_event_j[0] + 1 - e2_event_j[0]) <= relax
+            dt11 = abs(e1_event_j[1] - 1 - e2_event_j[1]) <= relax
+            return dt00 & dt11
+        elif (
+            type(e1).__name__ != "EventWhippet" and type(e2).__name__ == "EventWhippet"
+        ):
+            dt00 = abs(e2_event_j[0] - e1_event_j[0] + 1) <= relax
+            dt11 = abs(e2_event_j[1] - e1_event_j[1] - 1) <= relax
+            return dt00 & dt11
+        else:
+            de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
+            de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
+            return de0 & de1
     else:
-        dt0 = abs(e1_canonic_j[0] - e2_canonic_j[0]) <= relax
-        dt1 = abs(e1_canonic_j[1] - e2_canonic_j[1]) <= relax
-        de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
-        de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
-        return dt0 & dt1 & de0 & de1
+        if type(e1).__name__ == "EventWhippet" and type(e2).__name__ != "EventWhippet":
+            dt0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
+            dt1 = abs(e1_event_j[1] + 1 - e2.canonic_j[0]) <= relax
+            return dt0 & dt1
+
+        elif (
+            type(e1).__name__ != "EventWhippet" and type(e2).__name__ == "EventWhippet"
+        ):
+            dt0 = abs(e2_event_j[0] - e1_event_j[0]) <= relax
+            dt1 = abs(e2_event_j[1] + 1 - e1.canonic_j[0]) <= relax
+            return dt0 & dt1
+
+        else:
+            dt0 = abs(e1_canonic_j[0] - e2_canonic_j[0]) <= relax
+            dt1 = abs(e1_canonic_j[1] - e2_canonic_j[1]) <= relax
+            de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
+            de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
+            return dt0 & dt1 & de0 & de1
 
 
-# def get_interval(region):
-#     if region == ".":
-#         return region
-#     s, e = [int(x) if x != "?" else -1 for x in region.split(":")[1].split("-")]
-#     return s, e
-
-# def parse_truth(truth_path, novel):
-#     truth = {x: set() for x in ETYPES}
-#     truth_w = {x: {} for x in ETYPES}
-#     truth_psi = {x: dict() for x in ETYPES}
-
-#     for line in open(truth_path):
-#         etype, chrom, gene, strand, i1, i2, i3, W1, W2, psi1, psi2 = line.strip(
-#             "\n"
-#         ).split(",")
-#         if psi1 == "NaN" or psi2 == "NaN":
-#             continue
-#         k = None
-#         if novel:
-#             if W1[-2:] == "/0" or W2[-2:] == "/0":
-#                 continue
-#             if i3 == ".":
-#                 k = (chrom, i1, i2)
-#             else:
-#                 k = (chrom, i1, i2, i3)
-#         else:
-#             i1 = get_interval(i1)
-#             i2 = get_interval(i2)
-#             if etype == "ES":
-#                 k = f"{chrom}:{i1[0]}-{i1[1]}-{i2[0]}-{i2[1]}"
-#             elif etype[0] == "A":
-#                 if i1[0] == i2[0]:
-#                     k = f"{chrom}:{i1[0]}-{min(i1[1], i2[1])}-{max(i1[1], i2[1])}"
-#                 else:
-#                     k = f"{chrom}:{min(i1[0], i2[0])}-{max(i1[0], i2[0])}-{i1[1]}"
-#             elif etype == "IR":
-#                 k = f"{chrom}:{i1[0]}-{i1[1]}"
-#         truth[etype].add(k)
-#         truth_w[etype][k] = (W1, W2)
-#         assert not k in truth_psi[etype]
-#         truth_psi[etype][k] = (float(psi1), float(psi2))
-
-#     return truth, truth_w, truth_psi
+# def eq_event(e1: Event, e2: Event, relax: int = 0, reverse: bool = False):
+#     if e1.etype != e2.etype:
+#         return False
+#     if e1.gene != e2.gene:
+#         return False
+#     e1_canonic_j = e1.canonic_j
+#     e1_event_j = e1.event_j
+#     e2_canonic_j = e2.canonic_j
+#     e2_event_j = e2.event_j
+#     if reverse:
+#         e1_canonic_j = e1.event_j
+#         e1_event_j = e1.canonic_j
+#         e2_canonic_j = e2.event_j
+#         e2_event_j = e2.canonic_j
+#     if e1.etype == "CE":
+#         dt0 = abs(e1_canonic_j[0] - e2_canonic_j[0]) <= relax
+#         dt1 = abs(e1_canonic_j[1] - e2_canonic_j[1]) <= relax
+#         de00 = abs(e1_event_j[0][0] - e2_event_j[0][0]) <= relax
+#         de01 = abs(e1_event_j[0][1] - e2_event_j[0][1]) <= relax
+#         de10 = abs(e1_event_j[1][0] - e2_event_j[1][0]) <= relax
+#         de11 = abs(e1_event_j[1][1] - e2_event_j[1][1]) <= relax
+#         return dt0 & dt1 & de00 & de01 & de10 & de11
+#     elif e1.etype == "ES":
+#         de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
+#         de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
+#         dt00 = abs(e1_canonic_j[0][0] - e2_canonic_j[0][0]) <= relax
+#         dt01 = abs(e1_canonic_j[0][1] - e2_canonic_j[0][1]) <= relax
+#         dt10 = abs(e1_canonic_j[1][0] - e2_canonic_j[1][0]) <= relax
+#         dt11 = abs(e1_canonic_j[1][1] - e2_canonic_j[1][1]) <= relax
+#         return de0 & de1 & dt00 & dt01 & dt10 & dt11
+#     elif e1.etype == "IR":
+#         # print(e1_event_j, e2_event_j)
+#         de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
+#         de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
+#         return de0 & de1
+#     else:
+#         dt0 = abs(e1_canonic_j[0] - e2_canonic_j[0]) <= relax
+#         dt1 = abs(e1_canonic_j[1] - e2_canonic_j[1]) <= relax
+#         de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
+#         de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
+#         return dt0 & dt1 & de0 & de1

@@ -5,13 +5,6 @@ ETYPES = ["ES", "IR", "A3", "A5"]
 EMAP = {"SE": "ES", "RI": "IR", "A3SS": "A3", "A5SS": "A5"}
 
 
-# def get_interval(region):
-#     if region == ".":
-#         return region
-#     s, e = [int(x) for x in region.split(":")[1].split("-")]
-#     return s, e
-
-
 def get_interval_s(c, s, e):
     return f"{c}:{s}-{e}"
 
@@ -414,7 +407,9 @@ def parse_rmats_ri(fpath, novel, pvalue=0.05):
         #         gene,
         #         strand,
         #         get_interval_s(chrom, ex_s, ex_e),
-        #         # get_interval_s(chrom, fex_e, sex_s - 1),
+        #         get_interval_s(chrom, fex_e, fex_e - 1),
+        #         [ex_s, fex_s, sex_s],
+        #         [ex_e, fex_e, sex_e],
         #         ".",
         #         ".",
         #         "W1",
@@ -427,156 +422,18 @@ def parse_rmats_ri(fpath, novel, pvalue=0.05):
     return EVENTS
 
 
-def main_anno(rmats_prefix, min_pvalue):
+def main(mode, rmats_prefix, min_pvalue):
     # truth, truth_w = parse_truth(truth_path, False)
 
     rmats = {x: set() for x in ETYPES}
-    rmats["ES"] = parse_rmats_se(rmats_prefix + "/SE.MATS.JC.txt", False, min_pvalue)
-    # rmats["ES-all"] = parse_rmats_se(
-    #     rmats_prefix + "/fromGTF.SE.txt", False, min_pvalue
-    # )
-    rmats["A3"] = parse_rmats_a3(rmats_prefix + "/A3SS.MATS.JC.txt", False, min_pvalue)
-    # rmats["A3-all"] = parse_rmats_a3(
-    #     rmats_prefix + "/fromGTF.A3SS.txt", False, min_pvalue
-    # )
-    rmats["A5"] = parse_rmats_a5(rmats_prefix + "/A5SS.MATS.JC.txt", False, min_pvalue)
-    # rmats["A5-all"] = parse_rmats_a5(
-    #     rmats_prefix + "/fromGTF.A5SS.txt", False, min_pvalue
-    # )
-    rmats["IR"] = parse_rmats_ri(rmats_prefix + "/RI.MATS.JC.txt", False, min_pvalue)
-    # rmats["IR-all"] = parse_rmats_ri(
-    #     rmats_prefix + "/fromGTF.RI.txt", False, min_pvalue
-    # )
+    rmats["ES"] = parse_rmats_se(rmats_prefix + "/SE.MATS.JC.txt", mode == "novel", min_pvalue)
+    rmats["A3"] = parse_rmats_a3(rmats_prefix + "/A3SS.MATS.JC.txt", mode == "novel", min_pvalue)
+    rmats["A5"] = parse_rmats_a5(rmats_prefix + "/A5SS.MATS.JC.txt", mode == "novel", min_pvalue)
+    rmats["IR"] = parse_rmats_ri(rmats_prefix + "/RI.MATS.JC.txt", mode == "novel", min_pvalue)
 
     for etype in rmats:
         for e in rmats[etype]:
-            print(etype, "annotated", *map(lambda x: str(x).strip('"'), e), sep=",")
-
-
-# def main_novel(truth_path, rmats_prefix, min_pvalue):
-#     truth, truth_w = parse_truth(truth_path, True)
-
-#     rmats = {}
-#     rmats["ES"] = parse_rmats_se(rmats_prefix + "/SE.MATS.JC.txt", True, min_pvalue)
-#     # rmats["ES-all"] = parse_rmats_se(rmats_prefix + "/fromGTF.SE.txt", True, min_pvalue)
-#     # rmats["ES-all"].union(
-#     #     parse_rmats_se(
-#     #         rmats_prefix + "/fromGTF.novelSpliceSite.SE.txt", True, min_pvalue
-#     #     )
-#     # )
-#     # rmats["ES-all"].union(
-#     #     parse_rmats_se(rmats_prefix + "/fromGTF.novelJunction.SE.txt", True, min_pvalue)
-#     # )
-
-#     rmats["A3"] = parse_rmats_a3(rmats_prefix + "/A3SS.MATS.JC.txt", True, min_pvalue)
-#     # rmats["A3-all"] = parse_rmats_a3(
-#     #     rmats_prefix + "/fromGTF.novelSpliceSite.A3SS.txt", True, min_pvalue
-#     # )
-#     # rmats["A3-all"].union(
-#     #     parse_rmats_a3(
-#     #         rmats_prefix + "/fromGTF.novelJunction.A3SS.txt", True, min_pvalue
-#     #     )
-#     # )
-#     rmats["A5"] = parse_rmats_a5(rmats_prefix + "/A5SS.MATS.JC.txt", True, min_pvalue)
-#     # rmats["A5-all"] = parse_rmats_a5(
-#     #     rmats_prefix + "/fromGTF.novelSpliceSite.A5SS.txt", True, min_pvalue
-#     # )
-#     # rmats["A5-all"].union(
-#     #     parse_rmats_a5(
-#     #         rmats_prefix + "/fromGTF.novelJunction.A5SS.txt", True, min_pvalue
-#     #     )
-#     # )
-#     rmats["IR"] = parse_rmats_ri(rmats_prefix + "/RI.MATS.JC.txt", True, min_pvalue)
-#     # rmats["IR-all"] = parse_rmats_ri(
-#     #     rmats_prefix + "/fromGTF.novelSpliceSite.RI.txt", True, min_pvalue
-#     # )
-#     # rmats["IR-all"].union(
-#     #     parse_rmats_ri(rmats_prefix + "/fromGTF.novelJunction.RI.txt", True, min_pvalue)
-#     # )
-
-#     print("Event", "C", "T", "TP", "FP", "FN", "P", "R", "F1", sep=",")
-#     for etype in ETYPES:
-#         TP = 0
-#         for e1 in rmats[etype]:
-#             hit = False
-#             for e2 in truth[etype]:
-#                 if e1[0] != e2[0]:
-#                     # different chrom
-#                     continue
-#                 if (
-#                     relaxed_intersect(e1, e2) >= len(e1) / 2
-#                 ):  # /2 to check for half junctions, 2 for SE, 1 for others
-#                     hit = True
-#                     break
-#             if hit:
-#                 TP += 1
-#             else:
-#                 print(etype, e1, file=sys.stderr)
-#         FP = len(rmats[etype]) - TP
-#         FN = len(truth[etype]) - TP
-#         P = TP / (TP + FP) if TP + FP != 0 else 0
-#         R = TP / (TP + FN) if TP + FN != 0 else 0
-#         F1 = 2 * (P * R) / (P + R) if (P + R) != 0 else 0
-#         P = round(P * 100, 2)
-#         R = round(R * 100, 2)
-#         F1 = round(F1 * 100, 2)
-#         print(
-#             etype, len(rmats[etype]), len(truth[etype]), TP, FP, FN, P, R, F1, sep=","
-#         )
-
-#         for e1 in truth[etype]:
-#             hit = False
-#             for e2 in rmats[etype]:
-#                 if e1[0] != e2[0]:
-#                     # different chrom
-#                     continue
-#                 if (
-#                     relaxed_intersect(e1, e2) >= len(e2) / 2
-#                 ):  # /2 to check for half junctions, 2 for SE, 1 for others
-#                     hit = True
-#                     break
-#             if not hit:
-#                 print("FN", etype, e1, truth_w[etype][e1], file=sys.stderr)
-#             else:
-#                 print("TP", etype, e1, file=sys.stderr)
-
-#     for etype in ETYPES:
-#         TP = 0
-#         for e1 in rmats[etype + "-all"]:
-#             hit = False
-#             for e2 in truth[etype]:
-#                 if e1[0] != e2[0]:
-#                     # different chrom
-#                     continue
-#                 if (
-#                     relaxed_intersect(e1, e2) >= len(e1) / 2
-#                 ):  # /2 to check for half junctions, 2 for SE, 1 for others
-#                     hit = True
-#                     break
-#             if hit:
-#                 TP += 1
-#             else:
-#                 pass  # print(etype, e1, file=sys.stderr)
-#         FP = len(rmats[etype + "-all"]) - TP
-#         FN = len(truth[etype]) - TP
-#         P = TP / (TP + FP) if TP + FP != 0 else 0
-#         R = TP / (TP + FN) if TP + FN != 0 else 0
-#         F1 = 2 * (P * R) / (P + R) if (P + R) != 0 else 0
-#         P = round(P * 100, 2)
-#         R = round(R * 100, 2)
-#         F1 = round(F1 * 100, 2)
-#         print(
-#             etype + "-all",
-#             len(rmats[etype + "-all"]),
-#             len(truth[etype]),
-#             TP,
-#             FP,
-#             FN,
-#             P,
-#             R,
-#             F1,
-#             sep=",",
-#         )
+            print(etype, mode, *map(lambda x: str(x).strip('"'), e), sep=",")
 
 
 if __name__ == "__main__":
@@ -584,7 +441,4 @@ if __name__ == "__main__":
     # truth_path = sys.argv[2]
     rmats_path = sys.argv[2]
     min_pvalue = 10
-    if mode == "anno":
-        main_anno(rmats_path, min_pvalue)
-    # elif mode == "novel":
-    #     main_novel(rmats_path, min_pvalue)
+    main(mode, rmats_path, min_pvalue)

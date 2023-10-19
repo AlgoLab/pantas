@@ -50,6 +50,12 @@ rule run:
             sample=samples,
             x=[1, 2],
         ),
+        expand(
+            pjoin(ODIR, "{sample}", "compare-{annov}.w{w}.csv"),
+            sample=samples,
+            annov=["anno", "novel"],
+            w=[-1, 1, 3],
+        )
 
 
 rule combine:
@@ -372,16 +378,16 @@ rule pantas_quant:
 # /usr/bin/time -vo {log} python3 {input.py} {input.splicedfa} {input.csv1} {input.csv2} > {output.csv} 2> /dev/null
 
 
-rule compare_pantas:
-    input:
-        truth=pjoin(ODIR, "{sample}", "truth.csv"),
-        calls=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "quant.w{w}.csv"),
-    output:
-        pjoin(ODIR, "{sample}", "pantas2-{annov}.w{w}.csv"),
-    shell:
-        """
-        python3 compare_pantas.py {wildcards.annov} {input.truth} {input.calls} 3 > {output} 2> {output}.log
-        """
+# rule compare_pantas:
+#     input:
+#         truth=pjoin(ODIR, "{sample}", "truth.csv"),
+#         calls=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "quant.w{w}.csv"),
+#     output:
+#         pjoin(ODIR, "{sample}", "pantas2-{annov}.w{w}.csv"),
+#     shell:
+#         """
+#         python3 compare_pantas.py {wildcards.annov} {input.truth} {input.calls} 3 > {output} 2> {output}.log
+#         """
 
 
 # --------------------
@@ -493,7 +499,18 @@ rule rmats:
         """
 
 
-rule compare_rmats:
+# rule compare_rmats:
+#     input:
+#         truth=pjoin(ODIR, "{sample}", "truth.csv"),
+#         calls=pjoin(ODIR, "{sample}", "{annov}", "rMATS"),
+#     output:
+#         pjoin(ODIR, "{sample}", "rMATS-{annov}.csv"),
+#     shell:
+#         """
+#         python3 compare_rmats.py {wildcards.annov} {input.truth} {input.calls} > {output}
+#         """
+
+rule build_rmats:
     input:
         truth=pjoin(ODIR, "{sample}", "truth.csv"),
         calls=pjoin(ODIR, "{sample}", "{annov}", "rMATS"),
@@ -501,8 +518,9 @@ rule compare_rmats:
         pjoin(ODIR, "{sample}", "rMATS-{annov}.csv"),
     shell:
         """
-        python3 compare_rmats.py {wildcards.annov} {input.truth} {input.calls} > {output}
+        python3 build_rmats.py {wildcards.annov} {input.calls} > {output}
         """
+
 
 
 # ---------------
@@ -635,49 +653,63 @@ rule whippet_delta_novel:
         """
 
 
-rule compare_whippet:
+# rule compare_whippet:
+#     input:
+#         truth=pjoin(ODIR, "{sample}", "truth.csv"),
+#         calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
+#     output:
+#         pjoin(ODIR, "{sample}", "whippet-{annov}.csv"),
+#     shell:
+#         """
+#         python3 compare_whippet.py {input.truth} {input.calls} 0.1 0.9 0 > {output}
+#         """
+
+
+# rule compare_whippet_nofilt:
+#     input:
+#         truth=pjoin(ODIR, "{sample}", "truth.csv"),
+#         calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
+#     output:
+#         pjoin(ODIR, "{sample}", "whippet-{annov}-nofilt.csv"),
+#     shell:
+#         """
+#         python3 compare_whippet.py {input.truth} {input.calls} -1 -1 0 > {output}
+#         """
+
+
+# rule compare_whippet_relaxed:
+#     input:
+#         truth=pjoin(ODIR, "{sample}", "truth.csv"),
+#         calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
+#     output:
+#         pjoin(ODIR, "{sample}", "whippet-{annov}-relaxed.csv"),
+#     shell:
+#         """
+#         python3 compare_whippet.py {input.truth} {input.calls} 0.1 0.9 3 > {output}
+#         """
+
+
+# rule compare_whippet_nofilt_relaxed:
+#     input:
+#         truth=pjoin(ODIR, "{sample}", "truth.csv"),
+#         calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
+#     output:
+#         pjoin(ODIR, "{sample}", "whippet-{annov}-nofilt-relaxed.csv"),
+#     shell:
+#         """
+#         python3 compare_whippet.py {input.truth} {input.calls} -1 -1 3 > {output}
+#         """
+
+
+rule compare_all:
     input:
         truth=pjoin(ODIR, "{sample}", "truth.csv"),
-        calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
+        pantas=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "quant.w{w}.csv"),
+        rmats=pjoin(ODIR, "{sample}", "rMATS-{annov}.csv"),
+        whippet=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
     output:
-        pjoin(ODIR, "{sample}", "whippet-{annov}.csv"),
+        pjoin(ODIR, "{sample}", "compare-{annov}.w{w}.csv"),
     shell:
         """
-        python3 compare_whippet.py {input.truth} {input.calls} 0.1 0.9 0 > {output}
-        """
-
-
-rule compare_whippet_nofilt:
-    input:
-        truth=pjoin(ODIR, "{sample}", "truth.csv"),
-        calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
-    output:
-        pjoin(ODIR, "{sample}", "whippet-{annov}-nofilt.csv"),
-    shell:
-        """
-        python3 compare_whippet.py {input.truth} {input.calls} -1 -1 0 > {output}
-        """
-
-
-rule compare_whippet_relaxed:
-    input:
-        truth=pjoin(ODIR, "{sample}", "truth.csv"),
-        calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
-    output:
-        pjoin(ODIR, "{sample}", "whippet-{annov}-relaxed.csv"),
-    shell:
-        """
-        python3 compare_whippet.py {input.truth} {input.calls} 0.1 0.9 3 > {output}
-        """
-
-
-rule compare_whippet_nofilt_relaxed:
-    input:
-        truth=pjoin(ODIR, "{sample}", "truth.csv"),
-        calls=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
-    output:
-        pjoin(ODIR, "{sample}", "whippet-{annov}-nofilt-relaxed.csv"),
-    shell:
-        """
-        python3 compare_whippet.py {input.truth} {input.calls} -1 -1 3 > {output}
+        python3 cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} > {output}
         """

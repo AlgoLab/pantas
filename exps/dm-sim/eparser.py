@@ -145,6 +145,9 @@ class EventPantas(Event):
             case "IR":
                 self.event_j = parse_region(self.junction1_refpos)
                 self.canonic_j = parse_region(self.junction2_refpos)
+                if self.event_j == ".":
+                    self.event_j = self.canonic_j
+                    self.canonic_j = "."
 
             case "CE":
                 self.event_j = [
@@ -251,8 +254,6 @@ def eq_event(e1: Event, e2: Event, relax: int = 0, reverse: bool = False):
         de11 = abs(e1_event_j[1][1] - e2_event_j[1][1]) <= relax
         return dt0 & dt1 & de00 & de01 & de10 & de11
     elif e1.etype == "ES":
-        print("ev", e1_event_j, e2_event_j)
-        print("can", e1_canonic_j, e2_canonic_j)
         de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
         de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
         dt00 = abs(e1_canonic_j[0][0] - e2_canonic_j[0][0]) <= relax

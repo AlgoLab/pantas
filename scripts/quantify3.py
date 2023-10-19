@@ -216,7 +216,16 @@ class Event:
         self.replicates.append([event_cov, canonical_cov])
 
     def psi(self, mode: str = "canonic"):
-        return mean([calc_psi(*x, mode) for x in self.replicates])
+        _psis = [calc_psi(*x, mode) for x in self.replicates]
+        if all([x == -1 for x in _psis]):
+            return -1
+        return mean([x for x in _psis if x != -1])
+
+    def get_event_cov(self):
+        return int(mean([x[0] for x in self.replicates]))
+
+    def get_canonic_cov(self):
+        return int(mean([x[1] for x in self.replicates]))
 
 
 def eq_event(e1: Event, e2: Event, relax: int = 0):
@@ -351,8 +360,8 @@ def main(args):
                     dpsi = -1
                 print(
                     e1.to_csv(),
-                    "W1",
-                    "W2",
+                    f"{e1.get_canonic_cov()}/{e1.get_event_cov()}",
+                    f"{eqs[0].get_canonic_cov()}/{eqs[0].get_event_cov()}",
                     psi1,
                     psi2,
                     dpsi,
@@ -360,15 +369,31 @@ def main(args):
                 )
             else:
                 if not e1.psi() == -1:
-                    print(e1.to_csv(), "W1", "W2", e1.psi(), "NaN", "NaN", sep=",")
+                    print(
+                        e1.to_csv(),
+                        f"{e1.get_canonic_cov()}/{e1.get_event_cov()}",
+                        ".",
+                        e1.psi(),
+                        "NaN",
+                        "NaN",
+                        sep=",",
+                    )
         for e2 in events_2[etype]:
             eqs = [
                 x
                 for x in events_1[etype]
-                if eq_event(e2, x, relax=min(0, RELAX * (len(args.c2) - 1)))
+                if eq_event(e2, x, relax=RELAX * max(1, (len(args.c1) - 1)))
             ]
             if len(eqs) == 0 and not e2.psi() == -1:
-                print(e2.to_csv(), "W1", "W2", "NaN", e2.psi(), "NaN", sep=",")
+                print(
+                    e2.to_csv(),
+                    ".",
+                    f"{e2.get_canonic_cov()}/{e2.get_event_cov()}",
+                    "NaN",
+                    e2.psi(),
+                    "NaN",
+                    sep=",",
+                )
 
     # for etype in ETYPES:
     #     for es1 in events_1_matched[etype]:

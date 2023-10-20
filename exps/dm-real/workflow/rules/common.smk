@@ -19,10 +19,12 @@ S2 = config["s2"]
 
 Ws = [-1, 5, 10]
 
-p_value = 10,
-min_dpsi = -1,
-min_prob = -1,
+p_value = 10
+min_dpsi = -1
+min_prob = -1
 relax = 4
+min_coverage = 10
+
 chroms = []
 for line in open(FA + ".fai"):
     chroms.append(line.split("\t")[0])

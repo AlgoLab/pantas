@@ -74,3 +74,13 @@ rule rmats:
         """
         /usr/bin/time -vo {log} rmats.py --gtf {input.gtf} --b1 {input.c1txt} --b2 {input.c2txt} --od {params.outd} --tmp {params.tmpd} --readLength {L} --nthread {threads} -t paired
         """
+        
+rule build_rmats_csv:
+    input:
+        rmats = pjoin(ODIR, "rMATS"),
+    params:
+        p_value = p_value
+    output:
+        csv = pjoin(ODIR, "rMATS", "summary.csv"),
+    conda: "../envs/plot.yaml"
+    script: "../scripts/build_rmats.py"

@@ -5,7 +5,7 @@ rule get_transcripts:
     output:
         fa=pjoin(ODIR, "transcripts.fa"),
     conda:
-        "../envs/gffread.yml"
+        "../envs/gffread.yaml"
     shell:
         """
         gffread -w {output.fa} -g {input.fa} {input.gtf}

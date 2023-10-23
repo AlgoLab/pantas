@@ -55,7 +55,7 @@ rule run:
             sample=samples,
             annov=["anno", "novel"],
             w=[-1, 1, 3],
-        )
+        ),
 
 
 rule combine:
@@ -510,6 +510,7 @@ rule rmats:
 #         python3 compare_rmats.py {wildcards.annov} {input.truth} {input.calls} > {output}
 #         """
 
+
 rule build_rmats:
     input:
         truth=pjoin(ODIR, "{sample}", "truth.csv"),
@@ -520,7 +521,6 @@ rule build_rmats:
         """
         python3 build_rmats.py {wildcards.annov} {input.calls} > {output}
         """
-
 
 
 # ---------------
@@ -699,6 +699,98 @@ rule whippet_delta_novel:
 #         """
 #         python3 compare_whippet.py {input.truth} {input.calls} -1 -1 3 > {output}
 #         """
+
+
+# -----------------------
+# --- SALMON + SUPPA2 ---
+# -----------------------
+
+
+rule get_transcripts:
+    input:
+        fa=FA,
+        gtf=pjoin(ODIR, "{sample}", "asim-output", "splicing_variants.gtf"),
+    output:
+        fa=pjoin(ODIR, "{sample}", "asim-output", "splicing_variants.cdna.fa"),
+    conda:
+        "envs/gffread.yaml"
+    shell:
+        """
+        gffread -w {output.fa} -g {input.fa} {input.gtf}
+        """
+
+
+rule salmon_index:
+    input:
+        fa=rules.get_transcripts.output.fa,
+    output:
+        index=directory(pjoin(ODIR, "{sample}", "anno", "salmon", "salmon-index")),
+    threads: workflow.cores
+    conda:
+        "envs/salmon.yaml"
+    log:
+        pjoin(ODIR, "{sample}", "bench", "anno", "salmon", "index.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} salmon index -t {input.fa} -i {output.index} -p {threads}
+        """
+
+
+rule salmon_quant:
+    input:
+        index=pjoin(ODIR, "{sample}", "anno", "salmon", "salmon-index"),
+        fq1=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_1.clean.fq"),
+        fq2=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_2.clean.fq"),
+    output:
+        outd=directory(pjoin(ODIR, "{sample}", "anno", "salmon", "salmon-quant/")),
+        sf=pjoin(ODIR, "{sample}", "anno", "salmon", "quant.sf"),
+    threads: workflow.cores
+    conda:
+        "envs/salmon.yaml"
+    log:
+        pjoin(ODIR, "{sample}", "bench", "anno", "salmon", "quant.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} salmon quant -i {input.index} -l IU -1 {input.fq1} -2 {input.fq2} --validateMappings -o {output.outd} -p {threads}
+        """
+
+
+rule suppa2_generateevents:
+    input:
+        gtf=pjoin(ODIR, "{sample}", "asim-output", "splicing_variants.gtf"),
+    output:
+        ioe=pjoin(ODIR, "{sample}", "anno", "suppa2", "annotated.events.ioe"),
+    params:
+        oprefix=pjoin(ODIR, "{sample}", "anno", "suppa2", "annotated"),
+    threads: 1
+    conda:
+        "envs/suppa2.yaml"
+    log:
+        pjoin(ODIR, "{sample}", "bench", "anno", "suppa2", "generateevents.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} suppa.py generateEvents -i {input.gtf} -o {params.oprefix} -e SE SS RI -f ioe
+        awk 'FNR==1 && NR!=1 {{ while (/^seqname/) getline; }} 1 {{print}}' {params.oprefix}*ioe > {output.ioe}
+        """
+
+
+rule suppa2:
+    input:
+        ioe=pjoin(ODIR, "{sample}", "anno", "suppa2", "annotated.events.ioe"),
+        quants=pjoin(ODIR, "{sample}", "anno", "salmon", "quant.sf"),
+    output:
+        outd=directory(pjoin(ODIR, "suppa2", "OUT")),
+    params:
+        quants=pjoin(ODIR, "{sample}", "bench", "anno", "salmon", "*quant.sf"),
+    threads: 1
+    conda:
+        "envs/suppa2.yaml"
+    log:
+        pjoin(ODIR, "{sample}", "bench", "anno", "suppa2", "suppa2.time"),
+    shell:
+        """
+        /usr/bin/time -vo {log} bash run_suppa2.sh {input.ioe} "{params.quants}" {output.outd}
+        """
 
 
 rule compare_all:

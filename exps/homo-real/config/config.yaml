@@ -1,8 +1,8 @@
 fa : /data/human/reference.chroms.fa
 gtf : /data/human/annotation.gtf
 vcf : /data/human/1kgp-GRCh38.vcf.gz
-odir : /data/human/OUT
-glist: /data/human/83-rtpcr-genes.txt
+odir : /data/human/OUT-GC
+glist: /data/human/rtpcr.ens.txt
 L : 101
 software : software
 s1 :

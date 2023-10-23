@@ -30,7 +30,7 @@ rule whippet_index:
         pjoin(ODIR, "bench", "whippet", "index.time"),
     shell:
         """
-        /usr/bin/time -vo {log} julia {input.exe} --fasta {input.fa} --gtf {input.gtf} --index {params.index_prefix}
+        /usr/bin/time -vo {log} julia {input.exe} --fasta {input.fa} --gtf {input.gtf} --index {params.index_prefix} --suppress-low-tsl
         """
 
 

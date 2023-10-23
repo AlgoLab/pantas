@@ -30,6 +30,8 @@ include: "rules/pantas.smk"
 # ##### target rules #####
 rule all:
     input:
+        # expand(pjoin(ODIR, "pantas2", "{sample}.bam"), sample=C1.keys()),
+        # expand(pjoin(ODIR, "pantas2", "{sample}.bam"), sample=C2.keys()),
         expand(pjoin(ODIR, "pantas2", "quant.w{w}.csv"), w=Ws),
         # pjoin(ODIR, "rMATS", "summary.txt"),
         # pjoin(ODIR, "whippet", "psi.diff"),

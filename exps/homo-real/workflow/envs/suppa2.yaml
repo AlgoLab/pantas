@@ -1,0 +1,6 @@
+name: suppa
+channels:
+  - bioconda
+dependencies:
+    - R
+    - suppa

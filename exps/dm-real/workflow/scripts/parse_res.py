@@ -8,7 +8,7 @@ import numpy as np
 import math
 import copy
 from matplotlib import pyplot as plt
-from matplotlib_venn import venn2, venn3
+from venn import venn
 import seaborn as sns
 from scipy.stats import pearsonr
 import pandas as pd
@@ -18,7 +18,7 @@ import math
 ETYPES = ["ES", "IR", "A3", "A5"]
 EMAP_RMATS = {"SE": "ES", "RI": "IR", "A3SS": "A3", "A5SS": "A5"}
 EMAP_WHIPPET = {"CE": "ES", "RI": "IR", "AD": "A5", "AA": "A3"}
-## TODO metti come variabili snakemake
+
 FILTER = snakemake.params.min_dpsi
 MIN_EVENT_COV = snakemake.params.min_coverage
 
@@ -97,6 +97,19 @@ def parse_rmats(path):
         event_rmats[e.etype].append(e)
     return event_rmats
 
+def parse_suppa(path):
+    event_suppa = {x: [] for x in ETYPES}
+    for line in open(path, "r"):
+        if line.startswith("etype"):
+            continue
+        line = line.strip()
+        _e = line.split(",")
+        e = eparser.EventPantas(*_e)
+        e.dpsi = -e.dpsi
+        if abs(e.dpsi) < FILTER:
+            continue
+        event_suppa[e.etype].append(e)
+    return event_suppa
 
 def parse_whippet(path):
     event_whippet = {x: [] for x in ETYPES}
@@ -128,6 +141,10 @@ def main(argv):
     whippet_path = snakemake.input.w
     if whippet_path.endswith("/"):
         whippet_path = whippet_path[:-1]
+    suppa_path = snakemake.input.s
+    if suppa_path.endswith("/"):
+        suppa_path = suppa_path[:-1]
+
     output_dir = snakemake.params.res_dir
     if output_dir.endswith("/"):
         output_dir = output_dir[:-1]
@@ -138,16 +155,17 @@ def main(argv):
     min_dpsi = snakemake.params.min_dpsi
     min_prob = snakemake.params.min_prob
     relax = snakemake.params.relax
-     
+
     pantas = {}
     for w in Ws:
         pantas[w] = parse_pantas(f"{pantas_path}/quant.w{w}.csv")
     rmats = parse_rmats(rmats_path)
+    suppa = parse_suppa(suppa_path)
     whippet = parse_whippet(whippet_path)
     data = {}
     pantas_keys = list(pantas.keys())
     p_d = copy.deepcopy(pantas[Ws[0]])
-    key_names = [f"pantas_{w}" for w in Ws]
+    key_names = [f"Pantas_{w}" for w in Ws]
     for key in ["ES", "A3", "A5", "IR"]:
         for event in pantas[Ws[0]][key]:
             # print(event)
@@ -157,9 +175,10 @@ def main(argv):
             data[e_name] = {
                 "type": key,
                 "event": e_name,
-                "whippet": math.nan,
-                "rmats": math.nan,
-                f"pantas_{Ws[0]}": event.dpsi,
+                "Whippet": math.nan,
+                "Salmon+Suppa2": math.nan,
+                "rMATS": math.nan,
+                f"Pantas_{Ws[0]}": event.dpsi,
             }
     for i, w in enumerate(Ws[1:]):
         # print(w)
@@ -170,17 +189,18 @@ def main(argv):
                     f"{event.etype}_{event.chrom}_{event.event_j[0]}_{event.event_j[1]}"
                 )
                 if e_name in data.keys():
-                    data[e_name][f"pantas_{w}"] = event.dpsi
+                    data[e_name][f"Pantas_{w}"] = event.dpsi
                 else:
                     tmp_dict = {
                         "type": key,
                         "event": e_name,
-                        "whippet": math.nan,
-                        "rmats": math.nan,
-                        f"pantas_{w}": event.dpsi,
+                        "Whippet": math.nan,
+                        "Salmon+Suppa2": math.nan,
+                        "rMATS": math.nan,
+                        f"Pantas_{w}": event.dpsi,
                     }
                     for j in Ws[0 : i + 1]:
-                        tmp_dict[f"pantas_{j}"] = math.nan
+                        tmp_dict[f"Pantas_{j}"] = math.nan
                     data[e_name] = tmp_dict
                     p_d[key].append(event)
 
@@ -190,24 +210,43 @@ def main(argv):
                 f"{event.etype}_{event.chrom}_{event.event_j[0]}_{event.event_j[1]}"
             )
             if e_name in data.keys():
-                data[e_name][f"rmats"] = event.dpsi
+                data[e_name][f"rMATS"] = event.dpsi
             else:
                 tmp_dict = {
                     "type": key,
                     "event": e_name,
-                    "whippet": math.nan,
-                    "rmats": event.dpsi,
+                    "Whippet": math.nan,
+                    "Salmon+Suppa2": math.nan,
+                    "rMATS": event.dpsi,
                 }
                 for j in Ws:
-                    tmp_dict[f"pantas_{j}"] = math.nan
-                data[event[0]] = tmp_dict
+                    tmp_dict[f"Pantas_{j}"] = math.nan
+                data[e_name] = tmp_dict
                 p_d[key].append(event)
-
+    for key in ["ES", "A3", "A5", "IR"]:
+        for event in suppa[key]:
+            e_name = (
+                f"{event.etype}_{event.chrom}_{event.event_j[0]}_{event.event_j[1]}"
+            )
+            if e_name in data.keys():
+                data[e_name][f"Salmon+Suppa2"] = event.dpsi
+            else:
+                tmp_dict = {
+                    "type": key,
+                    "event": e_name,
+                    "Whippet": math.nan,
+                    "Salmon+Suppa2": event.dpsi,
+                    "rMATS": math.nan,
+                }
+                for j in Ws:
+                    tmp_dict[f"Pantas_{j}"] = math.nan
+                data[e_name] = tmp_dict
+                p_d[key].append(event)
     mask_whippet, p_w = check_whippet(whippet, p_d, relax)
     for event, row in data.items():
         e = row["type"]
         if event in mask_whippet[e].keys():
-            data[event]["whippet"] = mask_whippet[e][event]
+            data[event]["Whippet"] = mask_whippet[e][event]
     for key in ["ES", "A3", "A5", "IR"]:
         for event in whippet[key]:
             e_name = (
@@ -217,21 +256,23 @@ def main(argv):
                 tmp_dict = {
                     "type": key,
                     "event": e_name,
-                    "whippet": event.dpsi,
-                    "rmats": math.nan,
+                    "Whippet": event.dpsi,
+                    "Salmon+Suppa2": math.nan,
+                    "rMATS": math.nan,
                 }
                 for j in Ws:
-                    tmp_dict[f"pantas_{j}"] = math.nan
+                    tmp_dict[f"Pantas_{j}"] = math.nan
                 data[e_name] = tmp_dict
 
     df = pd.DataFrame(data.values())
     df.to_csv(f"{output}/res.csv", index=False)
+    print(df)
     for w in Ws:
-        p = f"pantas_{w}"
+        p = f"Pantas_{w}"
         g = sns.jointplot(
             data=df,
             x=p,
-            y="rmats",
+            y="rMATS",
             hue="type",
             kind="scatter",
             xlim=(-1.05, 1.05),
@@ -243,7 +284,7 @@ def main(argv):
         g = sns.jointplot(
             data=df,
             x=p,
-            y="whippet",
+            y="Whippet",
             hue="type",
             kind="scatter",
             xlim=(-1.05, 1.05),
@@ -252,12 +293,24 @@ def main(argv):
         plt.tight_layout()
         plt.savefig(f"{output}/pantas2_{w}_whippet.png")
         plt.clf()
+        g = sns.jointplot(
+            data=df,
+            x=p,
+            y="Salmon+Suppa2",
+            hue="type",
+            kind="scatter",
+            xlim=(-1.05, 1.05),
+            ylim=(-1.05, 1.05),
+        )
+        plt.tight_layout()
+        plt.savefig(f"{output}/pantas2_{w}_suppa.png")
+        plt.clf()
 
     for (w1, w2) in pairs(Ws):
         g = sns.jointplot(
             data=df,
-            x=f"pantas_{w1}",
-            y=f"pantas_{w2}",
+            x=f"Pantas_{w1}",
+            y=f"Pantas_{w2}",
             hue="type",
             kind="scatter",
             xlim=(-1.05, 1.05),
@@ -269,8 +322,8 @@ def main(argv):
 
     g = sns.jointplot(
         data=df,
-        x="rmats",
-        y="whippet",
+        x="rMATS",
+        y="Whippet",
         hue="type",
         kind="scatter",
         xlim=(-1.05, 1.05),
@@ -278,6 +331,122 @@ def main(argv):
     )
     plt.tight_layout()
     plt.savefig(f"{output}/rmats_whippet.png")
+    plt.clf()
+    g = sns.jointplot(
+        data=df,
+        x="rMATS",
+        y="Salmon+Suppa2",
+        hue="type",
+        kind="scatter",
+        xlim=(-1.05, 1.05),
+        ylim=(-1.05, 1.05),
+    )
+    plt.tight_layout()
+    plt.savefig(f"{output}/rmats_suppa.png")
+    plt.clf()
+    g = sns.jointplot(
+        data=df,
+        x="Whippet",
+        y="Salmon+Suppa2",
+        hue="type",
+        kind="scatter",
+        xlim=(-1.05, 1.05),
+        ylim=(-1.05, 1.05),
+    )
+    plt.tight_layout()
+    plt.savefig(f"{output}/whippet_suppa.png")
+    plt.clf()
+
+    for e in ETYPES:
+        tmp_df = df[df["type"] == e]
+
+        for w in Ws:
+            p = f"Pantas_{w}"
+            g = sns.jointplot(
+                data=tmp_df,
+                x=p,
+                y="rMATS",
+                hue="type",
+                kind="scatter",
+                xlim=(-1.05, 1.05),
+                ylim=(-1.05, 1.05),
+            )
+            plt.tight_layout()
+            plt.savefig(f"{output}/{e}_pantas2_{w}_rmats.png")
+            plt.clf()
+            g = sns.jointplot(
+                data=tmp_df,
+                x=p,
+                y="Whippet",
+                hue="type",
+                kind="scatter",
+                xlim=(-1.05, 1.05),
+                ylim=(-1.05, 1.05),
+            )
+            plt.tight_layout()
+            plt.savefig(f"{output}/{e}_pantas2_{w}_whippet.png")
+            plt.clf()
+            g = sns.jointplot(
+                data=tmp_df,
+                x=p,
+                y="Salmon+Suppa2",
+                hue="type",
+                kind="scatter",
+                xlim=(-1.05, 1.05),
+                ylim=(-1.05, 1.05),
+            )
+            plt.tight_layout()
+            plt.savefig(f"{output}/{e}_pantas2_{w}_suppa.png")
+            plt.clf()
+        for (w1, w2) in pairs(Ws):
+            g = sns.jointplot(
+                data=tmp_df,
+                x=f"Pantas_{w1}",
+                y=f"Pantas_{w2}",
+                hue="type",
+                kind="scatter",
+                xlim=(-1.05, 1.05),
+                ylim=(-1.05, 1.05),
+            )
+            plt.tight_layout()
+            plt.savefig(f"{output}/{e}_pantas_{w1}_pantas2_{w2}.png")
+            plt.clf()
+
+        g = sns.jointplot(
+            data=tmp_df,
+            x="rMATS",
+            y="Whippet",
+            hue="type",
+            kind="scatter",
+            xlim=(-1.05, 1.05),
+            ylim=(-1.05, 1.05),
+        )
+        plt.tight_layout()
+        plt.savefig(f"{output}/{e}_rmats_whippet.png")
+        plt.clf()
+        g = sns.jointplot(
+            data=tmp_df,
+            x="rMATS",
+            y="Salmon+Suppa2",
+            hue="type",
+            kind="scatter",
+            xlim=(-1.05, 1.05),
+            ylim=(-1.05, 1.05),
+        )
+        plt.tight_layout()
+        plt.savefig(f"{output}/{e}_rmats_suppa.png")
+        plt.clf()
+        g = sns.jointplot(
+            data=tmp_df,
+            x="Whippet",
+            y="Salmon+Suppa2",
+            hue="type",
+            kind="scatter",
+            xlim=(-1.05, 1.05),
+            ylim=(-1.05, 1.05),
+        )
+    plt.tight_layout()
+    plt.savefig(f"{output}/{e}_whippet_suppa.png")
     plt.clf()
 
     df_mask = df.copy()
@@ -287,47 +456,58 @@ def main(argv):
     df_mask.to_csv(f"{output}/res_mask.csv", index=False)
     for e in ETYPES:
         tmp_df = df_mask[df_mask["type"] == e]
-        rmats_set = set(tmp_df["rmats"])
-        whippet_set = set(tmp_df["whippet"])
+        rmats_set = set(tmp_df["rMATS"])
+        whippet_set = set(tmp_df["Whippet"])
+        suppa_set = set(tmp_df["Salmon+Suppa2"])
         for w in Ws:
-            pantas_set = set(tmp_df[f"pantas_{w}"])
-            venn3(
-                [rmats_set, whippet_set, pantas_set],
-                ("rmats", "whippet", f"pantas_{w}"),
-            )
+            pantas_set = set(tmp_df[f"Pantas_{w}"])
+            dic_data = {
+                "rMATS": rmats_set,
+                "Whippet": whippet_set,
+                "Salmon+Suppa2": suppa_set,
+                f"Pantas_{w}": pantas_set,
+            }
+            venn(dic_data)
             plt.tight_layout()
-            plt.savefig(f"{output}/venn_{e}_rmats_whippet_pantas_{w}.png")
+            plt.savefig(f"{output}/venn_{e}_rmats_whippet_suppa_pantas_{w}.png")
             plt.clf()
         for (w1, w2) in pairs(Ws):
-            pantas_set1 = set(tmp_df[f"pantas_{w1}"])
-            pantas_set2 = set(tmp_df[f"pantas_{w2}"])
-            venn2(
-                [pantas_set1, pantas_set2],
-                (f"pantas_{w1}", f"pantas_{w2}"),
-            )
+            pantas_set1 = set(tmp_df[f"Pantas_{w1}"])
+            pantas_set2 = set(tmp_df[f"Pantas_{w2}"])
+            dic_data = {
+                f"Pantas_{w1}": pantas_set1,
+                f"Pantas_{w2}": pantas_set2,
+            }
+            venn(dic_data)
+
             plt.tight_layout()
             plt.savefig(f"{output}/venn_{e}_pantas_{w1}_pantas_{w2}.png")
             plt.clf()
 
     tmp_df = df_mask
-    rmats_set = set(tmp_df["rmats"])
-    whippet_set = set(tmp_df["whippet"])
+    rmats_set = set(tmp_df["rMATS"])
+    whippet_set = set(tmp_df["Whippet"])
+    suppa_set = set(tmp_df["Salmon+Suppa2"])
     for w in Ws:
-        pantas_set = set(tmp_df[f"pantas_{w}"])
-        venn3(
-            [rmats_set, whippet_set, pantas_set],
-            ("rmats", "whippet", f"pantas_{w}"),
-        )
+        pantas_set = set(tmp_df[f"Pantas_{w}"])
+        dic_data = {
+            "rMATS": rmats_set,
+            "Whippet": whippet_set,
+            "Salmon+Suppa2": suppa_set,
+            f"Pantas_{w}": pantas_set,
+        }
+        venn(dic_data)
         plt.tight_layout()
-        plt.savefig(f"{output}/venn_full_rmats_whippet_pantas_{w}.png")
+        plt.savefig(f"{output}/venn_full_rmats_whippet_suppa_pantas_{w}.png")
         plt.clf()
     for (w1, w2) in pairs(Ws):
-        pantas_set1 = set(tmp_df[f"pantas_{w1}"])
-        pantas_set2 = set(tmp_df[f"pantas_{w2}"])
-        venn2(
-            [pantas_set1, pantas_set2],
-            (f"pantas_{w1}", f"pantas_{w2}"),
-        )
+        pantas_set1 = set(tmp_df[f"Pantas_{w1}"])
+        pantas_set2 = set(tmp_df[f"Pantas_{w2}"])
+        dic_data = {
+            f"Pantas_{w1}": pantas_set1,
+            f"Pantas_{w2}": pantas_set2,
+        }
+        venn(dic_data)
         plt.tight_layout()
         plt.savefig(f"{output}/venn_full_pantas_{w1}_pantas_{w2}.png")
         plt.clf()

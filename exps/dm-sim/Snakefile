@@ -781,6 +781,7 @@ rule suppa2:
         quant2=pjoin(ODIR, "{sample}", "anno", "salmon", "salmon-quant-2", "quant.sf"),
     output:
         outd=directory(pjoin(ODIR, "{sample}", "anno", "suppa2", "OUT")),
+        psi=pjoin(ODIR, "{sample}", "anno", "suppa2", "OUT", "DIFF.dpsi"),
     params:
         quants=pjoin(ODIR, "{sample}", "anno", "salmon", "salmon-quant-*", "quant.sf"),
     threads: 1
@@ -800,10 +801,12 @@ rule compare_all:
         truth=pjoin(ODIR, "{sample}", "truth.csv"),
         pantas=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "quant.w{w}.csv"),
         rmats=pjoin(ODIR, "{sample}", "rMATS-{annov}.csv"),
-        whippet=pjoin(ODIR, "{sample}", "{annov}", "whippet", "psi.diff"),
+        whippet=pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff"),
+        suppa2=pjoin(ODIR, "{sample}", "anno", "SUPPA2", "DIFF.dpsi"),
     output:
         pjoin(ODIR, "{sample}", "compare-{annov}.w{w}.csv"),
     shell:
         """
+        # FIXME: add SUPPA2 here and check if rules I/O are correct
         python3 cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} > {output}
         """

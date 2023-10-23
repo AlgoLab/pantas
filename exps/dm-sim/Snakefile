@@ -742,13 +742,13 @@ rule salmon_quant:
         fq1=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_1.clean.fq"),
         fq2=pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_2.clean.fq"),
     output:
-        outd=directory(pjoin(ODIR, "{sample}", "anno", "salmon", "salmon-quant/")),
-        sf=pjoin(ODIR, "{sample}", "anno", "salmon", "quant.sf"),
+        outd=directory(pjoin(ODIR, "{sample}", "anno", "salmon", "salmon-quant-{x}/")),
+        sf=pjoin(ODIR, "{sample}", "anno", "salmon", "salmon-quant-{x}", "quant.sf"),
     threads: workflow.cores
     conda:
         "envs/salmon.yaml"
     log:
-        pjoin(ODIR, "{sample}", "bench", "anno", "salmon", "quant.time"),
+        pjoin(ODIR, "{sample}", "bench", "anno", "salmon", "quant-{x}.time"),
     shell:
         """
         /usr/bin/time -vo {log} salmon quant -i {input.index} -l IU -1 {input.fq1} -2 {input.fq2} --validateMappings -o {output.outd} -p {threads}
@@ -777,11 +777,12 @@ rule suppa2_generateevents:
 rule suppa2:
     input:
         ioe=pjoin(ODIR, "{sample}", "anno", "suppa2", "annotated.events.ioe"),
-        quants=pjoin(ODIR, "{sample}", "anno", "salmon", "quant.sf"),
+        quant1=pjoin(ODIR, "{sample}", "anno", "salmon", "salmon-quant-1", "quant.sf"),
+        quant2=pjoin(ODIR, "{sample}", "anno", "salmon", "salmon-quant-2", "quant.sf"),
     output:
-        outd=directory(pjoin(ODIR, "suppa2", "OUT")),
+        outd=directory(pjoin(ODIR, "{sample}", "anno", "suppa2", "OUT")),
     params:
-        quants=pjoin(ODIR, "{sample}", "bench", "anno", "salmon", "*quant.sf"),
+        quants=pjoin(ODIR, "{sample}", "anno", "salmon", "salmon-quant-*", "quant.sf"),
     threads: 1
     conda:
         "envs/suppa2.yaml"
@@ -789,6 +790,7 @@ rule suppa2:
         pjoin(ODIR, "{sample}", "bench", "anno", "suppa2", "suppa2.time"),
     shell:
         """
+        # NOTE: script is update to work with single replicate per condition
         /usr/bin/time -vo {log} bash run_suppa2.sh {input.ioe} "{params.quants}" {output.outd}
         """
 

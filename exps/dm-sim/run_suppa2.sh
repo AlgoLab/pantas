@@ -27,7 +27,15 @@ echo $h1s
 echo $h2s
 Rscript $wd/split_file.R $outd/all.iso_tpm.txt $h1s $h2s $outd/h1.tpm $outd/h2.tpm
 Rscript $wd/split_file.R $outd/events.psi $h1s $h2s $outd/h1.psi $outd/h2.psi
-suppa.py diffSplice -m empirical -i $ioe -e $outd/h1.tpm $outd/h2.tpm -p $outd/h1.psi $outd/h2.psi -o $outd/DIFF
+
+# hack for single replicate - anyway we do not compare dPSI, but just events detection, so we should be good
+paste $outd/h1.tpm <(cut -f2 $outd/h1.tpm) > $outd/h1.mod.tpm
+paste $outd/h2.tpm <(cut -f2 $outd/h2.tpm) > $outd/h2.mod.tpm
+
+paste $outd/h1.psi <(cut -f2 $outd/h1.psi) > $outd/h1.mod.psi
+paste $outd/h2.psi <(cut -f2 $outd/h2.psi) > $outd/h2.mod.psi
+
+suppa.py diffSplice -m empirical -i $ioe -e $outd/h1.mod.tpm $outd/h2.mod.tpm -p $outd/h1.mod.psi $outd/h2.mod.psi -o $outd/DIFF
 if [ -f $outd/DIFF.dpsi.temp.0 ]; then
     mv $outd/DIFF.dpsi.temp.0 $outd/DIFF.dpsi
 fi

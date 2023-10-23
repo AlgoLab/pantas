@@ -8,7 +8,7 @@ rule download_pantas:
             "alignments_augmentation_from_gaf.py",
         ),
         call=pjoin(software_folder, "pantas2", "scripts", "call.py"),
-        quant=pjoin(software_folder, "pantas2", "scripts", "quantify.py"),
+        quant=pjoin(software_folder, "pantas2", "scripts", "quantify3.py"),
         outd=directory(pjoin(software_folder, "pantas2")),
     shell:
         """
@@ -26,6 +26,7 @@ rule sub_fa:
     shell:
         """
         cut -f1 {input.bed} | sort -u | while read chr ; do samtools faidx {input.fa} ${{chr}} ; done > {output.fa}
+        samtools faidx {output.fa}
         """
 
 
@@ -98,11 +99,12 @@ rule pantas2_index:
         vcf=pjoin(ODIR, "pantas2", "variations.vcf.gz"),
         exe=rules.download_pantas.output.sh,
     output:
-        xg=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.xg"),
-        gcsa=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.gcsa"),
-        dist=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.dist"),
-        gfa=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.annotated.gfa"),
+        xg=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.xg"),
+        gcsa=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.gcsa"),
+        dist=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.dist"),
+        gfa=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.annotated.gfa"),
         splicedfa=pjoin(ODIR, "pantas2", "index", "genes.spliced.fa"),
+        gfarp=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.refpath"),
     params:
         wd=pjoin(ODIR, "pantas2", "index"),
     log:
@@ -118,9 +120,9 @@ rule pantas2_index:
 
 rule pantas2_mpmap:
     input:
-        xg=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.xg"),
-        gcsa=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.gcsa"),
-        dist=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.dist"),
+        xg=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.xg"),
+        gcsa=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.gcsa"),
+        dist=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.dist"),
         fq1=pjoin(ODIR, "pantas2", "{sample}_1.fq"),
         fq2=pjoin(ODIR, "pantas2", "{sample}_2.fq"),
     output:
@@ -157,7 +159,7 @@ rule pantas2_mpmap:
 
 rule pantas_weight:
     input:
-        gfa=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.annotated.gfa"),
+        gfa=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.annotated.gfa"),
         gaf=pjoin(ODIR, "pantas2", "{sample}.gaf"),
         exe=rules.download_pantas.output.augm,
     output:
@@ -166,6 +168,7 @@ rule pantas_weight:
         time=pjoin(ODIR, "bench", "pantas2", "weight-{sample}.time"),
     conda:
         "../envs/pantas2.yaml"
+    threads: 1
     shell:
         """
         /usr/bin/time -vo {log.time} python3 {input.exe} {input.gaf} {input.gfa} > {output.gfa}
@@ -176,28 +179,30 @@ rule pantas_call:
     input:
         gfa=pjoin(ODIR, "pantas2", "graph_{sample}.gfa"),
         gtf=rules.sub_gtf.output.gtf,
+        gfarp=rules.pantas2_index.output.gfarp,
         exe=rules.download_pantas.output.call,
     output:
-        csv=pjoin(ODIR, "pantas2", "{w}", "events_{sample}.csv"),
+        csv=pjoin(ODIR, "pantas2", "w{w}", "events_{sample}.csv"),
     log:
         time=pjoin(ODIR, "bench", "pantas2", "call-{sample}.w{w}.time"),
     conda:
         "../envs/pantas2.yaml"
+    threads: 1
     shell:
         """
-        /usr/bin/time -vo {log.time} python3 {input.exe} --rc {wildcards.w} {input.gfa} {input.gtf} > {output.csv}
+        /usr/bin/time -vo {log.time} python3 {input.exe} --events ES --novel --rca -1 --rc {wildcards.w} {input.gfa} {input.gfarp} {input.gtf} > {output.csv}
         """
 
 
 # rule c1_csv:
 #     input:
 #         expand(
-#             pjoin(ODIR, "pantas2", "{w}", "events_{sample}.csv"),
+#             pjoin(ODIR, "pantas2", "w{w}", "events_{sample}.csv"),
 #             sample=C1.keys(),
 #             w="{w}",
 #         ),
 #     output:
-#         pjoin(ODIR, "pantas2", "{w}", "c1.csv"),
+#         pjoin(ODIR, "pantas2", "w{w}", "c1.csv"),
 #     conda:
 #         "../envs/pantas2.yaml"
 #     shell:
@@ -207,12 +212,12 @@ rule pantas_call:
 # rule c2_csv:
 #     input:
 #         expand(
-#             pjoin(ODIR, "pantas2", "{w}", "events_{sample}.csv"),
+#             pjoin(ODIR, "pantas2", "w{w}", "events_{sample}.csv"),
 #             sample=C2.keys(),
 #             w="{w}",
 #         ),
 #     output:
-#         pjoin(ODIR, "pantas2", "{w}", "c2.csv"),
+#         pjoin(ODIR, "pantas2", "w{w}", "c2.csv"),
 #     conda:
 #         "../envs/pantas2.yaml"
 #     shell:
@@ -223,14 +228,13 @@ rule pantas_call:
 
 rule pantas_quant:
     input:
-        splicedfa=pjoin(ODIR, "pantas2", "index", "genes.spliced.fa"),
         csv1s=expand(
-            pjoin(ODIR, "pantas2", "{w}", "events_{sample}.csv"),
+            pjoin(ODIR, "pantas2", "w{w}", "events_{sample}.csv"),
             sample=C1.keys(),
             w="{w}",
         ),
         csv2s=expand(
-            pjoin(ODIR, "pantas2", "{w}", "events_{sample}.csv"),
+            pjoin(ODIR, "pantas2", "w{w}", "events_{sample}.csv"),
             sample=C2.keys(),
             w="{w}",
         ),
@@ -243,5 +247,5 @@ rule pantas_quant:
         "../envs/pantas2.yaml"
     shell:
         """
-        /usr/bin/time -vo {log.time} python3 {input.exe} {input.splicedfa} {input.csv1s} {input.csv2s} > {output.csv}
+        /usr/bin/time -vo {log.time} python3 {input.exe} -c1 {input.csv1s} -c2 {input.csv2s} > {output.csv}
         """

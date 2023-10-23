@@ -18,7 +18,7 @@ S2 = config["s2"]
 
 L = config["L"]
 
-Ws = [-1]
+Ws = [-1,1,2,3,10]
 
 FQs = {}
 C1 = {}

@@ -2,10 +2,11 @@ name: pantas2
 channels:
   - bioconda
 dependencies:
-  - python=3.9
+  - python=3.10
   - biopython
   - gffutils
   - gffread
   - vg=1.50.1
   - csvkit
+  - intervaltree
   - snakemake-minimal

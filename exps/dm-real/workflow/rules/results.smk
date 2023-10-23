@@ -17,6 +17,7 @@ rule analyze_results:
     input:
         r=pjoin(ODIR, "rMATS", "summary.csv"),
         w=pjoin(ODIR, "whippet", "psi.diff"),
+        s=pjoin(ODIR, "salmon_suppa", "suppa.csv"),
         q=expand(pjoin(ODIR, "pantas2", "quant.w{w}.csv"), w=Ws)
     output:
         pjoin(ODIR, "results", "res.csv")

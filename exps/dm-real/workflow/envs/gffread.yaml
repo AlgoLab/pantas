@@ -1,7 +1,6 @@
-name: suppa
+name: gffread
 channels:
   - conda-forge
   - bioconda
 dependencies:
-    - R
-    - suppa
+  - gffread

@@ -16,7 +16,7 @@ include: "rules/rmats.smk"
 # whippet rules
 include: "rules/whippet.smk"
 # salmon+suppa rules
-# include: "rules/salmon_suppa.smk"
+include: "rules/salmon_suppa.smk"
 # # pantas rules
 include: "rules/pantas.smk"
 # # merge results and make plots/tables
@@ -32,5 +32,6 @@ rule all:
         # expand(pjoin(ODIR, "pantas2", "{w}", "c2.csv"), w=Ws),
         pjoin(ODIR, "results", "bench.csv"),
         pjoin(ODIR, "results", "res.csv"),
+        #pjoin(ODIR, "salmon_suppa", "suppa.csv"),
         #expand(pjoin(ODIR, "pantas2", "quant.w{w}.csv"),w=Ws)
         #expand(pjoin(ODIR, "salmon_suppa", "suppa2.k{k}/"), k=Ks),

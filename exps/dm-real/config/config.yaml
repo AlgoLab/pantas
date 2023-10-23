@@ -1,8 +1,9 @@
-software : /data/drosmel/software
-odir : /data/drosmel/output_8750000
+software : /data/drosmel/filter/software
+odir : /data/drosmel/filter/output_8750000
 fa : /data/drosmel/ref.chroms.fa
-gtf : /data/drosmel/genes.chroms.gtf
+gtf : /data/drosmel/genes.gtf
 vcf : /data/drosmel/DGRP2.SNPs_only.genes.norm.vcf.gz
+L : 151
 s1 :
   - SRR14101759,/data/drosmel/samples_8750000/SRR14101759_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101759_l150_2_clean.fq.gz
   - SRR14101760,/data/drosmel/samples_8750000/SRR14101760_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101760_l150_2_clean.fq.gz
@@ -11,5 +12,4 @@ s2 :
   - SRR14101762,/data/drosmel/samples_8750000/SRR14101762_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101762_l150_2_clean.fq.gz
   - SRR14101763,/data/drosmel/samples_8750000/SRR14101763_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101763_l150_2_clean.fq.gz
   - SRR14101764,/data/drosmel/samples_8750000/SRR14101764_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101764_l150_2_clean.fq.gz
-
 

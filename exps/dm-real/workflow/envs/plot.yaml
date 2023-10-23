@@ -10,3 +10,4 @@ dependencies:
   - pandas
   - pip:
     - matplotlib_venn
+    - venn

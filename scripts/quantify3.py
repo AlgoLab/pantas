@@ -91,6 +91,7 @@ class Event:
                     parse_region(self.junction2_refpos),
                     parse_region(self.junction3_refpos),
                 ]
+                self.canonic_nodes = [self.junction2_nodes, self.junction3_nodes]
 
                 self.csv_j1 = junction1_refpos
                 self.csv_j2 = junction2_refpos
@@ -104,6 +105,7 @@ class Event:
                     self.event_j = parse_region(self.junction1_refpos)
                     self.canonic_cov = self.junction2_coverage
                     self.canonic_j = parse_region(self.junction2_refpos)
+                    self.canonic_nodes = self.junction2_nodes
 
                     self.csv_j1 = junction1_refpos
                     self.csv_j2 = junction2_refpos
@@ -113,6 +115,7 @@ class Event:
                     self.event_j = parse_region(self.junction2_refpos)
                     self.canonic_cov = self.junction1_coverage
                     self.canonic_j = parse_region(self.junction1_refpos)
+                    self.canonic_nodes = self.junction1_nodes
 
                     self.csv_j1 = junction2_refpos
                     self.csv_j2 = junction1_refpos
@@ -126,6 +129,7 @@ class Event:
                     self.event_j = parse_region(self.junction2_refpos)
                     self.canonic_cov = self.junction1_coverage
                     self.canonic_j = parse_region(self.junction1_refpos)
+                    self.canonic_nodes = self.junction1_nodes
 
                     self.csv_j1 = junction2_refpos
                     self.csv_j2 = junction1_refpos
@@ -135,6 +139,7 @@ class Event:
                     self.event_j = parse_region(self.junction1_refpos)
                     self.canonic_cov = self.junction2_coverage
                     self.canonic_j = parse_region(self.junction2_refpos)
+                    self.canonic_nodes = self.junction2_nodes
 
                     self.csv_j1 = junction1_refpos
                     self.csv_j2 = junction2_refpos
@@ -149,6 +154,7 @@ class Event:
                     self.event_j = parse_region(self.junction2_refpos)
                     self.canonic_cov = self.junction1_coverage
                     self.canonic_j = parse_region(self.junction1_refpos)
+                    self.canonic_nodes = self.junction1_nodes
                     if self.canonic_j[1] - self.canonic_j[0] < min_junction_len:
                         self.valid = False
 
@@ -160,6 +166,7 @@ class Event:
                     self.event_j = parse_region(self.junction1_refpos)
                     self.canonic_cov = self.junction2_coverage
                     self.canonic_j = parse_region(self.junction2_refpos)
+                    self.canonic_nodes = self.junction2_nodes
 
                     if self.event_j[1] - self.event_j[0] < min_junction_len:
                         self.valid = False
@@ -177,6 +184,7 @@ class Event:
                 ]
                 self.canonic_cov = self.junction1_coverage
                 self.canonic_j = parse_region(self.junction1_refpos)
+                self.canonic_nodes = self.junction1_nodes
 
                 if self.event_j[0][1] - self.event_j[0][0] < min_junction_len:
                     self.valid = False
@@ -284,8 +292,33 @@ def parse_pantas(fpath: str, min_junction_len: int = 3) -> dict[str, Event]:
     return pantas
 
 
+def load_gfa(fpath: str, gfa: dict, cond: int) -> None:
+    for line in open(fpath, "r"):
+        if line.startswith("L") and not "RC:i:0" in line:
+            line = line.strip()
+            _, start, _, end, _, _, *ann = line.split()
+            rc = [int(x.split(":")[-1]) for x in ann if "RC" in x]
+            assert len(rc) == 1
+            rc = rc[0]
+            key = f"{start}>{end}"
+            if not key in gfa:
+                gfa[key] = [0, 0]
+                gfa[key][cond - 1] = rc
+            else:
+                gfa[key][cond - 1] += rc
+
+
 def main(args):
     RELAX = args.relax
+
+    GFA = dict()
+    if args.gfac1:
+        for _gfa in args.gfac1:
+            load_gfa(_gfa, GFA, 1)
+    if args.gfac2:
+        for _gfa in args.gfac2:
+            load_gfa(_gfa, GFA, 2)
+
     events_1 = {x: [] for x in ETYPES}
     for i, fpath in enumerate(args.c1):
         _ei = parse_pantas(fpath, min_junction_len=args.min_junction_len)
@@ -358,6 +391,8 @@ def main(args):
                 dpsi = max(0, psi1) - max(0, psi2)
                 if psi1 == -1 and psi2 == -1:
                     dpsi = -1
+                if abs(dpsi) < args.mindpsi:
+                    continue
                 print(
                     e1.to_csv(),
                     f"{e1.get_canonic_cov()}/{e1.get_event_cov()}",
@@ -369,13 +404,24 @@ def main(args):
                 )
             else:
                 if not e1.psi() == -1:
+                    if e1.get_event_cov() < args.minrc:
+                        continue
+                    psi2 = "NaN"
+                    dpsi = "NaN"
+                    w2 = "."
+                    if args.gfac2:
+                        s = sum(ws := [GFA.get(k, [0, 0])[1] for k in e1.canonic_nodes])
+                        if s > 0:
+                            psi2 = 1
+                            dpsi = 1 - e1.psi()
+                        w2 = f"{mean(ws)}/0"
                     print(
                         e1.to_csv(),
                         f"{e1.get_canonic_cov()}/{e1.get_event_cov()}",
-                        ".",
+                        w2,
                         e1.psi(),
-                        "NaN",
-                        "NaN",
+                        psi2,
+                        dpsi,
                         sep=",",
                     )
         for e2 in events_2[etype]:
@@ -385,13 +431,24 @@ def main(args):
                 if eq_event(e2, x, relax=RELAX * max(1, (len(args.c1) - 1)))
             ]
             if len(eqs) == 0 and not e2.psi() == -1:
+                if e2.get_event_cov() < args.minrc:
+                    continue
+                psi1 = "NaN"
+                dpsi = "NaN"
+                w1 = "."
+                if args.gfac1:
+                    s = sum(ws := [GFA.get(k, [0, 0])[0] for k in e2.canonic_nodes])
+                    if s > 0:
+                        psi1 = 1
+                        dpsi = 1 - e2.psi()
+                        w1 = f"{mean(ws)}/0"
                 print(
                     e2.to_csv(),
-                    ".",
+                    w1,
                     f"{e2.get_canonic_cov()}/{e2.get_event_cov()}",
-                    "NaN",
+                    psi1,
                     e2.psi(),
-                    "NaN",
+                    dpsi,
                     sep=",",
                 )
 
@@ -449,6 +506,36 @@ if __name__ == "__main__":
         help="Minimum number of junction length to be valid (Default: 3)",
         type=int,
         default=3,
+    )
+    parser.add_argument(
+        "--mindpsi",
+        dest="mindpsi",
+        help="Minimum value of delta-psi (absolute value) to be valid (Default: 0.0)",
+        type=float,
+        default=0.0,
+    )
+    parser.add_argument(
+        "--minrc",
+        dest="minrc",
+        help="Minimum value of read count of the event to be valid (Default: 0)",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "--gfac1",
+        help="Annotated spliced pangenome of condition 1",
+        dest="gfac1",
+        type=str,
+        required=False,
+        nargs="*",
+    )
+    parser.add_argument(
+        "--gfac2",
+        help="Annotated spliced pangenome of condition 2",
+        dest="gfac2",
+        type=str,
+        required=False,
+        nargs="*",
     )
     args = parser.parse_args()
 

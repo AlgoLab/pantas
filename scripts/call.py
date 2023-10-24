@@ -3,8 +3,11 @@ import re
 import sys
 from math import floor
 
+
 def dopass(*args):
     pass
+
+
 eprint = dopass
 
 
@@ -128,10 +131,9 @@ def get_outgoing_nodes_old(
         ret = [x for x in ret if segments[x]["NC"] > rc]
     return ret
 
-def get_outgoing_nodes(
-    segments: dict, nid: str, rc: int = -1
-) -> list:
-    ret = segments[nid]['O']
+
+def get_outgoing_nodes(segments: dict, nid: str, rc: int = -1) -> list:
+    ret = segments[nid]["O"]
     if rc > 0:
         ret = [x for x in ret if segments[x]["NC"] > rc]
     return ret
@@ -145,10 +147,9 @@ def get_incoming_nodes_old(
         ret = [x for x in ret if segments[x]["NC"] > rc]
     return ret
 
-def get_incoming_nodes(
-    segments: dict, nid: str, rc: int = -1
-) -> list:
-    ret = segments[nid]['I']
+
+def get_incoming_nodes(segments: dict, nid: str, rc: int = -1) -> list:
+    ret = segments[nid]["I"]
     if rc > 0:
         ret = [x for x in ret if segments[x]["NC"] > rc]
     return ret
@@ -213,12 +214,8 @@ def check_junction(ix_j: tuple, segments: dict, links: dict, window: int, rc: in
 
     while i < window:
         i += 1
-        _intron_next = [
-            get_outgoing_nodes(segments, x, rc=rc) for x in _intron_next
-        ]
-        _intron_prev = [
-            get_incoming_nodes(segments, x, rc=rc) for x in _intron_prev
-        ]
+        _intron_next = [get_outgoing_nodes(segments, x, rc=rc) for x in _intron_next]
+        _intron_prev = [get_incoming_nodes(segments, x, rc=rc) for x in _intron_prev]
         # flatten lists
         _intron_next = [x for y in _intron_next for x in y]
         _intron_prev = [x for y in _intron_prev for x in y]
@@ -279,8 +276,8 @@ def main(args):
             gfaS[nid] = build_attrs(fields, args.d)
             # TODO: uncomment if needed
             # gfaS[nid]['seq'] = seq
-            gfaS[nid]['I'] = []
-            gfaS[nid]['O'] = []
+            gfaS[nid]["I"] = []
+            gfaS[nid]["O"] = []
         elif line.startswith("P"):
             _, pid, p, _ = line.split()
             if "+," in p[:-1]:
@@ -302,8 +299,8 @@ def main(args):
                 *fields,
             ) = line.split()
             gfaL[(nid_from, nid_to)] = build_attrs(fields, args.d)
-            gfaS[nid_from]['O'].append(nid_to)
-            gfaS[nid_to]['I'].append(nid_from)
+            gfaS[nid_from]["O"].append(nid_to)
+            gfaS[nid_to]["I"].append(nid_from)
             # TODO: uncomment if needed
             # gfaL[(nid_from, nid_to)]['overlap'] = overlap
             if "JN" in gfaL[(nid_from, nid_to)]:
@@ -347,7 +344,7 @@ def main(args):
             transcript2gene[tidx] = gidx
             genestrand[gidx] = line[6]
             genechr[gidx] = line[0]
-    
+
     if args.header:
         print(
             "event_type",
@@ -419,16 +416,28 @@ def main(args):
                                         _es_j2_name = f"{_tr}.{_exno_max-1}.{_exno_max}"
 
                                         if genestrand[transcript2gene[_tj]] == "-":
-                                            _es_j1_name = f"{_tr}.{_exno_max-1}.{_exno_max}"
-                                            _es_j2_name = f"{_tr}.{_exno_min}.{_exno_min+1}"
+                                            _es_j1_name = (
+                                                f"{_tr}.{_exno_max-1}.{_exno_max}"
+                                            )
+                                            _es_j2_name = (
+                                                f"{_tr}.{_exno_min}.{_exno_min+1}"
+                                            )
 
-                                        _n_j1 = [x for x in junctions if x[0] == ix_j[0]]
-                                        _n_j2 = [x for x in junctions if x[1] == ix_j[1]]
+                                        _n_j1 = [
+                                            x for x in junctions if x[0] == ix_j[0]
+                                        ]
+                                        _n_j2 = [
+                                            x for x in junctions if x[1] == ix_j[1]
+                                        ]
                                         _es_j1 = [
-                                            x for x in _n_j1 if _es_j1_name in gfaL[x]["JN"]
+                                            x
+                                            for x in _n_j1
+                                            if _es_j1_name in gfaL[x]["JN"]
                                         ]
                                         _es_j2 = [
-                                            x for x in _n_j2 if _es_j2_name in gfaL[x]["JN"]
+                                            x
+                                            for x in _n_j2
+                                            if _es_j2_name in gfaL[x]["JN"]
                                         ]
 
                                         if len(_es_j1) == 1 and len(_es_j2) == 1:
@@ -466,15 +475,21 @@ def main(args):
                                 > 0
                             ):
                                 cap_a5 = set(
-                                    map(lambda x: ".".join(x.split(".")[:-1]), cap_a5_ex)
+                                    map(
+                                        lambda x: ".".join(x.split(".")[:-1]), cap_a5_ex
+                                    )
                                 )
                                 cap_a5 = cap_a5 & cap
                                 if len(cap_a5) > 0:
                                     # Checking that the trascripts belong to the same gene
-                                    for _j, _te in itertools.product(junc["JN"], cap_a5):
+                                    for _j, _te in itertools.product(
+                                        junc["JN"], cap_a5
+                                    ):
                                         _tj = ".".join(_j.split(".")[:-2])
                                         if transcript2gene[_tj] == transcript2gene[_te]:
-                                            _a_j = [x for x in junctions if x[1] == ix_j[1]]
+                                            _a_j = [
+                                                x for x in junctions if x[1] == ix_j[1]
+                                            ]
                                             _a_j = list(
                                                 filter(
                                                     lambda x: any(
@@ -531,15 +546,21 @@ def main(args):
                                 > 0
                             ):
                                 cap_a3 = set(
-                                    map(lambda x: ".".join(x.split(".")[:-1]), cap_a3_ex)
+                                    map(
+                                        lambda x: ".".join(x.split(".")[:-1]), cap_a3_ex
+                                    )
                                 )
                                 cap_a3 = cap & cap_a3
                                 if len(cap_a3) > 0:
                                     # Checking that the trascripts belong to the same gene
-                                    for _j, _te in itertools.product(junc["JN"], cap_a3):
+                                    for _j, _te in itertools.product(
+                                        junc["JN"], cap_a3
+                                    ):
                                         _tj = ".".join(_j.split(".")[:-2])
                                         if transcript2gene[_tj] == transcript2gene[_te]:
-                                            _a_j = [x for x in junctions if x[0] == ix_j[0]]
+                                            _a_j = [
+                                                x for x in junctions if x[0] == ix_j[0]
+                                            ]
                                             _a_j = list(
                                                 filter(
                                                     lambda x: any(
@@ -596,7 +617,9 @@ def main(args):
                         ex_prev_n1 = [get_set_exons(gfaS, x) for x in prev_n1]
                         ex_next_n0 = set().union(*ex_next_n0)
                         ex_prev_n1 = set().union(*ex_prev_n1)
-                        cap_ir = set.intersection(exons_n0, exons_n1, ex_next_n0, ex_prev_n1)
+                        cap_ir = set.intersection(
+                            exons_n0, exons_n1, ex_next_n0, ex_prev_n1
+                        )
 
                         eprint(f"{exons_n0=}")
                         eprint(f"{exons_n1=}")
@@ -684,8 +707,12 @@ def main(args):
                         # Checking for novel ES
                         if "ES" in args.events:
                             for _tr in cap:
-                                _fex0 = list(filter(lambda x: x.startswith(_tr), exons_n0))
-                                _fex1 = list(filter(lambda x: x.startswith(_tr), exons_n1))
+                                _fex0 = list(
+                                    filter(lambda x: x.startswith(_tr), exons_n0)
+                                )
+                                _fex1 = list(
+                                    filter(lambda x: x.startswith(_tr), exons_n1)
+                                )
                                 assert len(_fex0) == len(_fex1) == 1
 
                                 _tex0 = int(_fex0[0].split(".")[-1])
@@ -742,8 +769,12 @@ def main(args):
                         # Checking for novel A5+ before / A3- after
                         if "SS" in args.events:
                             for _tr in cap:
-                                _fex0 = list(filter(lambda x: x.startswith(_tr), exons_n0))
-                                _fex1 = list(filter(lambda x: x.startswith(_tr), exons_n1))
+                                _fex0 = list(
+                                    filter(lambda x: x.startswith(_tr), exons_n0)
+                                )
+                                _fex1 = list(
+                                    filter(lambda x: x.startswith(_tr), exons_n1)
+                                )
                                 assert len(_fex0) == len(_fex1) == 1
 
                                 eprint(f"{_fex0=}")
@@ -785,7 +816,8 @@ def main(args):
                                             eprint("A5b: A5b+ / A3a-")
                                             print(
                                                 "A5"
-                                                if genestrand[transcript2gene[_tr]] == "+"
+                                                if genestrand[transcript2gene[_tr]]
+                                                == "+"
                                                 else "A3",
                                                 "novel",
                                                 genechr[transcript2gene[_tr]],
@@ -845,7 +877,8 @@ def main(args):
                                             eprint("A3a: A3a+ / A5b-")
                                             print(
                                                 "A3"
-                                                if genestrand[transcript2gene[_tr]] == "+"
+                                                if genestrand[transcript2gene[_tr]]
+                                                == "+"
                                                 else "A5",
                                                 "novel",
                                                 genechr[transcript2gene[_tr]],
@@ -868,13 +901,9 @@ def main(args):
 
                         # Checking for novel IR reverse
                         if "IR" in args.events:
-                            next_n0 = get_outgoing_nodes(
-                                gfaS, ix_j[0]
-                            )
+                            next_n0 = get_outgoing_nodes(gfaS, ix_j[0])
                             ex_next_n0 = [get_set_exons(gfaS, x) for x in next_n0]
-                            prev_n1 = get_incoming_nodes(
-                                gfaS, ix_j[1]
-                            )
+                            prev_n1 = get_incoming_nodes(gfaS, ix_j[1])
                             ex_prev_n1 = [get_set_exons(gfaS, x) for x in prev_n1]
 
                             ex_next_n0 = set().union(*ex_next_n0)
@@ -929,7 +958,11 @@ def main(args):
                     if "SS" in args.events:
                         # if len(exons_n1) == 0:
                         if (
-                            len(set(get_transcript_from_exons(exons_n1)) & transcripts_n0) == 0
+                            len(
+                                set(get_transcript_from_exons(exons_n1))
+                                & transcripts_n0
+                            )
+                            == 0
                         ):
                             # n1 is an intron, check if there is a junction
                             # from n0 to somewhere else
@@ -941,9 +974,17 @@ def main(args):
                                 exons_nX = [get_set_exons(gfaS, x) for x in nX]
                                 eprint(f"{exons_nX=}")
                                 print(exons_nX)
-                                print([list(get_transcript_from_exons(x)) for x in exons_nX])
+                                print(
+                                    [
+                                        list(get_transcript_from_exons(x))
+                                        for x in exons_nX
+                                    ]
+                                )
                                 transcripts_nX = set(
-                                    *[list(get_transcript_from_exons(x)) for x in exons_nX]
+                                    *[
+                                        list(get_transcript_from_exons(x))
+                                        for x in exons_nX
+                                    ]
                                 )
                                 eprint(f"{transcripts_nX=}")
 
@@ -985,7 +1026,11 @@ def main(args):
                                         )
                                         if len(_a_j) == 1 and any(
                                             check_junction(
-                                                [ix_j[1], _x], gfaS, gfaL, args.irw, args.rc
+                                                [ix_j[1], _x],
+                                                gfaS,
+                                                gfaL,
+                                                args.irw,
+                                                args.rc,
                                             )
                                             for _x in _fnX
                                         ):
@@ -1000,7 +1045,8 @@ def main(args):
                                             eprint("A3b: A3b+ / A5a-")
                                             print(
                                                 "A3"
-                                                if genestrand[transcript2gene[_tr]] == "+"
+                                                if genestrand[transcript2gene[_tr]]
+                                                == "+"
                                                 else "A5",
                                                 "novel",
                                                 genechr[transcript2gene[_tr]],
@@ -1024,7 +1070,11 @@ def main(args):
                         # Chek A5 - after
                         # if len(exons_n0) == 0:
                         if (
-                            len(set(get_transcript_from_exons(exons_n0)) & transcripts_n1) == 0
+                            len(
+                                set(get_transcript_from_exons(exons_n0))
+                                & transcripts_n1
+                            )
+                            == 0
                         ):
                             # n0 is an intron, check if there is a junction
                             # to n1 from somewhere else
@@ -1036,7 +1086,10 @@ def main(args):
                                 exons_nX = [get_set_exons(gfaS, x) for x in nX]
                                 eprint(f"{exons_nX=}")
                                 transcripts_nX = set(
-                                    *[list(get_transcript_from_exons(x)) for x in exons_nX]
+                                    *[
+                                        list(get_transcript_from_exons(x))
+                                        for x in exons_nX
+                                    ]
                                 )
                                 eprint(f"{transcripts_nX=}")
 
@@ -1081,7 +1134,11 @@ def main(args):
                                         )
                                         if len(_a_j) == 1 and any(
                                             check_junction(
-                                                [_x, ix_j[0]], gfaS, gfaL, args.irw, args.rc
+                                                [_x, ix_j[0]],
+                                                gfaS,
+                                                gfaL,
+                                                args.irw,
+                                                args.rc,
                                             )
                                             for _x in _fnX
                                         ):
@@ -1096,7 +1153,8 @@ def main(args):
                                             eprint("A5a: A5a+ / A3b-")
                                             print(
                                                 "A5"
-                                                if genestrand[transcript2gene[_tr]] == "+"
+                                                if genestrand[transcript2gene[_tr]]
+                                                == "+"
                                                 else "A3",
                                                 "novel",
                                                 genechr[transcript2gene[_tr]],
@@ -1128,9 +1186,7 @@ def main(args):
             if "SE" in args.events:
                 # Known junctions (n0 > n1) that have novel junctions (n0 > nX) and (nY > n1)
 
-                _trjunc = set(
-                    map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"])
-                )
+                _trjunc = set(map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"]))
                 # nX = [x[1] for x in noveljunctions if x[0] == ix_j[0]]
                 # nY = [x[0] for x in noveljunctions if x[1] == ix_j[1]]
                 nX = [
@@ -1248,12 +1304,10 @@ def main(args):
                 while i < args.irw:
                     i += 1
                     _intron_next = [
-                        get_outgoing_nodes(gfaS, x, rc=args.rc)
-                        for x in _intron_next
+                        get_outgoing_nodes(gfaS, x, rc=args.rc) for x in _intron_next
                     ]
                     _intron_prev = [
-                        get_incoming_nodes(gfaS, x, rc=args.rc)
-                        for x in _intron_prev
+                        get_incoming_nodes(gfaS, x, rc=args.rc) for x in _intron_prev
                     ]
                     # flatten lists
                     _intron_next = [x for y in _intron_next for x in y]
@@ -1263,7 +1317,6 @@ def main(args):
 
                     eprint(f"{i=} {_intron_next=}")
                     eprint(f"{i=} {_intron_prev=}")
-
 
                     if len(_intron_next & _intron_prev) > 0:
                         _subpath_total = True
@@ -1278,10 +1331,12 @@ def main(args):
 
                     if len(_intron_next) > 0 and len(_intron_prev) > 0:
                         _max_n = max(
-                            [(x, gfaS[x]["NC"]) for x in _intron_next], key=lambda x: x[1]
+                            [(x, gfaS[x]["NC"]) for x in _intron_next],
+                            key=lambda x: x[1],
                         )
                         _max_p = max(
-                            [(x, gfaS[x]["NC"]) for x in _intron_prev], key=lambda x: x[1]
+                            [(x, gfaS[x]["NC"]) for x in _intron_prev],
+                            key=lambda x: x[1],
                         )
 
                         _subpath_n.append(_max_n[0])

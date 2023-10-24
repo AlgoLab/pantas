@@ -269,6 +269,8 @@ def main(args):
     junctions = list()
     noveljunctions = list()
     refpaths = []
+    if args.RP != "":
+        refpaths = {}
     for line in open(args.GFA, "r"):
         line = line.strip()
         if line.startswith("S"):
@@ -287,7 +289,10 @@ def main(args):
                 gfaP[pid] = {"path": p[:-1].split("-,")}
                 gfaP[pid]["reverse"] = True
             if not "_R1" in pid:
-                refpaths.append(gfaP[pid]["path"])
+                if args.RP == "":
+                    refpaths.append(gfaP[pid]["path"])
+                else:
+                    refpaths[pid] = gfaP[pid]["path"]
         elif line.startswith("L"):
             (
                 _,
@@ -309,11 +314,22 @@ def main(args):
                 noveljunctions.append((nid_from, nid_to))
 
     eprint(f"Found {len(refpaths)} reference paths.")
-    for refpath in refpaths:
-        curr = 0
-        for n in refpath:
-            gfaS[n]["RP"] = curr
-            curr += gfaS[n]["LN"]
+    if args.RP == "":
+        for refpath in refpaths:
+            curr = 0
+            for n in refpath:
+                gfaS[n]["RP"] = curr
+                curr += gfaS[n]["LN"]
+    else:
+        for line in open(args.RP):
+            refpath, positions = line.strip("\n").split("\t")
+            if refpath not in refpaths:
+                eprint(f"Skipping {refpath}..")
+                continue
+            positions = [int(x) if x != "." else x for x in positions.split(",")]
+            assert len(refpaths[refpath]) == len(positions)
+            for n, p in zip(refpaths[refpath], positions):
+                gfaS[n]["RP"] = p
 
     transcript2gene = dict()
     genestrand = dict()
@@ -1408,6 +1424,14 @@ if __name__ == "__main__":
     )
     parser.add_argument("GFA", help="Spliced pangenome in GFA format")
     parser.add_argument("GTF", help="Annotation in GTF format")
+    parser.add_argument(
+        "--rp",
+        help='Reduceed spliced pangenome reference paths (default: "")',
+        dest="RP",
+        type=str,
+        required=False,
+        default="",
+    )
     parser.add_argument(
         "--rc",
         help="Minimum read count (default: 3)",

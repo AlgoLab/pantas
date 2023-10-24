@@ -10,3 +10,4 @@ dependencies:
   - csvkit
   - intervaltree
   - snakemake-minimal
+  - samtools

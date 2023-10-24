@@ -138,25 +138,6 @@ rule pantas2_mpmap:
         """
 
 
-# rule pantas2_mpmap_bam:
-#     input:
-#         xg=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.xg"),
-#         gcsa=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.gcsa"),
-#         dist=pjoin(ODIR, "pantas2", "index", "spliced-pangenome.dist"),
-#         fq1=pjoin(ODIR, "pantas2", "{sample}_1.fq"),
-#         fq2=pjoin(ODIR, "pantas2", "{sample}_2.fq"),
-#     output:
-#         bam=pjoin(ODIR, "pantas2", "{sample}.bam"),
-#     threads: workflow.cores
-#     conda:
-#         "../envs/pantas2.yaml"
-#     shell:
-#         """
-#         vg mpmap -x {input.xg} -g {input.gcsa} -d {input.dist} -f {input.fq1} -f {input.fq2} -F BAM --threads {threads} | samtools sort > {output.bam}
-#         samtools index {output.bam}
-#         """
-
-
 rule pantas_weight:
     input:
         gfa=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.annotated.gfa"),
@@ -194,38 +175,6 @@ rule pantas_call:
         """
 
 
-# rule c1_csv:
-#     input:
-#         expand(
-#             pjoin(ODIR, "pantas2", "w{w}", "events_{sample}.csv"),
-#             sample=C1.keys(),
-#             w="{w}",
-#         ),
-#     output:
-#         pjoin(ODIR, "pantas2", "w{w}", "c1.csv"),
-#     conda:
-#         "../envs/pantas2.yaml"
-#     shell:
-#         """
-#         csvstack {input} > {output}
-#         """
-# rule c2_csv:
-#     input:
-#         expand(
-#             pjoin(ODIR, "pantas2", "w{w}", "events_{sample}.csv"),
-#             sample=C2.keys(),
-#             w="{w}",
-#         ),
-#     output:
-#         pjoin(ODIR, "pantas2", "w{w}", "c2.csv"),
-#     conda:
-#         "../envs/pantas2.yaml"
-#     shell:
-#         """
-#         csvstack {input} > {output}
-#         """
-
-
 rule pantas_quant:
     input:
         csv1s=expand(
@@ -248,4 +197,37 @@ rule pantas_quant:
     shell:
         """
         /usr/bin/time -vo {log.time} python3 {input.exe} -c1 {input.csv1s} -c2 {input.csv2s} > {output.csv}
+        """
+
+
+rule pantas2_gaf2sam:
+    input:
+        gaf=pjoin(ODIR, "pantas2", "{sample}.gaf"),
+        gfa=pjoin(ODIR, "pantas2", "graph_{sample}.gfa"),
+        gfarp=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.refpath"),
+    output:
+        sam=pjoin(ODIR, "pantas2", "{sample}.sam"),
+    log:
+        err=pjoin(ODIR, "pantas2", "{sample}.err"),
+    threads: 1
+    conda:
+        "../envs/pantas2.yaml"
+    shell:
+        """
+        python3 ../scripts/gaf2sam.py {input.gaf} {input.gfa} {input.gfarp} > {output.sam} 2> {log.err}
+        """
+
+
+rule sam2bam:
+    input:
+        sam=pjoin(ODIR, "pantas2", "{sample}.sam"),
+    output:
+        bam=pjoin(ODIR, "pantas2", "{sample}.bam"),
+    threads: 1
+    conda:
+        "../envs/pantas2.yaml"
+    shell:
+        """
+        samtools view -bS {input.sam} | samtools sort > {output.bam}
+        samtools index {output.bam}
         """

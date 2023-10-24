@@ -1,6 +1,6 @@
 rule download_pantas:
     output:
-        sh=pjoin(software_folder, "pantas2", "pantas2.sh"),
+        index=pjoin(software_folder, "pantas2", "index-reduced.smk"),
         augm=pjoin(
             software_folder,
             "pantas2",
@@ -13,7 +13,7 @@ rule download_pantas:
     shell:
         """
         rm -r {output.outd}
-        git clone git@github.com:AlgoLab/pantas2.git {output.outd}
+        git clone git@github.com:AlgoLab/pantas.git {output.outd}
         """
 
 
@@ -97,7 +97,7 @@ rule pantas2_index:
         fa=pjoin(ODIR, "pantas2", "ref.fa"),
         gtf=pjoin(ODIR, "pantas2", "genes.gtf"),
         vcf=pjoin(ODIR, "pantas2", "variations.vcf.gz"),
-        exe=rules.download_pantas.output.sh,
+        smk=rules.download_pantas.output.index,
     output:
         xg=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.xg"),
         gcsa=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.gcsa"),
@@ -114,7 +114,9 @@ rule pantas2_index:
     threads: workflow.cores
     shell:
         """
-        /usr/bin/time -vo {log.time} bash {input.exe} index {input.fa} {input.gtf} {input.vcf} {params.wd} {threads}
+        pushd {software_folder}
+        /usr/bin/time -vo {log.time} snakemake -s {input.smk} -c{threads} --config fa={input.fa} gtf={input.gtf} vcf={input.vcf} wd={params.wd}
+        popd
         """
 
 
@@ -171,7 +173,7 @@ rule pantas_call:
     threads: 1
     shell:
         """
-        /usr/bin/time -vo {log.time} python3 {input.exe} --events ES --novel --rca -1 --rc {wildcards.w} {input.gfa} {input.gfarp} {input.gtf} > {output.csv}
+        /usr/bin/time -vo {log.time} python3 {input.exe} --events ES --novel --rca -1 --rc {wildcards.w} {input.gfa} {input.gtf} --rp {input.gfarp} > {output.csv}
         """
 
 

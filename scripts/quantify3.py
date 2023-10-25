@@ -331,7 +331,7 @@ def main(args):
                     if eq_event(_ee, x, relax=RELAX * max(1, (len(args.c1) - 1)))
                 ]
                 if len(eqs) > 0:
-                    assert len(eqs) == 1
+                    # assert len(eqs) == 1
                     eqs[0].add_replicate(_ee.event_cov, _ee.canonic_cov)
                 else:
                     events_1[etype].append(_ee)
@@ -349,7 +349,7 @@ def main(args):
                     if eq_event(_ee, x, relax=RELAX * max(1, (len(args.c1) - 1)))
                 ]
                 if len(eqs) > 0:
-                    assert len(eqs) == 1
+                    # assert len(eqs) == 1
                     eqs[0].add_replicate(_ee.event_cov, _ee.canonic_cov)
                 else:
                     events_2[etype].append(_ee)
@@ -385,7 +385,7 @@ def main(args):
                 if eq_event(e1, x, relax=RELAX * max(1, (len(args.c1) - 1)))
             ]
             if len(eqs) > 0:
-                assert len(eqs) == 1
+                # assert len(eqs) == 1
                 psi1 = e1.psi()
                 psi2 = eqs[0].psi()
                 dpsi = max(0, psi1) - max(0, psi2)

@@ -989,13 +989,6 @@ def main(args):
                                 eprint(f"{nX=}")
                                 exons_nX = [get_set_exons(gfaS, x) for x in nX]
                                 eprint(f"{exons_nX=}")
-                                print(exons_nX)
-                                print(
-                                    [
-                                        list(get_transcript_from_exons(x))
-                                        for x in exons_nX
-                                    ]
-                                )
                                 transcripts_nX = set(
                                     *[
                                         list(get_transcript_from_exons(x))

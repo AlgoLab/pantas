@@ -7,6 +7,13 @@ ETYPES = ["ES", "IR", "A3", "A5", "CE"]
 EMAP_WHIPPET = {"CE": "ES", "RI": "IR", "AD": "A5", "AA": "A3"}
 
 
+def precision_recall_f1(tp: int, fn: int, fp: int) -> list[int]:
+    prec = float(tp) / (tp + fp)
+    rec = float(tp) / (tp + fn)
+    f1 = 2 * float(tp) / (2 * tp + fp + fn)
+    return [prec, rec, f1]
+
+
 def main(args):
     FILTER = 0.05
     MIN_EVENT_COV = 10
@@ -73,9 +80,24 @@ def main(args):
             e = eparser.EventWhippet(*_e, "anno")
             if isnan(e.psi_c1) or isnan(e.psi_c2):
                 continue
-            if abs(e.dpsi) < FILTER:
-                continue
+            # if abs(e.dpsi) < FILTER:
+            #     continue
             event_whippet[e.etype].append(e)
+
+    event_suppa = {x: [] for x in ETYPES}
+    if args.s:
+        for line in open(args.s, "r"):
+            if line.startswith("Gene"):
+                # header
+                continue
+            line = line.strip()
+            _e = line.split(",")
+            e = eparser.EventPantas(*_e)
+            # if isnan(e.psi_c1) or isnan(e.psi_c2):
+            #     continue
+            # if abs(e.dpsi) < FILTER:
+            #     continue
+            event_suppa[e.etype].append(e)
 
     TP_PANTAS = {x: 0 for x in ETYPES}
     FN_PANTAS = {x: 0 for x in ETYPES}
@@ -88,6 +110,10 @@ def main(args):
     TP_WHIPPET = {x: 0 for x in ETYPES}
     FN_WHIPPET = {x: 0 for x in ETYPES}
     FP_WHIPPET = {x: 0 for x in ETYPES}
+
+    TP_SUPPA = {x: 0 for x in ETYPES}
+    FN_SUPPA = {x: 0 for x in ETYPES}
+    FP_SUPPA = {x: 0 for x in ETYPES}
 
     for etype in ETYPES:
         for e1 in event_truth[etype]:
@@ -145,6 +171,21 @@ def main(args):
                 FN_WHIPPET[etype] += 1
                 str_event += ",FN"
 
+            eqss = [
+                x
+                for x in event_suppa[etype]
+                if eparser.eq_event(e1, x, relax=args.relax)
+            ]
+            if len(eqss) > 0:
+                # True positives
+                assert len(eqss) == 1
+                TP_SUPPA[etype] += 1
+                str_event += ",TP"
+            else:
+                # False negatives
+                FN_SUPPA[etype] += 1
+                str_event += ",FN"
+
             # print(str_event)
 
     for etype in ETYPES:
@@ -187,20 +228,47 @@ def main(args):
                 FP_WHIPPET[etype] += 1
                 # print("FP-WHIPPET", e2.to_csv())
 
+        for e2 in event_suppa[etype]:
+            if abs(e2.dpsi) < FILTER:
+                continue
+            eqs = [
+                x
+                for x in event_truth[etype]
+                if eparser.eq_event(e2, x, relax=args.relax)
+            ]
+            if len(eqs) == 0:
+                # False positives
+                FP_SUPPA[etype] += 1
+                # print("FP-WHIPPET", e2.to_csv())
+
     print("PANTAS")
-    print("etype", "TP", "FN", "FP", sep=",")
+    print("etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
     for etype in ETYPES:
-        print(etype, TP_PANTAS[etype], FN_PANTAS[etype], FP_PANTAS[etype], sep=",")
+        if etype == "CE":
+            continue
+        print(etype, TP_PANTAS[etype], FN_PANTAS[etype], FP_PANTAS[etype], *precision_recall_f1(TP_PANTAS[etype], FN_PANTAS[etype], FP_PANTAS[etype]), sep=",")
 
     print("RMATS")
-    print("etype", "TP", "FN", "FP", sep=",")
+    print("etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
     for etype in ETYPES:
-        print(etype, TP_RMATS[etype], FN_RMATS[etype], FP_RMATS[etype], sep=",")
+        if etype == "CE":
+            continue
+        print(etype, TP_RMATS[etype], FN_RMATS[etype], FP_RMATS[etype], *precision_recall_f1(TP_RMATS[etype], FN_RMATS[etype], FP_RMATS[etype]), sep=",")
 
-    print("WHIPPET")
-    print("etype", "TP", "FN", "FP", sep=",")
-    for etype in ETYPES:
-        print(etype, TP_WHIPPET[etype], FN_WHIPPET[etype], FP_WHIPPET[etype], sep=",")
+    if args.w:
+        print("WHIPPET")
+        print("etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
+        for etype in ETYPES:
+            if etype == "CE":
+                continue
+            print(etype, TP_WHIPPET[etype], FN_WHIPPET[etype], FP_WHIPPET[etype], *precision_recall_f1(TP_WHIPPET[etype], FN_WHIPPET[etype], FP_WHIPPET[etype]), sep=",")
+    if args.s:
+        print("SUPPA2")
+        print("etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
+        for etype in ETYPES:
+            if etype == "CE":
+                continue
+            print(etype, TP_SUPPA[etype], FN_SUPPA[etype], FP_SUPPA[etype], *precision_recall_f1(TP_SUPPA[etype], FN_SUPPA[etype], FP_SUPPA[etype]), sep=",")
 
 
 if __name__ == "__main__":
@@ -235,6 +303,13 @@ if __name__ == "__main__":
         "-w",
         help="Whippet psi file",
         dest="w",
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "-s",
+        help="suppa2 CSV",
+        dest="s",
         type=str,
         required=False,
     )

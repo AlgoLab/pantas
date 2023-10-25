@@ -349,6 +349,7 @@ rule pantas_call:
     params:
         novelp=lambda wildcards: "" if wildcards.annov == "anno" else "--novel",
         # --no-annotated
+    threads: workflow.cores / 2
     log:
         pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "call{x}.w{w}.time"),
     shell:
@@ -365,13 +366,17 @@ rule pantas_quant:
         ),
         csv1=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "events_1.w{w}.csv"),
         csv2=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "events_2.w{w}.csv"),
+        gfa1=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "graph_1.gfa"),
+        gfa2=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "graph_2.gfa"),
     output:
         csv=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "quant.w{w}.csv"),
+    params:
+        relax=lambda wildcards: "" if wildcards.annov == "anno" else "--relax 3",
     log:
         pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "quant.w{w}.time"),
     shell:
         """
-        /usr/bin/time -vo {log} python3 {input.py} -c1 {input.csv1} -c2 {input.csv2} --minj 3 > {output.csv} 2> /dev/null
+        /usr/bin/time -vo {log} python3 {input.py} -c1 {input.csv1} -c2 {input.csv2} --minj 3 --gfac1 {input.gfa1} --gfac2 {input.gfa2} {params.relax} > {output.csv} 2> /dev/null
         """
 
 
@@ -796,17 +801,40 @@ rule suppa2:
         """
 
 
-rule compare_all:
+rule build_suppa:
     input:
-        truth=pjoin(ODIR, "{sample}", "truth.csv"),
-        pantas=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "quant.w{w}.csv"),
-        rmats=pjoin(ODIR, "{sample}", "rMATS-{annov}.csv"),
-        whippet=pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff"),
-        suppa2=pjoin(ODIR, "{sample}", "anno", "SUPPA2", "DIFF.dpsi"),
+        calls=pjoin(ODIR, "{sample}", "anno", "suppa2", "OUT", "DIFF.dpsi"),
     output:
-        pjoin(ODIR, "{sample}", "compare-{annov}.w{w}.csv"),
+        csv=pjoin(ODIR, "{sample}", "SUPPA2-anno.csv"),
     shell:
         """
-        # FIXME: add SUPPA2 here and check if rules I/O are correct
-        python3 cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} > {output}
+        python3 build_suppa.py {input.calls} 100 > {output.csv}
+        """
+
+
+rule compare_all_anno:
+    input:
+        truth=pjoin(ODIR, "{sample}", "truth.csv"),
+        pantas=pjoin(ODIR, "{sample}", "anno", "pantas2", "quant.w{w}.csv"),
+        rmats=pjoin(ODIR, "{sample}", "rMATS-anno.csv"),
+        whippet=pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff"),
+        suppa2=pjoin(ODIR, "{sample}", "SUPPA2-anno.csv"),
+    output:
+        pjoin(ODIR, "{sample}", "compare-anno.w{w}.csv"),
+    shell:
+        """
+        python3 cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} -s {input.suppa2} --relax 0 > {output}
+        """
+
+
+rule compare_all_novel:
+    input:
+        truth=pjoin(ODIR, "{sample}", "truth.csv"),
+        pantas=pjoin(ODIR, "{sample}", "novel", "pantas2", "quant.w{w}.csv"),
+        rmats=pjoin(ODIR, "{sample}", "rMATS-novel.csv"),
+    output:
+        pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"),
+    shell:
+        """
+        python3 cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} --relax 3 > {output}
         """

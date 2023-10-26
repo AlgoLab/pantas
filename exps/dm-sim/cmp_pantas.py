@@ -241,34 +241,68 @@ def main(args):
                 FP_SUPPA[etype] += 1
                 # print("FP-WHIPPET", e2.to_csv())
 
-    print("PANTAS")
-    print("etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
+    # print("PANTAS")
+    print("tool", "etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
     for etype in ETYPES:
         if etype == "CE":
             continue
-        print(etype, TP_PANTAS[etype], FN_PANTAS[etype], FP_PANTAS[etype], *precision_recall_f1(TP_PANTAS[etype], FN_PANTAS[etype], FP_PANTAS[etype]), sep=",")
+        print(
+            "pantas",
+            etype,
+            TP_PANTAS[etype],
+            FN_PANTAS[etype],
+            FP_PANTAS[etype],
+            *precision_recall_f1(TP_PANTAS[etype], FN_PANTAS[etype], FP_PANTAS[etype]),
+            sep=","
+        )
 
-    print("RMATS")
-    print("etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
+    # print("RMATS")
+    # print("etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
     for etype in ETYPES:
         if etype == "CE":
             continue
-        print(etype, TP_RMATS[etype], FN_RMATS[etype], FP_RMATS[etype], *precision_recall_f1(TP_RMATS[etype], FN_RMATS[etype], FP_RMATS[etype]), sep=",")
+        print(
+            "rMATS",
+            etype,
+            TP_RMATS[etype],
+            FN_RMATS[etype],
+            FP_RMATS[etype],
+            *precision_recall_f1(TP_RMATS[etype], FN_RMATS[etype], FP_RMATS[etype]),
+            sep=","
+        )
 
     if args.w:
-        print("WHIPPET")
-        print("etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
+        # print("WHIPPET")
+        # print("etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
         for etype in ETYPES:
             if etype == "CE":
                 continue
-            print(etype, TP_WHIPPET[etype], FN_WHIPPET[etype], FP_WHIPPET[etype], *precision_recall_f1(TP_WHIPPET[etype], FN_WHIPPET[etype], FP_WHIPPET[etype]), sep=",")
+            print(
+                "Whippet",
+                etype,
+                TP_WHIPPET[etype],
+                FN_WHIPPET[etype],
+                FP_WHIPPET[etype],
+                *precision_recall_f1(
+                    TP_WHIPPET[etype], FN_WHIPPET[etype], FP_WHIPPET[etype]
+                ),
+                sep=","
+            )
     if args.s:
-        print("SUPPA2")
-        print("etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
+        # print("SUPPA2")
+        # print("etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")
         for etype in ETYPES:
             if etype == "CE":
                 continue
-            print(etype, TP_SUPPA[etype], FN_SUPPA[etype], FP_SUPPA[etype], *precision_recall_f1(TP_SUPPA[etype], FN_SUPPA[etype], FP_SUPPA[etype]), sep=",")
+            print(
+                "SUPPA2",
+                etype,
+                TP_SUPPA[etype],
+                FN_SUPPA[etype],
+                FP_SUPPA[etype],
+                *precision_recall_f1(TP_SUPPA[etype], FN_SUPPA[etype], FP_SUPPA[etype]),
+                sep=","
+            )
 
 
 if __name__ == "__main__":

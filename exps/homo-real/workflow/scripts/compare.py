@@ -266,6 +266,7 @@ def main(args):
 
     # Compute correlation and prepare legend
     legends = []
+    xticks = []
     for t in events:
         n = len(df[df["Tool"] == t])
         corr, _ = pearsonr(
@@ -275,7 +276,9 @@ def main(args):
         print(df[df["Tool"] == t]["X"].describe())
         corr = round(corr, 3)
         # legends.append(f"{t}: {n} events (P={corr:.3f})")
-        legends.append(f"{n} events (P={corr:.3f})")
+        # legends.append(f"{t}: {n} ({corr:.3f})")
+        legends.append(f"{t}: {n}")
+        xticks.append(f"{t} ({corr:.3f})")
 
     # Print events not found by pantas + Some other stuff
     print((rmats | whippet | suppa2) - pantas)
@@ -293,9 +296,9 @@ def main(args):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
 
     # First plot: ECDF with legend
-    sns.ecdfplot(data=df, x="X", hue="Tool", ax=ax1)
-    ax1.set_xlabel("|ΔPSI - RTPCR|")
-    ax1.set_ylabel("Cumulative Proportion")
+    # sns.ecdfplot(data=df, x="X", hue="Tool", ax=ax1)
+    # ax1.set_xlabel("|ΔPSI - RTPCR|")
+    # ax1.set_ylabel("Cumulative Proportion")
 
     custom_lines = [
         Rectangle(
@@ -331,21 +334,27 @@ def main(args):
             edgecolor="black",
         ),
     ]
-    ax1.get_legend().remove()
-
-    ax2.legend(custom_lines, legends, title="Events (Pearson)", loc=1)
-    ax1.set_xlim(-0.01, 1.01)
-    ax1.set_ylim(-0.01, 1.01)
+    # ax1.set_xlim(-0.01, 1.01)
+    # ax1.set_ylim(-0.01, 1.01)
 
     # Second plot: VENN of TPs
-    ins_ax = ax1.inset_axes([0.2, -0.09, 0.85, 0.85])
+    # ins_ax = ax1.inset_axes([0.2, -0.09, 0.85, 0.85])
     venn_dict = {"pantas": pantas, "rMATS": rmats, "whippet": whippet, "SUPPA2": suppa2}
     venn(
         venn_dict,
         fontsize=13,
         legend_loc=None,  # "upper left",
         cmap=sns.color_palette(),
-        ax=ins_ax,
+        ax=ax1,
+    )
+    # ax1.get_legend().remove()
+    ax1.legend(
+        custom_lines,
+        legends,
+        title="Tool: #Events (Pearson)",
+        loc="lower center",
+        bbox_to_anchor=(0.5, -0.1),
+        ncol=2,
     )
 
     # Third plot: box + strip
@@ -365,12 +374,13 @@ def main(args):
     sns.stripplot(
         data=df, x="Tool", y="X", hue="Tool", linewidth=1, edgecolor="black", ax=ax2
     )
+    ax2.set_xticklabels(xticks)
     ax2.set_ylabel("|ΔPSI - RTPCR|")
-    ax2.set_ylim(-0.01, 1.01)
+    ax2.set_ylim(-0.01, 0.7)
 
     # Set subplots titles
-    ax1.set_title("(a)")
-    ax2.set_title("(b)")
+    ax1.set_title("(a)")  # Number of events reported by each tool")
+    ax2.set_title("(b)")  # Difference between predicted and RT-PCR ∆ψ")
     # ax3.set_title("(c)")
 
     # Plot

@@ -7,6 +7,8 @@ from scipy.stats import pearsonr
 from matplotlib.patches import Rectangle
 from venn import venn
 
+sns.set()
+
 
 font = {"size": 13}
 matplotlib.rc("font", **font)
@@ -26,17 +28,15 @@ def parse_pantas(fpath):
         ).split(",")
         if etype != "ES":
             continue
-        if dpsi == "NaN":
-            if psi1 != "NaN" or psi2 != "NaN":
-                psi1 = 1 if psi1 == "NaN" else float(psi1)
-                psi2 = 1 if psi2 == "NaN" else float(psi2)
-                dpsi = psi1 - psi2
-            else:
-                continue
         dpsi = float(dpsi)
         s1, e1 = get_interval(i1)
         s2, e2 = get_interval(i2)
-        events[f"{chrom}:{e1+1}-{s2-1}"] = (-float(dpsi), novel)
+        k = f"{chrom}:{e1+1}-{s2-1}"
+        events[k] = (
+            events[k] + [(-float(dpsi), novel)]
+            if k in events
+            else [(-float(dpsi), novel)]
+        )
     return events
 
 
@@ -73,7 +73,12 @@ def parse_rmats(fpath):
         delta_incl = float(delta_incl)
         pv = float(pv)
         ex_s, ex_e = int(ex_s), int(ex_e)
-        events[f"{chrom}:{ex_s+1}-{ex_e}"] = (-delta_incl, float(pv))
+        k = f"{chrom}:{ex_s+1}-{ex_e}"
+        events[k] = (
+            events[k] + [(-delta_incl, float(pv))]
+            if k in events
+            else [(-delta_incl, float(pv))]
+        )
     return events
 
 
@@ -99,7 +104,9 @@ def parse_whippet(fpath):
         p = float(p)
         if etype != "CE":
             continue
-        events[region] = (-dpsi, p)
+        events[region] = (
+            events[region] + [(-dpsi, p)] if region in events else [(-dpsi, p)]
+        )
     return events
 
 
@@ -119,9 +126,11 @@ def parse_suppa(suppa_dpsi):
             intron1 = tuple(int(x) for x in ab.split("-"))
             intron2 = tuple(int(x) for x in cd.split("-"))
             k = f"{chrom}:{intron1[1]}-{intron2[0]}"
-            if k in events and pvalue > events[k][1]:
-                continue
-            events[k] = (dpsi, pvalue)
+            # if k in events and pvalue > events[k][1]:
+            #     continue
+            events[k] = (
+                events[k] + [(dpsi, pvalue)] if k in events else [(dpsi, pvalue)]
+            )
     return events
 
 
@@ -160,54 +169,68 @@ def main(args):
     for t, Es in events.items():
         TPs = set(Es.keys()) & set(truth.keys())
         for k in TPs:
-            dpsi, conf = Es[k]
-            if abs(dpsi) < args.delta or abs(dpsi) > 1 - args.delta:
+            best_dpsi = -1
+            best_conf = -1
+            best_diff = 2
+            for dpsi, conf in Es[k]:
+                if abs(dpsi) < args.delta or abs(dpsi) > 1 - args.delta:
+                    continue
+                if t == "pantas":
+                    pass
+                elif t == "rMATS":
+                    if conf > args.pvalue:
+                        continue
+                elif t == "whippet":
+                    if conf < args.prob:
+                        continue
+                elif t == "SUPPA2":
+                    if conf > args.pvalue:
+                        continue
+                if dpsi - truth[k] > best_diff:
+                    continue
+                best_dpsi = dpsi
+                best_conf = conf
+                best_diff = dpsi - truth[k]
+            if best_diff == 2:
                 continue
-            if t == "pantas":
-                pass
-            elif t == "rMATS":
-                if conf > args.pvalue:
-                    continue
-            elif t == "whippet":
-                if conf < args.prob:
-                    continue
-            elif t == "SUPPA2":
-                if conf > args.pvalue:
-                    continue
             df.append(
                 [
                     t,
                     k,
-                    dpsi,
-                    conf,
+                    best_dpsi,
+                    best_conf,
                     truth[k],
-                    abs(dpsi - truth[k]),
+                    abs(best_dpsi - truth[k]),
                 ]
             )
         FPs = set(Es.keys()) & set(negatives)
         for k in FPs:
-            dpsi, conf = Es[k]
-            if abs(dpsi) < args.delta or abs(dpsi) > 1 - args.delta:
-                continue
-            if t == "pantas":
-                pass
-            elif t == "rMATS":
-                if conf > args.pvalue:
+            add_flag = False
+            for dpsi, conf in Es[k]:
+                if abs(dpsi) < args.delta or abs(dpsi) > 1 - args.delta:
                     continue
-            elif t == "whippet":
-                if conf < args.prob:
-                    continue
-            elif t == "SUPPA2":
-                if conf > args.pvalue:
-                    continue
-            df_neg.append(
-                [
-                    t,
-                    k,
-                    dpsi,
-                    conf,
-                ]
-            )
+                if t == "pantas":
+                    pass
+                elif t == "rMATS":
+                    if conf > args.pvalue:
+                        continue
+                elif t == "whippet":
+                    if conf < args.prob:
+                        continue
+                elif t == "SUPPA2":
+                    if conf > args.pvalue:
+                        continue
+                add_flag = True
+                break
+            if add_flag:
+                df_neg.append(
+                    [
+                        t,
+                        k,
+                        dpsi,
+                        conf,
+                    ]
+                )
     df = pd.DataFrame(df, columns=["Tool", "Event", "dPSI", "P", "RTPCR", "X"])
     df_neg = pd.DataFrame(df_neg, columns=["Tool", "Event", "dPSI", "P"])
 
@@ -278,7 +301,7 @@ def main(args):
         # legends.append(f"{t}: {n} events (P={corr:.3f})")
         # legends.append(f"{t}: {n} ({corr:.3f})")
         legends.append(f"{t}: {n}")
-        xticks.append(f"{t} ({corr:.3f})")
+        xticks.append(f"{t}\n(r={corr:.3f})")
 
     # Print events not found by pantas + Some other stuff
     print((rmats | whippet | suppa2) - pantas)

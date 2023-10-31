@@ -237,6 +237,8 @@ class Event:
 
 
 def eq_event(e1: Event, e2: Event, relax: int = 0):
+    if e1.annotation_type == "annotated" and e2.annotation_type == "annotated":
+        relax = 0
     if e1.etype != e2.etype:
         return False
     if e1.gene != e2.gene:

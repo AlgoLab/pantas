@@ -39,23 +39,31 @@ assert samples != []
 
 rule run:
     input:
-        expand(pjoin(ODIR, "{sample}.results.csv"), sample=samples),
+        expand(pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"),
+               sample=samples,
+               w=[1, 3, 5, 10],
+        ),
+        expand(pjoin(ODIR, "{sample}", "compare-anno.w{w}.csv"),
+               sample=samples,
+               w=[-1, 1, 3, 5, 10],
+        ),
+        # expand(pjoin(ODIR, "{sample}.results.csv"), sample=samples),
         #expand(
         #    pjoin(ODIR, "{sample}", "anno", "pantas2", "sample_{x}.bam"),
         #    sample=samples,
         #    x=[1, 2],
         #),
-        expand(
-            pjoin(ODIR, "{sample}", "novel", "pantas2", "sample_{x}.bam"),
-            sample=samples,
-            x=[1, 2],
-        ),
-        expand(
-            pjoin(ODIR, "{sample}", "compare-{annov}.w{w}.csv"),
-            sample=samples,
-            annov=["anno", "novel"],
-            w=[-1, 1, 3],
-        ),
+        #expand(
+        #    pjoin(ODIR, "{sample}", "novel", "pantas2", "sample_{x}.bam"),
+        #    sample=samples,
+        #    x=[1, 2],
+        #),
+        #expand(
+        #    pjoin(ODIR, "{sample}", "compare-{annov}.w{w}.csv"),
+        #    sample=samples,
+        #    annov=["anno", "novel"],
+        #    w=[-1, 1, 3],
+        #),
 
 
 rule combine:
@@ -814,6 +822,7 @@ rule build_suppa:
 
 rule compare_all_anno:
     input:
+        py="cmp_pantas.py",
         truth=pjoin(ODIR, "{sample}", "truth.csv"),
         pantas=pjoin(ODIR, "{sample}", "anno", "pantas2", "quant.w{w}.csv"),
         rmats=pjoin(ODIR, "{sample}", "rMATS-anno.csv"),
@@ -823,12 +832,13 @@ rule compare_all_anno:
         pjoin(ODIR, "{sample}", "compare-anno.w{w}.csv"),
     shell:
         """
-        python3 cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} -s {input.suppa2} --relax 0 > {output}
+        python3 {input.py} -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} -s {input.suppa2} --relax 0 > {output}
         """
 
 
 rule compare_all_novel:
     input:
+        py="cmp_pantas.py",
         truth=pjoin(ODIR, "{sample}", "truth.csv"),
         pantas=pjoin(ODIR, "{sample}", "novel", "pantas2", "quant.w{w}.csv"),
         rmats=pjoin(ODIR, "{sample}", "rMATS-novel.csv"),
@@ -836,5 +846,5 @@ rule compare_all_novel:
         pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"),
     shell:
         """
-        python3 cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} --relax 3 > {output}
+        python3 {input.py} -t {input.truth} -p {input.pantas} -r {input.rmats} --relax 3 > {output}
         """

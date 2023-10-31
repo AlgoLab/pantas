@@ -19,7 +19,7 @@ include: "rules/rmats.smk"
 include: "rules/whippet.smk"
 # salmon+suppa rules
 include: "rules/suppa2.smk"
-# # pantas rules
+# pantas rules
 include: "rules/pantas.smk"
 
 

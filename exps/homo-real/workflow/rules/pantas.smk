@@ -84,11 +84,12 @@ rule shark:
         tsv=pjoin(ODIR, "pantas2", "{sample}.tsv"),
     conda:
         "../envs/shark.yaml"
+    threads: 16
     log:
         time=pjoin(ODIR, "bench", "pantas2", "shark_{sample}.time"),
     shell:
         """
-        /usr/bin/time -vo {log.time} shark -r {input.fa} -1 {input.fq1} -2 {input.fq2} -o {output.fq1} -p {output.fq2} > {output.tsv}
+        /usr/bin/time -vo {log.time} shark --threads {threads} -q 10 -r {input.fa} -1 {input.fq1} -2 {input.fq2} -o {output.fq1} -p {output.fq2} > {output.tsv}
         """
 
 
@@ -114,9 +115,22 @@ rule pantas2_index:
     threads: workflow.cores
     shell:
         """
-        pushd {software_folder}
-        /usr/bin/time -vo {log.time} snakemake -s {input.smk} -c{threads} --config fa={input.fa} gtf={input.gtf} vcf={input.vcf} wd={params.wd}
+        pushd {software_folder}/pantas2
+        /usr/bin/time -vo {log.time} snakemake -s index-reduced.smk -c{threads} --config fa={input.fa} gtf={input.gtf} vcf={input.vcf} wd={params.wd}
         popd
+        """
+
+
+rule get_intron_distr:
+    input:
+        gtf=pjoin(ODIR, "pantas2", "genes.gtf"),
+    output:
+        distr=pjoin(ODIR, "pantas2", "introns.distr"),
+    conda:
+        "../envs/pylib.yaml"
+    shell:
+        """
+        python3 workflow/scripts/intron_length_distribution.py -g {input.gtf} -o {output.distr}
         """
 
 
@@ -127,16 +141,17 @@ rule pantas2_mpmap:
         dist=pjoin(ODIR, "pantas2", "index", "spliced-pangenes.dist"),
         fq1=pjoin(ODIR, "pantas2", "{sample}_1.fq"),
         fq2=pjoin(ODIR, "pantas2", "{sample}_2.fq"),
+        distr=pjoin(ODIR, "pantas2", "introns.distr"),
     output:
         gaf=pjoin(ODIR, "pantas2", "{sample}.gaf"),
-    threads: workflow.cores
+    threads: 16  # workflow.cores
     log:
         time=pjoin(ODIR, "bench", "pantas2", "mpmap-{sample}.time"),
     conda:
         "../envs/pantas2.yaml"
     shell:
         """
-        /usr/bin/time -vo {log.time} vg mpmap -x {input.xg} -g {input.gcsa} -d {input.dist} -f {input.fq1} -f {input.fq2} -F GAF --threads {threads} > {output.gaf}
+        /usr/bin/time -vo {log.time} vg mpmap --intron-distr {input.distr} -x {input.xg} -g {input.gcsa} -d {input.dist} -f {input.fq1} -f {input.fq2} -F GAF --threads {threads} > {output.gaf}
         """
 
 
@@ -189,6 +204,16 @@ rule pantas_quant:
             sample=C2.keys(),
             w="{w}",
         ),
+        gfa1s=expand(
+            pjoin(ODIR, "pantas2", "graph_{sample}.gfa"),
+            sample=C1.keys(),
+            w="{w}",
+        ),
+        gfa2s=expand(
+            pjoin(ODIR, "pantas2", "graph_{sample}.gfa"),
+            sample=C2.keys(),
+            w="{w}",
+        ),
         exe=rules.download_pantas.output.quant,
     output:
         csv=pjoin(ODIR, "pantas2", "quant.w{w}.csv"),
@@ -198,7 +223,7 @@ rule pantas_quant:
         "../envs/pantas2.yaml"
     shell:
         """
-        /usr/bin/time -vo {log.time} python3 {input.exe} -c1 {input.csv1s} -c2 {input.csv2s} > {output.csv}
+        /usr/bin/time -vo {log.time} python3 {input.exe} -c1 {input.csv1s} -c2 {input.csv2s} --relax 0 --minj 10 --gfac1 {input.gfa1s} --gfac2 {input.gfa2s} > {output.csv}
         """
 
 
@@ -216,7 +241,7 @@ rule pantas2_gaf2sam:
         "../envs/pantas2.yaml"
     shell:
         """
-        python3 ../scripts/gaf2sam.py {input.gaf} {input.gfa} {input.gfarp} > {output.sam} 2> {log.err}
+        python3 workflow/scripts/gaf2sam.py {input.gaf} {input.gfa} {input.gfarp} > {output.sam} 2> {log.err}
         """
 
 

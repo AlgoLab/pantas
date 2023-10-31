@@ -39,13 +39,15 @@ assert samples != []
 
 rule run:
     input:
-        expand(pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"),
-               sample=samples,
-               w=[1, 3, 5, 10],
+        expand(
+            pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"),
+            sample=samples,
+            w=[1, 3, 5, 10],
         ),
-        expand(pjoin(ODIR, "{sample}", "compare-anno.w{w}.csv"),
-               sample=samples,
-               w=[-1, 1, 3, 5, 10],
+        expand(
+            pjoin(ODIR, "{sample}", "compare-anno.w{w}.csv"),
+            sample=samples,
+            w=[-1, 1, 3, 5, 10],
         ),
         # expand(pjoin(ODIR, "{sample}.results.csv"), sample=samples),
         #expand(
@@ -64,31 +66,6 @@ rule run:
         #    annov=["anno", "novel"],
         #    w=[-1, 1, 3],
         #),
-
-
-rule combine:
-    input:
-        expand(pjoin(ODIR, "{{sample}}", "pantas2-anno.w{w}.csv"), w=[-1, 1, 2, 3]),
-        expand(
-            pjoin(ODIR, "{{sample}}", "pantas2-novel.w{w}.csv"),
-            w=[1, 2, 3],
-        ),
-        pjoin(ODIR, "{sample}", "rMATS-anno.csv"),
-        pjoin(ODIR, "{sample}", "rMATS-novel.csv"),
-        pjoin(ODIR, "{sample}", "whippet-anno.csv"),
-        pjoin(ODIR, "{sample}", "whippet-anno-relaxed.csv"),
-        pjoin(ODIR, "{sample}", "whippet-anno-nofilt.csv"),
-        pjoin(ODIR, "{sample}", "whippet-anno-nofilt-relaxed.csv"),
-        # pjoin(ODIR, "{sample}", "whippet-novel.csv"),
-        # pjoin(ODIR, "{sample}", "whippet-novel-relaxed.csv"),
-        # pjoin(ODIR, "{sample}", "whippet-novel-nofilt.csv"),
-        # pjoin(ODIR, "{sample}", "whippet-novel-nofilt-relaxed.csv"),
-    output:
-        pjoin(ODIR, "{sample}.results.csv"),
-    shell:
-        """
-        bash combine.sh {input} > {output}
-        """
 
 
 # ------------------
@@ -771,9 +748,10 @@ rule compare_all_novel:
         truth=pjoin(ODIR, "{sample}", "truth.csv"),
         pantas=pjoin(ODIR, "{sample}", "novel", "pantas2", "quant.w{w}.csv"),
         rmats=pjoin(ODIR, "{sample}", "rMATS-novel.csv"),
+        whippet=pjoin(ODIR, "{sample}", "novel", "whippet", "psi.diff"),
     output:
         pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"),
     shell:
         """
-        python3 {input.py} -t {input.truth} -p {input.pantas} -r {input.rmats} --relax 3 > {output}
+        python3 {input.py} -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} --relax 3 > {output}
         """

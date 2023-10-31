@@ -8,9 +8,9 @@ EMAP_WHIPPET = {"CE": "ES", "RI": "IR", "AD": "A5", "AA": "A3"}
 
 
 def precision_recall_f1(tp: int, fn: int, fp: int) -> list[int]:
-    prec = float(tp) / (tp + fp)
-    rec = float(tp) / (tp + fn)
-    f1 = 2 * float(tp) / (2 * tp + fp + fn)
+    prec = float(tp) / (tp + fp) if tp + fp != 0 else 0
+    rec = float(tp) / (tp + fn) if tp + fn != 0 else 0
+    f1 = 2 * float(tp) / (2 * tp + fp + fn) if tp + fp + fn != 0 else 0
     return [prec, rec, f1]
 
 

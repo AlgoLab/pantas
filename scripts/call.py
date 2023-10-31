@@ -387,7 +387,7 @@ def main(args):
     def check_nonnovel():
         for ix_j in junctions:
             junc = gfaL[ix_j]
-            if junc["RC"] > args.rca:
+            if junc["RC"] >= args.rca:
                 _trjunc = set(map(lambda x: ".".join(x.split(".")[:-2]), junc["JN"]))
                 eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
 
@@ -690,7 +690,7 @@ def main(args):
             # Check all novel junctions
             for ix_j in noveljunctions:
                 junc = gfaL[ix_j]
-                if junc["RC"] > args.rc:
+                if junc["RC"] >= args.rc:
                     _trjunc = set()
                     eprint(f"[Checking junction {ix_j}]: {junc}, {_trjunc}")
 
@@ -1201,12 +1201,12 @@ def main(args):
                 nX = [
                     x
                     for x in noveljunctions
-                    if x[0] == ix_j[0] and gfaS[x[0]].get("NC", 0) > args.rc
+                    if x[0] == ix_j[0] and gfaS[x[0]].get("NC", 0) >= args.rc
                 ]
                 nY = [
                     x
                     for x in noveljunctions
-                    if x[1] == ix_j[1] and gfaS[x[1]].get("NC", 0) > args.rc
+                    if x[1] == ix_j[1] and gfaS[x[1]].get("NC", 0) >= args.rc
                 ]
 
                 if len(nX) > 0 and len(nY) > 0:

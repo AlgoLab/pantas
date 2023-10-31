@@ -11,7 +11,7 @@ samtools faidx reference.chroms.fa
 
 # Gene Annotation
 wget https://ftp.ensembl.org/pub/release-109/gtf/homo_sapiens/Homo_sapiens.GRCh38.109.gtf.gz
-for c in $(seq 1 22) X Y ; do zgrep -P "^$c\t" Homo_sapiens.GRCh38.109.gtf.gz | grep "protein_coding" ; done > annotation.gtf
+for c in $(seq 1 22) X Y ; do zgrep -P "^$c\t" Homo_sapiens.GRCh38.109.gtf.gz ; done | sed -e 's/^/chr/' > annotation.gtf
 
 # Variants
 mkdir 1kgp-GRCh38

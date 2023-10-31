@@ -1,6 +1,6 @@
-# Experiments
-## Simulated on Drosophila
+# Exps on simulated data from Drosophila
 
+### Setup input
 ``` sh
 wget http://ftp.flybase.net/releases/FB2023_02/dmel_r6.51/fasta/dmel-all-chromosome-r6.51.fasta.gz
 gunzip dmel-all-chromosome-r6.51.fasta.gz
@@ -31,20 +31,18 @@ tabix -p vcf DGRP2.genes.norm.vcf.gz
 ```
 
 
-## Simulation
+## Setup environment
 ``` sh
-mamba create -n pantas2 -c bioconda -c conda-forge r-base samtools bcftools biopython intervaltree
+mamba create -n pantas2 -c bioconda -c conda-forge python=3.11.5 r-base numpy samtools bcftools biopython intervaltree snakemake-minimal vg=1.50.1 julia
 conda activate pantas2
 R
 > install.packages("remotes")
 > remotes::install_github("biomedbigdata/ASimulatoR")
 > q()
-
-cd dm-sim
-snakemake -c16 --config fa=/path/to/reference.fa gtf=/path/to/annotation.gtf vcf=/path/to/population.vcf.gz odir=/path/to/output/directory n=<nreads>
 ```
 
-## Evaluation
-``` sh
-
+### Run experiments
+```
+snakemake -pc16 --config fa=/path/to/reference.fa gtf=/path/to/annotation.gtf vcf=/path/to/population.vcf.gz odir=/path/to/output/directory n=<nreads> [-n]
+# Results: $odir/DGRP-897/compare-*.csv
 ```

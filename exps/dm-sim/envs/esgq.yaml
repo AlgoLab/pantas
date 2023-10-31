@@ -1,9 +1,0 @@
-name: esgq
-channels:
-  - bioconda
-dependencies:
-  - python=3.9
-  - biopython
-  - gffutils
-  - suppa
-  - vg

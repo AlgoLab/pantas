@@ -1,7 +1,0 @@
-test	manual	gene	4	33	.	+	.	gene_id "Gtest";
-test	manual	transcript	4	33	.	+	.	gene_id "Gtest"; transcript_id "Ttest";
-test	manual	exon	4	19	.	+	.	gene_id "Gtest"; transcript_id "Ttest"; exon_id "Etest1";
-test	manual	exon	23	25	.	+	.	gene_id "Gtest"; transcript_id "Ttest"; exon_id "Etest2";
-test	manual	exon	29	33	.	+	.	gene_id "Gtest"; transcript_id "Ttest"; exon_id "Etest3";
-
-

@@ -1,6 +1,5 @@
 name: suppa
 channels:
-  - conda-forge
   - bioconda
 dependencies:
   - salmon

@@ -26,12 +26,5 @@ include: "rules/results.smk"
 # ##### target rules #####
 rule all:
     input:
-        #pjoin(ODIR, "rMATS", "summary.txt"),
-        #pjoin(ODIR, "whippet", "psi.diff"),
-        # expand(pjoin(ODIR, "pantas2", "{w}", "c1.csv"), w=Ws),
-        # expand(pjoin(ODIR, "pantas2", "{w}", "c2.csv"), w=Ws),
         pjoin(ODIR, "results", "bench.csv"),
         pjoin(ODIR, "results", "res.csv"),
-        #pjoin(ODIR, "salmon_suppa", "suppa.csv"),
-        #expand(pjoin(ODIR, "pantas2", "quant.w{w}.csv"),w=Ws)
-        #expand(pjoin(ODIR, "salmon_suppa", "suppa2.k{k}/"), k=Ks),

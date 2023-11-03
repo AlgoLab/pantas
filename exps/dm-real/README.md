@@ -1,4 +1,4 @@
-# Exps on real data from Drosophila
+# Exps on Drosophila real data
 
 ## Setup input
 

@@ -2,6 +2,8 @@
 
 This repository contains the codebase of pantas, a pangenomic approach for performing differential AS events quantification across RNA-Seq conditions. pantas is based on the notion of annotated spliced pangenomes, which are [spliced pangenomes](https://doi.org/10.1038/s41592-022-01731-9) augmented with additional information needed for AS events inference and quantification.
 
+Alongside pantas, we provide a set of utilities to build and index a (annotated) spliced pangenome. We devised [two alternative construction pipelines](https://github.com/AlgoLab/pantas/tree/main#input-preparation), one for full genome analysis and one for the analysis of a panel of genes of interest (reduced).
+
 
 ### Installation
 ``` sh
@@ -10,48 +12,6 @@ git clone https://github.com/AlgoLab/pantas.git
 # Install dependencies
 mamba create -c bioconda -c conda-forge pantas python=3.10 biopython gffutils intervaltree bcftools samtools gffread vg=1.50.1 snakemake-minimal
 mamba activate pantas
-```
-
-### Input preparation
-To build and index an annotated spliced pangenome, we provide a snakemake pipeline (`index.smk`): 
-``` sh
-snakemake -s index.smk -c4 --config fa=/path/to/reference.fa gtf=/path/to/annotation.gtf vcf=/path/to/variants.vcf.gz wd=/path/to/out/dir
-```
-The annotated spliced pangenome and the index are stored in the `wd` directory:
-``` sh
-# Annotated spliced pangenome in GFA format:
-spliced-pangenome.annotated.gfa
-# Compressed graph
-spliced-pangenome.xg
-# Index
-spliced-pangenome.dist         
-spliced-pangenome.gcsa
-spliced-pangenome.gcsa.lcp
-```
-
-To build/index a reduced annotated spliced pangenomes, i.e., a graph representing just a panel of genes of interest:
-``` sh
-snakemake -s index-reduced.smk -c4 --config fa=/path/to/reference.fa gtf=/path/to/panel.gtf vcf=/path/to/variants.vcf.gz wd=/path/to/out/dir
-```
-The reduced annotated spliced pangenome and the index are stored in the `wd` directory:
-```
-# Annotated spliced pangenome in GFA format:
-spliced-pangenes.annotated.gfa
-# Compressed graph
-spliced-pangenes.xg
-# Index
-spliced-pangenes.dist         
-spliced-pangenes.gcsa
-spliced-pangenes.gcsa.lcp
-# Reduced reference paths
-spliced-pangenes.refpath
-```
-
-*Note:* using reduced annotated spliced pangenomes (when possible) is recommended since it hugely improves running times and RAM usage.
-
-To map each replicate to the annotated spliced pangenome, use `vg mpmap`:
-``` sh
-vg mpmap -x [spliced-pangenome.xg] -g [spliced-pangenome.gcsa] -d [spliced-pangenome.dist] -f [sample_1.fq] -f [sample_2.fq] -F GAF > [sample.gaf]
 ```
 
 ### pantas pipeline
@@ -67,7 +27,7 @@ python3 ./scripts/quantify3.py -c1 condition1-rep1.csv condition1-rep2.csv condi
                                -c2 condition2-rep1.csv condition2-rep2.csv condition2-rep3.csv > [quantification.csv]
 ```
 
-##### call step
+##### Event calling
 The `call.py` script provides several arguments that can be used to tweak the event calling. Please refer to `python3 ./scripts/call.py --help`:
 ```
   --rc RC                        Minimum read count (default: 3)
@@ -80,6 +40,50 @@ The `call.py` script provides several arguments that can be used to tweak the ev
 Moreover, to call events from a reduced spliced pangenome, it is necessary to use the `--rp` argument to provide the list of reference paths in the reduced graph (this file is created during the graph construction/indexing):
 ``` sh
 python3 ./scripts/call.py --rp [spliced-pangenome.refpath] [sample.gfa] [annotation.gtf] > [sample-events.csv]
+```
+
+##### Input preparation
+The input of pantas are: an annotated spliced pangenome and the replicates aligned to this structure.
+
+To build and index an annotated spliced pangenome, we provide a snakemake pipeline (`index.smk`): 
+``` sh
+snakemake -s index.smk -c4 --config fa=/path/to/reference.fa gtf=/path/to/annotation.gtf vcf=/path/to/variants.vcf.gz wd=/path/to/out/dir
+```
+The annotated spliced pangenome and the index are stored in the `wd` directory:
+``` sh
+# Annotated spliced pangenome in GFA format:
+spliced-pangenome.annotated.gfa
+# Compressed graph:
+spliced-pangenome.xg
+# Index:
+spliced-pangenome.dist         
+spliced-pangenome.gcsa
+spliced-pangenome.gcsa.lcp
+```
+
+To build/index a **reduced** annotated spliced pangenomes, i.e., a graph representing a panel of genes of interest:
+``` sh
+snakemake -s index-reduced.smk -c4 --config fa=/path/to/reference.fa gtf=/path/to/panel.gtf vcf=/path/to/variants.vcf.gz wd=/path/to/out/dir
+```
+The reduced annotated spliced pangenome and the index are stored in the `wd` directory:
+```
+# Annotated spliced pangenome in GFA format:
+spliced-pangenes.annotated.gfa
+# Compressed graph:
+spliced-pangenes.xg
+# Index:
+spliced-pangenes.dist         
+spliced-pangenes.gcsa
+spliced-pangenes.gcsa.lcp
+# Reduced reference paths:
+spliced-pangenes.refpath
+```
+
+**Note:** using reduced annotated spliced pangenomes (when possible) is recommended since it hugely improves running times and RAM usage.
+
+To map each replicate to the annotated spliced pangenome, we suggest to use `vg mpmap`:
+``` sh
+vg mpmap -x [spliced-pangenome.xg] -g [spliced-pangenome.gcsa] -d [spliced-pangenome.dist] -f [sample_1.fq] -f [sample_2.fq] -F GAF > [sample.gaf]
 ```
 
 ### Example
@@ -112,7 +116,7 @@ Experimental evaluation scripts can be found in the `./exps` subdirectory of thi
 * `./exps/homo-real/` is the evaluation on real data from human (here we used a *reduced* annotated spliced pangenome)
 
 
-##### Authors
+### Authors
 pantas is developed by Simone Ciccolella, Davide Cozzi, and Luca Denti.
 
 For inquiries on this software please open an [issue](https://github.com/algolab/pantas/issues).

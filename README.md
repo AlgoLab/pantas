@@ -111,9 +111,9 @@ python3 ./scripts/quantify3.py -c1 example/reads.events.csv -c2 example/reads.ev
 
 ## Experiments
 Experimental evaluation scripts can be found in the `./exps` subdirectory of this repository. We provide three snakemake pipelines which also contain more information on how to use pantas.
-* `./exps/dm-sim/` is the evaluation on simulated data from Drosophila Melanogaster
-* `./exps/dm-sim/` is the evaluation on real data from Drosophila Melanogaster (here we used an annotated spliced pangenome)
-* `./exps/homo-real/` is the evaluation on real data from human (here we used a *reduced* annotated spliced pangenome)
+* `./exps/dm-sim/` is the evaluation on simulated data from Drosophila Melanogaster (here we used an annotated spliced pangenome)
+* `./exps/dm-sim/` is the evaluation on real data from Drosophila Melanogaster using (here we used an annotated spliced pangenome)
+* `./exps/homo-real/` is the evaluation on real data from human (here we used a **reduced** annotated spliced pangenome)
 
 
 ## Authors

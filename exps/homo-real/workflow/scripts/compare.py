@@ -291,6 +291,7 @@ def main(args):
     legends = []
     xticks = []
     for t in events:
+        print("---", t)
         n = len(df[df["Tool"] == t])
         corr, _ = pearsonr(
             df[df["Tool"] == t].sort_values(by="Event")["RTPCR"],

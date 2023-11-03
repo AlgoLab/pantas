@@ -97,6 +97,7 @@ def parse_rmats_se(fpath, novel, pvalue=0.05):
             inclvl_1,
             inclvl_2,
             delta_incl,
+            pv
         ]
      
         EVENTS.append(k)
@@ -208,6 +209,7 @@ def parse_rmats_a3(fpath, novel, pvalue=0.05):
                 inclvl_1,
                 inclvl_2,
                 delta_incl,
+                pv
             ]
       
         EVENTS.append(k)
@@ -320,6 +322,7 @@ def parse_rmats_a5(fpath, novel, pvalue=0.05):
                 inclvl_1,
                 inclvl_2,
                 delta_incl,
+                pv
             ]
         EVENTS.append(k)
     return EVENTS
@@ -410,6 +413,7 @@ def parse_rmats_ri(fpath, novel, pvalue=0.05):
             inclvl_1,
             inclvl_2,
             delta_incl,
+            pv
         ]
         EVENTS.append(k)
     return EVENTS
@@ -432,7 +436,7 @@ def main(rmats_prefix, min_pvalue, output):
 
 
 if __name__ == "__main__":
-    rmats_path = snakemake.input.rmats
+    rmats_path = snakemake.params.rmats
     min_pvalue = snakemake.params.p_value
     output = snakemake.output.csv
     main(rmats_path, min_pvalue, output)

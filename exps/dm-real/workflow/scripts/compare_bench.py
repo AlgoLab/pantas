@@ -94,7 +94,7 @@ def main(argv):
     for m in star_map_times:
         df = pd.concat([df, pd.DataFrame(m)], ignore_index=True, axis=0)
 
-    pantas_bench_dir = f"{bench_dir}/pantas2"
+    pantas_bench_dir = f"{bench_dir}/pantas"
 
     pantas_bench_index_file = f"{pantas_bench_dir}/index.time"
 
@@ -138,24 +138,24 @@ def main(argv):
     for w in pantas_bench_quant_files.keys():
         pantas_bench_quant_files[w].sort()
 
-    pantas_index_time = parse_time_verbose(pantas_bench_index_file, "pantas2")
+    pantas_index_time = parse_time_verbose(pantas_bench_index_file, "pantas")
     pantas_mpmap_times = [
-        parse_time_verbose(x, "pantas2") for x in pantas_bench_mpmap_files
+        parse_time_verbose(x, "pantas") for x in pantas_bench_mpmap_files
     ]
     pantas_weight_times = [
-        parse_time_verbose(x, "pantas2") for x in pantas_bench_weight_files
+        parse_time_verbose(x, "pantas") for x in pantas_bench_weight_files
     ]
     pantas_call_times = {}
     for w in pantas_bench_call_files.keys():
         pantas_call_times[w] = [
-            parse_time_verbose(x, "pantas2") for x in pantas_bench_call_files[w]
+            parse_time_verbose(x, "pantas") for x in pantas_bench_call_files[w]
         ]
         for x in pantas_call_times[w]:
             x["w"] = [w]
     pantas_quant_times = {}
     for w in pantas_bench_quant_files.keys():
         pantas_quant_times[w] = [
-            parse_time_verbose(x, "pantas2") for x in pantas_bench_quant_files[w]
+            parse_time_verbose(x, "pantas") for x in pantas_bench_quant_files[w]
         ]
         for x in pantas_quant_times[w]:
             x["w"] = [w]

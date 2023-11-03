@@ -50,6 +50,7 @@ def parse_suppa(suppa_dpsi, pvalue=0.05):
                 "NAN",
                 "NAN",
                 dpsi,
+                pv
             ]
 
             EVENTS["ES"].append(k)
@@ -71,6 +72,7 @@ def parse_suppa(suppa_dpsi, pvalue=0.05):
                 "NAN",
                 "NAN",
                 dpsi,
+                pv
             ]
             EVENTS[etype].append(k)
         elif (etype == "A3" and strand == "+") or (etype == "A5" and strand == "-"):
@@ -91,6 +93,7 @@ def parse_suppa(suppa_dpsi, pvalue=0.05):
                 "NAN",
                 "NAN",
                 dpsi,
+                pv
             ]
             EVENTS[etype].append(k)
         elif etype == "RI":
@@ -111,6 +114,7 @@ def parse_suppa(suppa_dpsi, pvalue=0.05):
                 "NAN",
                 "NAN",
                 dpsi,
+                pv
             ]
             EVENTS["IR"].append(k)
     return EVENTS

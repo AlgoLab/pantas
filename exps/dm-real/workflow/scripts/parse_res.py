@@ -10,10 +10,15 @@ import copy
 from matplotlib import pyplot as plt
 from venn import venn
 import seaborn as sns
+import matplotlib.gridspec as gridspec
+import seaborn as sns; sns.set()
+import SeabornFig2Grid as sfg
 from scipy.stats import pearsonr
 import pandas as pd
 import eparser
 import math
+from matplotlib.patches import Rectangle
+import matplotlib.colors 
 
 ETYPES = ["ES", "IR", "A3", "A5"]
 EMAP_RMATS = {"SE": "ES", "RI": "IR", "A3SS": "A3", "A5SS": "A5"}
@@ -83,7 +88,9 @@ def parse_pantas(path):
 
 
 def parse_rmats(path):
+    filt = {x: {} for x in ETYPES}
     event_rmats = {x: [] for x in ETYPES}
+    pos = 0
     for line in open(path, "r"):
         if line.startswith("etype"):
             continue
@@ -94,11 +101,20 @@ def parse_rmats(path):
             continue
         if abs(e.dpsi) < FILTER:
             continue
-        event_rmats[e.etype].append(e)
+        if e not in filt[e.etype].keys():
+            event_rmats[e.etype].append(e)
+            filt[e.etype][e] = [len(event_rmats[e.etype])-1, float(e.pv)]
+            pos = pos + 1
+        else:
+            if float(e.pv) < filt[e.etype][e][1]: 
+                filt[e.etype][e][1] = float(e.pv)
+                event_rmats[e.etype][filt[e][0]] = e
     return event_rmats
 
 def parse_suppa(path):
+    filt = {x: {} for x in ETYPES}
     event_suppa = {x: [] for x in ETYPES}
+    pos = 0
     for line in open(path, "r"):
         if line.startswith("etype"):
             continue
@@ -108,11 +124,20 @@ def parse_suppa(path):
         e.dpsi = -e.dpsi
         if abs(e.dpsi) < FILTER:
             continue
-        event_suppa[e.etype].append(e)
+        if e not in filt[e.etype].keys():
+            event_suppa[e.etype].append(e)
+            filt[e.etype][e] = [len(event_suppa[e.etype])-1, float(e.pv)]
+            pos = pos + 1
+        else:
+            if float(e.pv) < filt[e.etype][e][1]: 
+                filt[e.etype][e][1] = float(e.pv)
+                event_suppa[e.etype][filt[e][0]] = e
     return event_suppa
 
 def parse_whippet(path):
+    filt = {x: {} for x in ETYPES}
     event_whippet = {x: [] for x in ETYPES}
+    pos = 0
     for line in open(path, "r"):
         if line.startswith("Gene"):
             # header
@@ -127,11 +152,23 @@ def parse_whippet(path):
             continue
         if abs(e.dpsi) < FILTER:
             continue
-        event_whippet[e.etype].append(e)
+        #event_whippet[e.etype].append(e)
+        if e not in filt[e.etype].keys():
+            event_whippet[e.etype].append(e)
+            filt[e.etype][e] = [len(event_whippet[e.etype])-1, float(e.pv)]
+            pos = pos + 1
+        else:
+            if float(e.pv) > filt[e.etype][e][1]: # here pv is min prob
+                filt[e.etype][e][1] = float(e.pv)
+                event_whippet[e.etype][filt[e][0]] = e
+        
+        
     return event_whippet
 
 
 def main(argv):
+    plt.rc('axes', labelsize=18) #fontsize of the x and y labels
+    plt.rc('legend', fontsize=14) #fontsize of the legend
     pantas_path = snakemake.params.pantas_dir
     if pantas_path.endswith("/"):
         pantas_path = pantas_path[:-1]
@@ -165,7 +202,7 @@ def main(argv):
     data = {}
     pantas_keys = list(pantas.keys())
     p_d = copy.deepcopy(pantas[Ws[0]])
-    key_names = [f"Pantas_{w}" for w in Ws]
+    key_names = [f"pantas_{w}" for w in Ws]
     for key in ["ES", "A3", "A5", "IR"]:
         for event in pantas[Ws[0]][key]:
             # print(event)
@@ -175,10 +212,10 @@ def main(argv):
             data[e_name] = {
                 "type": key,
                 "event": e_name,
-                "Whippet": math.nan,
-                "Salmon+Suppa2": math.nan,
+                "whippet": math.nan,
+                "SUPPA2": math.nan,
                 "rMATS": math.nan,
-                f"Pantas_{Ws[0]}": event.dpsi,
+                f"pantas_{Ws[0]}": event.dpsi,
             }
     for i, w in enumerate(Ws[1:]):
         # print(w)
@@ -189,18 +226,18 @@ def main(argv):
                     f"{event.etype}_{event.chrom}_{event.event_j[0]}_{event.event_j[1]}"
                 )
                 if e_name in data.keys():
-                    data[e_name][f"Pantas_{w}"] = event.dpsi
+                    data[e_name][f"pantas_{w}"] = event.dpsi
                 else:
                     tmp_dict = {
                         "type": key,
                         "event": e_name,
-                        "Whippet": math.nan,
-                        "Salmon+Suppa2": math.nan,
+                        "whippet": math.nan,
+                        "SUPPA2": math.nan,
                         "rMATS": math.nan,
-                        f"Pantas_{w}": event.dpsi,
+                        f"pantas_{w}": event.dpsi,
                     }
                     for j in Ws[0 : i + 1]:
-                        tmp_dict[f"Pantas_{j}"] = math.nan
+                        tmp_dict[f"pantas_{j}"] = math.nan
                     data[e_name] = tmp_dict
                     p_d[key].append(event)
 
@@ -215,12 +252,12 @@ def main(argv):
                 tmp_dict = {
                     "type": key,
                     "event": e_name,
-                    "Whippet": math.nan,
-                    "Salmon+Suppa2": math.nan,
+                    "whippet": math.nan,
+                    "SUPPA2": math.nan,
                     "rMATS": event.dpsi,
                 }
                 for j in Ws:
-                    tmp_dict[f"Pantas_{j}"] = math.nan
+                    tmp_dict[f"pantas_{j}"] = math.nan
                 data[e_name] = tmp_dict
                 p_d[key].append(event)
     for key in ["ES", "A3", "A5", "IR"]:
@@ -229,24 +266,24 @@ def main(argv):
                 f"{event.etype}_{event.chrom}_{event.event_j[0]}_{event.event_j[1]}"
             )
             if e_name in data.keys():
-                data[e_name][f"Salmon+Suppa2"] = event.dpsi
+                data[e_name][f"SUPPA2"] = event.dpsi
             else:
                 tmp_dict = {
                     "type": key,
                     "event": e_name,
-                    "Whippet": math.nan,
-                    "Salmon+Suppa2": event.dpsi,
+                    "whippet": math.nan,
+                    "SUPPA2": event.dpsi,
                     "rMATS": math.nan,
                 }
                 for j in Ws:
-                    tmp_dict[f"Pantas_{j}"] = math.nan
+                    tmp_dict[f"pantas_{j}"] = math.nan
                 data[e_name] = tmp_dict
                 p_d[key].append(event)
     mask_whippet, p_w = check_whippet(whippet, p_d, relax)
     for event, row in data.items():
         e = row["type"]
         if event in mask_whippet[e].keys():
-            data[event]["Whippet"] = mask_whippet[e][event]
+            data[event]["whippet"] = mask_whippet[e][event]
     for key in ["ES", "A3", "A5", "IR"]:
         for event in whippet[key]:
             e_name = (
@@ -256,19 +293,150 @@ def main(argv):
                 tmp_dict = {
                     "type": key,
                     "event": e_name,
-                    "Whippet": event.dpsi,
-                    "Salmon+Suppa2": math.nan,
+                    "whippet": event.dpsi,
+                    "SUPPA2": math.nan,
                     "rMATS": math.nan,
                 }
                 for j in Ws:
-                    tmp_dict[f"Pantas_{j}"] = math.nan
+                    tmp_dict[f"pantas_{j}"] = math.nan
                 data[e_name] = tmp_dict
 
     df = pd.DataFrame(data.values())
     df.to_csv(f"{output}/res.csv", index=False)
+    df_mask = df.copy()
+    for col in df_mask.columns:
+        if col != "type" and col != "event":
+            df_mask[col] = df_mask.apply(update_column, col_name=col, axis=1)
+    df_mask.to_csv(f"{output}/res_mask.csv", index=False)
+    df=df.dropna(how='any')
     print(df)
+    if len(Ws) == 1:
+        fig = plt.figure(figsize=(13,8))
+        gs = gridspec.GridSpec(2, 3)
+        p = f"pantas_{Ws[0]}"
+        sns.set(style="white", color_codes=True)
+        g1 = sns.JointGrid(
+            data=df,
+            x=p,
+            y="rMATS",
+            #hue="type",
+            #color="black",
+            #kind="kde",
+            xlim=(-1.05, 1.05),
+            ylim=(-1.05, 1.05),
+            #palette={"ES": "#c08c7d", "A3": "#9549ff", "A5": "#beae03", "IR": "#65d7cd"}
+        )
+        g1.plot(sns.scatterplot, sns.kdeplot, color="black")
+        g1.ax_joint.set_xlabel('pantas')
+        #sns.move_legend(g1.ax_joint, "upper left", title='Type')
+        
+        corr, _ = pearsonr(df[p], df["rMATS"])
+        corr = round(corr, 3)
+        g1.ax_joint.text(s=f"Pearson correlation: {corr:.3f}", x=-0.85, y=-1, fontsize=16)
+        #g1.ax_joint.legend_.remove()
+        sns.set(style="white", color_codes=True)
+        g2 = sns.JointGrid(
+            data=df,
+            x=p,
+            y="whippet",
+            #hue="type",
+            #kind="kde",
+            #color="black",
+            xlim=(-1.05, 1.05),
+            ylim=(-1.05, 1.05),
+            #palette={"ES": "#c08c7d", "A3": "#9549ff", "A5": "#beae03", "IR": "#65d7cd"}
+        )
+        g2.plot(sns.scatterplot, sns.kdeplot, color="black")
+        g2.ax_joint.set_xlabel('pantas')
+        corr, _ = pearsonr(df[p], df["whippet"])
+        corr = round(corr, 3)
+        g2.ax_joint.text(s=f"Pearson correlation: {corr:.3f}", x=-0.85, y=-1, fontsize=16)
+        #g2.ax_joint.legend_.remove()
+        sns.set(style="white", color_codes=True)
+        g3 = sns.JointGrid(
+            data=df,
+            x=p,
+            y="SUPPA2",
+            #hue="type",
+            #kind="kde",
+            #color="black",
+            xlim=(-1.05, 1.05),
+            ylim=(-1.05, 1.05),
+            #palette={"ES": "#c08c7d", "A3": "#9549ff", "A5": "#beae03", "IR": "#65d7cd"}
+        )
+        g3.plot(sns.scatterplot, sns.kdeplot, color="black")
+        g3.ax_joint.set_xlabel('pantas')
+        corr, _ = pearsonr(df[p], df["SUPPA2"])
+        corr = round(corr, 3)
+        g3.ax_joint.text(s=f"Pearson correlation: {corr:.3f}", x=-0.85, y=-1, fontsize=16)
+        #g3.ax_joint.legend_.remove()
+        sns.set(style="white", color_codes=True)
+        g4 = sns.JointGrid(
+            data=df,
+            x="rMATS",
+            y="whippet",
+            #hue="type",
+            #kind="kde",
+            #color="black",
+            xlim=(-1.05, 1.05),
+            ylim=(-1.05, 1.05),
+            #palette={"ES": "#c08c7d", "A3": "#9549ff", "A5": "#beae03", "IR": "#65d7cd"}
+        )
+        g4.plot(sns.scatterplot, sns.kdeplot, color="black")
+        corr, _ = pearsonr(df["rMATS"], df["whippet"])
+        corr = round(corr, 3)
+        g4.ax_joint.text(s=f"Pearson correlation: {corr:.3f}", x=-0.85, y=-1, fontsize=16)
+        #g4.ax_joint.legend_.remove()
+        sns.set(style="white", color_codes=True)
+        g5 = sns.JointGrid(
+            data=df,
+            x="rMATS",
+            y="SUPPA2",
+            #hue="type",
+            #kind="kde",
+            #color="black",
+            xlim=(-1.05, 1.05),
+            ylim=(-1.05, 1.05),
+            #palette={"ES": "#c08c7d", "A3": "#9549ff", "A5": "#beae03", "IR": "#65d7cd"}
+        )
+        corr, _ = pearsonr(df["rMATS"], df["SUPPA2"])
+        corr = round(corr, 3)
+        g5.ax_joint.text(s=f"Pearson correlation: {corr:.3f}", x=-0.85, y=-1, fontsize=16)
+        #g5.ax_joint.legend_.remove()
+        g5.plot(sns.scatterplot, sns.kdeplot, color="black")
+        sns.set(style="white", color_codes=True)
+        g6 = sns.JointGrid(
+            data=df,
+            x="whippet",
+            y="SUPPA2",
+            #hue="type",
+            #kind="scatter",
+            #kind="kde",
+            #color="black",
+            xlim=(-1.05, 1.05),
+            ylim=(-1.05, 1.05),
+            #palette={"ES": "#c08c7d", "A3": "#9549ff", "A5": "#beae03", "IR": "#65d7cd"}
+        )
+        g6.plot(sns.scatterplot, sns.kdeplot, color="black")
+        corr, _ = pearsonr(df["whippet"], df["SUPPA2"])
+        corr = round(corr, 3)
+        g6.ax_joint.text(s=f"Pearson correlation: {corr:.3f}", x=-0.85, y=-1, fontsize=16)
+        #g6.ax_joint.legend_.remove()
+        
+        fig = plt.figure(figsize=(15,10))
+        gs = gridspec.GridSpec(2, 3)
+        mg0 = sfg.SeabornFig2Grid(g1, fig, gs[0])
+        mg1 = sfg.SeabornFig2Grid(g2, fig, gs[1])
+        mg2 = sfg.SeabornFig2Grid(g3, fig, gs[2])
+        mg3 = sfg.SeabornFig2Grid(g4, fig, gs[3])
+        mg4 = sfg.SeabornFig2Grid(g5, fig, gs[4])
+        mg5 = sfg.SeabornFig2Grid(g6, fig, gs[5])
+        gs.tight_layout(fig)
+        plt.savefig(f"{output}/full_corr.png",bbox_inches='tight') 
+        
+        
     for w in Ws:
-        p = f"Pantas_{w}"
+        p = f"pantas_{w}"
         g = sns.jointplot(
             data=df,
             x=p,
@@ -278,90 +446,116 @@ def main(argv):
             xlim=(-1.05, 1.05),
             ylim=(-1.05, 1.05),
         )
+        corr, _ = pearsonr(df[p], df["rMATS"])
+        corr = round(corr, 3)
+        plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
         plt.tight_layout()
-        plt.savefig(f"{output}/pantas2_{w}_rmats.png")
+        plt.savefig(f"{output}/corr_pantas2_{w}_rmats.png")
         plt.clf()
+        
         g = sns.jointplot(
             data=df,
             x=p,
-            y="Whippet",
+            y="whippet",
             hue="type",
             kind="scatter",
             xlim=(-1.05, 1.05),
             ylim=(-1.05, 1.05),
         )
+        corr, _ = pearsonr(df[p], df["whippet"])
+        corr = round(corr, 3)
+        plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
         plt.tight_layout()
-        plt.savefig(f"{output}/pantas2_{w}_whippet.png")
+        plt.savefig(f"{output}/corr_pantas2_{w}_whippet.png")
         plt.clf()
+        
         g = sns.jointplot(
             data=df,
             x=p,
-            y="Salmon+Suppa2",
+            y="SUPPA2",
             hue="type",
             kind="scatter",
             xlim=(-1.05, 1.05),
             ylim=(-1.05, 1.05),
         )
+        corr, _ = pearsonr(df[p], df["SUPPA2"])
+        corr = round(corr, 3)
+        plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
         plt.tight_layout()
-        plt.savefig(f"{output}/pantas2_{w}_suppa.png")
+        plt.savefig(f"{output}/corr_pantas2_{w}_suppa.png")
         plt.clf()
 
-    for (w1, w2) in pairs(Ws):
-        g = sns.jointplot(
-            data=df,
-            x=f"Pantas_{w1}",
-            y=f"Pantas_{w2}",
-            hue="type",
-            kind="scatter",
-            xlim=(-1.05, 1.05),
-            ylim=(-1.05, 1.05),
-        )
-        plt.tight_layout()
-        plt.savefig(f"{output}/pantas_{w1}_pantas2_{w2}.png")
-        plt.clf()
+    if len(Ws) > 1:
+        for (w1, w2) in pairs(Ws):
+            g = sns.jointplot(
+                data=df,
+                x=f"pantas_{w1}",
+                y=f"pantas_{w2}",
+                hue="type",
+                kind="scatter",
+                xlim=(-1.05, 1.05),
+                ylim=(-1.05, 1.05),
+            )
+            corr, _ = pearsonr(df[f"pantas_{w1}"], df[f"pantas_{w2}"])
+            corr = round(corr, 3)
+            plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
+            plt.tight_layout()
+            plt.savefig(f"{output}/corr_pantas_{w1}_pantas2_{w2}.png")
+            plt.clf()
 
     g = sns.jointplot(
         data=df,
         x="rMATS",
-        y="Whippet",
+        y="whippet",
         hue="type",
         kind="scatter",
         xlim=(-1.05, 1.05),
         ylim=(-1.05, 1.05),
     )
+    corr, _ = pearsonr(df["rMATS"], df["whippet"])
+    corr = round(corr, 3)
+    plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
     plt.tight_layout()
-    plt.savefig(f"{output}/rmats_whippet.png")
+    plt.savefig(f"{output}/corr_rmats_whippet.png")
     plt.clf()
+    
     g = sns.jointplot(
         data=df,
         x="rMATS",
-        y="Salmon+Suppa2",
+        y="SUPPA2",
         hue="type",
         kind="scatter",
         xlim=(-1.05, 1.05),
         ylim=(-1.05, 1.05),
     )
+    corr, _ = pearsonr(df["rMATS"], df["SUPPA2"])
+    corr = round(corr, 3)
+    plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
     plt.tight_layout()
-    plt.savefig(f"{output}/rmats_suppa.png")
+    plt.savefig(f"{output}/corr_rmats_suppa.png")
     plt.clf()
+    
     g = sns.jointplot(
         data=df,
-        x="Whippet",
-        y="Salmon+Suppa2",
+        x="whippet",
+        y="SUPPA2",
         hue="type",
         kind="scatter",
         xlim=(-1.05, 1.05),
         ylim=(-1.05, 1.05),
     )
+    corr, _ = pearsonr(df["whippet"], df["SUPPA2"])
+    corr = round(corr, 3)
+    plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
     plt.tight_layout()
-    plt.savefig(f"{output}/whippet_suppa.png")
+    plt.savefig(f"{output}/corr_whippet_suppa.png")
     plt.clf()
 
     for e in ETYPES:
         tmp_df = df[df["type"] == e]
 
         for w in Ws:
-            p = f"Pantas_{w}"
+            p = f"pantas_{w}"
             g = sns.jointplot(
                 data=tmp_df,
                 x=p,
@@ -371,145 +565,244 @@ def main(argv):
                 xlim=(-1.05, 1.05),
                 ylim=(-1.05, 1.05),
             )
+            corr, _ = pearsonr(tmp_df[p], tmp_df["rMATS"])
+            corr = round(corr, 3)
+            plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
             plt.tight_layout()
-            plt.savefig(f"{output}/{e}_pantas2_{w}_rmats.png")
+            plt.savefig(f"{output}/corr_{e}_pantas2_{w}_rmats.png")
             plt.clf()
+            
             g = sns.jointplot(
                 data=tmp_df,
                 x=p,
-                y="Whippet",
+                y="whippet",
                 hue="type",
                 kind="scatter",
                 xlim=(-1.05, 1.05),
                 ylim=(-1.05, 1.05),
             )
+            corr, _ = pearsonr(tmp_df[p], tmp_df["whippet"])
+            corr = round(corr, 3)
+            plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
             plt.tight_layout()
-            plt.savefig(f"{output}/{e}_pantas2_{w}_whippet.png")
+            plt.savefig(f"{output}/corr_{e}_pantas2_{w}_whippet.png")
             plt.clf()
+            
             g = sns.jointplot(
                 data=tmp_df,
                 x=p,
-                y="Salmon+Suppa2",
+                y="SUPPA2",
                 hue="type",
                 kind="scatter",
                 xlim=(-1.05, 1.05),
                 ylim=(-1.05, 1.05),
             )
+            corr, _ = pearsonr(tmp_df[p], tmp_df["SUPPA2"])
+            corr = round(corr, 3)
+            plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
             plt.tight_layout()
-            plt.savefig(f"{output}/{e}_pantas2_{w}_suppa.png")
+            plt.savefig(f"{output}/corr_{e}_pantas2_{w}_suppa.png")
             plt.clf()
-        for (w1, w2) in pairs(Ws):
-            g = sns.jointplot(
-                data=tmp_df,
-                x=f"Pantas_{w1}",
-                y=f"Pantas_{w2}",
-                hue="type",
-                kind="scatter",
-                xlim=(-1.05, 1.05),
-                ylim=(-1.05, 1.05),
-            )
-            plt.tight_layout()
-            plt.savefig(f"{output}/{e}_pantas_{w1}_pantas2_{w2}.png")
-            plt.clf()
+        
+        if len(Ws) > 1:
+            for (w1, w2) in pairs(Ws):
+                g = sns.jointplot(
+                    data=tmp_df,
+                    x=f"pantas_{w1}",
+                    y=f"pantas_{w2}",
+                    hue="type",
+                    kind="scatter",
+                    xlim=(-1.05, 1.05),
+                    ylim=(-1.05, 1.05),
+                )
+                corr, _ = pearsonr(tmp_df[f"pantas_{w1}"], tmp_df[f"pantas_{w2}"])
+                corr = round(corr, 3)
+                plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
+                plt.tight_layout()
+                plt.savefig(f"{output}/corr_{e}_pantas_{w1}_pantas2_{w2}.png")
+                plt.clf()
 
         g = sns.jointplot(
             data=tmp_df,
             x="rMATS",
-            y="Whippet",
+            y="whippet",
             hue="type",
             kind="scatter",
             xlim=(-1.05, 1.05),
             ylim=(-1.05, 1.05),
         )
+        corr, _ = pearsonr(tmp_df["rMATS"], tmp_df["whippet"])
+        corr = round(corr, 3)
+        plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
         plt.tight_layout()
-        plt.savefig(f"{output}/{e}_rmats_whippet.png")
+        plt.savefig(f"{output}/corr_{e}_rmats_whippet.png")
         plt.clf()
+        
         g = sns.jointplot(
             data=tmp_df,
             x="rMATS",
-            y="Salmon+Suppa2",
+            y="SUPPA2",
             hue="type",
             kind="scatter",
             xlim=(-1.05, 1.05),
             ylim=(-1.05, 1.05),
         )
+        corr, _ = pearsonr(tmp_df["rMATS"], tmp_df["SUPPA2"])
+        corr = round(corr, 3)
+        plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
         plt.tight_layout()
-        plt.savefig(f"{output}/{e}_rmats_suppa.png")
+        plt.savefig(f"{output}/corr_{e}_rmats_suppa.png")
         plt.clf()
         g = sns.jointplot(
             data=tmp_df,
-            x="Whippet",
-            y="Salmon+Suppa2",
+            x="whippet",
+            y="SUPPA2",
             hue="type",
             kind="scatter",
             xlim=(-1.05, 1.05),
             ylim=(-1.05, 1.05),
         )
-    plt.tight_layout()
-    plt.savefig(f"{output}/{e}_whippet_suppa.png")
-    plt.clf()
+        corr, _ = pearsonr(tmp_df["whippet"], tmp_df["SUPPA2"])
+        corr = round(corr, 3)
+        plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)
+        plt.tight_layout()
+        plt.savefig(f"{output}/corr_{e}_whippet_suppa.png")
+        plt.clf()
 
-    df_mask = df.copy()
-    for col in df_mask.columns:
-        if col != "type" and col != "event":
-            df_mask[col] = df_mask.apply(update_column, col_name=col, axis=1)
-    df_mask.to_csv(f"{output}/res_mask.csv", index=False)
+    
     for e in ETYPES:
         tmp_df = df_mask[df_mask["type"] == e]
         rmats_set = set(tmp_df["rMATS"])
-        whippet_set = set(tmp_df["Whippet"])
-        suppa_set = set(tmp_df["Salmon+Suppa2"])
+        whippet_set = set(tmp_df["whippet"])
+        suppa_set = set(tmp_df["SUPPA2"])
         for w in Ws:
-            pantas_set = set(tmp_df[f"Pantas_{w}"])
+            pantas_set = set(tmp_df[f"pantas_{w}"])
             dic_data = {
                 "rMATS": rmats_set,
-                "Whippet": whippet_set,
-                "Salmon+Suppa2": suppa_set,
-                f"Pantas_{w}": pantas_set,
+                "whippet": whippet_set,
+                "SUPPA2": suppa_set,
+                f"pantas_{w}": pantas_set,
             }
             venn(dic_data)
             plt.tight_layout()
             plt.savefig(f"{output}/venn_{e}_rmats_whippet_suppa_pantas_{w}.png")
             plt.clf()
-        for (w1, w2) in pairs(Ws):
-            pantas_set1 = set(tmp_df[f"Pantas_{w1}"])
-            pantas_set2 = set(tmp_df[f"Pantas_{w2}"])
-            dic_data = {
-                f"Pantas_{w1}": pantas_set1,
-                f"Pantas_{w2}": pantas_set2,
-            }
-            venn(dic_data)
+        if len(Ws) > 1:
+            pantas_set_full = {}
+            for key in key_names:
+                pantas_set_full[key] = set(tmp_df[key])
 
+            venn(pantas_set_full)
             plt.tight_layout()
-            plt.savefig(f"{output}/venn_{e}_pantas_{w1}_pantas_{w2}.png")
+            plt.savefig(f"{output}/venn_{e}_pantas.png")
             plt.clf()
+        # for (w1, w2) in pairs(Ws):
+        #     pantas_set1 = set(tmp_df[f"pantas_{w1}"])
+        #     pantas_set2 = set(tmp_df[f"pantas_{w2}"])
+        #     dic_data = {
+        #         f"pantas_{w1}": pantas_set1,
+        #         f"pantas_{w2}": pantas_set2,
+        #     }
+        #     venn(dic_data)
+
+        #     plt.tight_layout()
+        #     plt.savefig(f"{output}/venn_{e}_pantas_{w1}_pantas_{w2}.png")
+        #     plt.clf()
 
     tmp_df = df_mask
-    rmats_set = set(tmp_df["rMATS"])
-    whippet_set = set(tmp_df["Whippet"])
-    suppa_set = set(tmp_df["Salmon+Suppa2"])
+    rmats_set = set(tmp_df["rMATS"].dropna())
+    whippet_set = set(tmp_df["whippet"].dropna())
+    suppa_set = set(tmp_df["SUPPA2"].dropna())
+    if len(Ws) == 1: 
+        pantas_set = set(tmp_df[f"pantas_{Ws[0]}"].dropna())
+       	legends = []
+        for t in [f"pantas_{Ws[0]}", "rMATS", "whippet", "SUPPA2"]:
+	        n = tmp_df[t].count()
+	        if t == f"pantas_{Ws[0]}":
+	            t = "pantas"
+	        legends.append(f"{t}: {n}")
+
+        custom_lines = [
+	        Rectangle(
+	            (0, 0),
+	            1,
+	            1,
+	            facecolor=sns.color_palette()[0],
+	            linewidth=1,
+	            edgecolor="black",
+	        ),
+	        Rectangle(
+	            (0, 0),
+	            1,
+	            1,
+	            facecolor=sns.color_palette()[1],
+	            linewidth=1,
+	            edgecolor="black",
+	        ),
+	        Rectangle(
+	            (0, 0),
+	            1,
+	            1,
+	            facecolor=sns.color_palette()[2],
+	            linewidth=1,
+	            edgecolor="black",
+	        ),
+	        Rectangle(
+	            (0, 0),
+	            1,
+	            1,
+	            facecolor=sns.color_palette()[3],
+	            linewidth=1,
+	            edgecolor="black",
+	        ),
+        ]
+        print(len(pantas_set))
+        dic_data = {
+            "pantas": pantas_set,
+            "rMATS": rmats_set,
+            "whippet": whippet_set,
+            "SUPPA2": suppa_set,      
+        }
+        fig, ax1 = plt.subplots(1, 1, figsize=(5,5))
+        venn(
+            dic_data,
+            fontsize=13,
+            legend_loc=None,  # "upper left",
+            cmap=sns.color_palette(),
+            ax=ax1,
+        )
+        ax1.legend(
+            custom_lines,
+            legends,
+            title="Tool: #Events",
+            loc="lower center",
+            bbox_to_anchor=(0.5, -0.1),
+            ncol=2,
+        )
+        plt.tight_layout()
+        plt.savefig(f"{output}/venn_full_rmats_whippet_suppa_pantas.png",bbox_inches='tight')
+        plt.clf()
+        
     for w in Ws:
-        pantas_set = set(tmp_df[f"Pantas_{w}"])
+        pantas_set = set(tmp_df[f"pantas_{w}"])
         dic_data = {
             "rMATS": rmats_set,
-            "Whippet": whippet_set,
-            "Salmon+Suppa2": suppa_set,
-            f"Pantas_{w}": pantas_set,
+            "whippet": whippet_set,
+            "SUPPA2": suppa_set,
+            f"pantas_{w}": pantas_set,
         }
         venn(dic_data)
         plt.tight_layout()
         plt.savefig(f"{output}/venn_full_rmats_whippet_suppa_pantas_{w}.png")
         plt.clf()
-    for (w1, w2) in pairs(Ws):
-        pantas_set1 = set(tmp_df[f"Pantas_{w1}"])
-        pantas_set2 = set(tmp_df[f"Pantas_{w2}"])
-        dic_data = {
-            f"Pantas_{w1}": pantas_set1,
-            f"Pantas_{w2}": pantas_set2,
-        }
-        venn(dic_data)
+
+    if len(Ws) > 1:
+        pantas_set_full = {}
+        for key in key_names:
+            pantas_set_full[key] = set(tmp_df[key])
+        venn(pantas_set_full)
         plt.tight_layout()
-        plt.savefig(f"{output}/venn_full_pantas_{w1}_pantas_{w2}.png")
+        plt.savefig(f"{output}/venn_full_pantas.png")
         plt.clf()
 
 

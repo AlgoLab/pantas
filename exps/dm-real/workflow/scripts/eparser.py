@@ -33,20 +33,21 @@ def build_region(regions):
 
 class Event(ABC):
     def __init__(
-        self,
-        event_type: str,
-        annotation_type: str,
-        chrom: str,
-        gene: str,
-        strand: str,
-        junction1_refpos: str,
-        junction2_refpos: str,
-        junction3_refpos: str,
-        W1: str,
-        W2: str,
-        psi_c1: str,
-        psi_c2: str,
-        dpsi: str,
+	    self,
+	    event_type: str,
+	    annotation_type: str,
+	    chrom: str,
+	    gene: str,
+	    strand: str,
+	    junction1_refpos: str,
+	    junction2_refpos: str,
+	    junction3_refpos: str,
+	    W1: str,
+	    W2: str,
+	    psi_c1: str,
+	    psi_c2: str,
+	    dpsi: str,
+	    pv: str
     ):
         self.chrom = chrom
         self.etype = event_type
@@ -59,7 +60,7 @@ class Event(ABC):
         self.psi_c1 = float(psi_c1)
         self.psi_c2 = float(psi_c2)
         self.dpsi = float(dpsi)
-
+        self.pv = float(pv)
         self.event_j = ""
         self.canonic_j = ""
 
@@ -87,6 +88,7 @@ class Event(ABC):
                     self.psi_c1,
                     self.psi_c2,
                     self.dpsi,
+                    self.pv
                 ],
             )
         )
@@ -108,6 +110,7 @@ class EventPantas(Event):
         psi_c1: str,
         psi_c2: str,
         dpsi: str,
+        pv: str = "NaN"
     ):
         super().__init__(
             event_type,
@@ -123,6 +126,7 @@ class EventPantas(Event):
             psi_c1,
             psi_c2,
             dpsi,
+            pv,
         )
 
     def build_conditions(self):
@@ -241,7 +245,7 @@ class EventWhippet(Event):
         psi_c1: str,
         psi_c2: str,
         dpsi: str,
-        t2: str,
+        pv: str,
         t3: str,
         t4: str,
         annotation_type: str,
@@ -260,6 +264,7 @@ class EventWhippet(Event):
             psi_c1,
             psi_c2,
             dpsi,
+            pv
         )
 
     def build_conditions(self):

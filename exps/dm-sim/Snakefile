@@ -246,7 +246,9 @@ rule pantas2_index:
     threads: workflow.cores
     shell:
         """
-        /usr/bin/time -vo {log.time} bash ../../pantas2.sh index {input.fa} {input.gtf} {input.vcf} {params.wd} {threads}
+        pushd ../..
+        /usr/bin/time -vo {log.time} snakemake -s index.smk -c{threads} --config fa={input.fa} gtf={input.gtf} vcf={input.vcf} wd={params.wd}
+        popd
         """
 
 

@@ -17,13 +17,12 @@ L = config["L"]
 S1 = config["s1"]
 S2 = config["s2"]
 
-Ws = [-1, 5, 10]
-
-p_value = 10
-min_dpsi = -1
-min_prob = -1
-relax = 4
-min_coverage = 0
+Ws = [5]
+p_value = 0.05
+min_dpsi = 0.05
+min_prob = 0.9
+relax = 0
+min_coverage = 5
 
 chroms = []
 for line in open(FA + ".fai"):

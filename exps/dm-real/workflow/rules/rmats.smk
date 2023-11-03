@@ -4,7 +4,7 @@ rule STAR_index_anno:
         gtf=GTF
     output:
         index=directory(pjoin(ODIR, "STAR-index")),
-    threads: workflow.cores
+    threads: max(16, workflow.cores)
     conda: "../envs/star.yaml"
     log:
         pjoin(ODIR, "bench", "STAR", "index.time"),
@@ -61,7 +61,6 @@ rule rmats:
         gtf=GTF,
         c1txt=pjoin(ODIR, "rMATS", "c1-bams.txt"),
         c2txt=pjoin(ODIR, "rMATS", "c2-bams.txt"),
-
     output:
         summary = pjoin(ODIR, "rMATS", "summary.txt"),
     params:
@@ -73,13 +72,15 @@ rule rmats:
     shell:
         """
         /usr/bin/time -vo {log} rmats.py --gtf {input.gtf} --b1 {input.c1txt} --b2 {input.c2txt} --od {params.outd} --tmp {params.tmpd} --readLength {L} --nthread {threads} -t paired
+        rm -r {params.tmpd}
         """
         
 rule build_rmats_csv:
     input:
-        rmats = pjoin(ODIR, "rMATS"),
+        summary = pjoin(ODIR, "rMATS", "summary.txt"),
     params:
-        p_value = p_value
+        p_value = p_value,
+        rmats = pjoin(ODIR, "rMATS"),
     output:
         csv = pjoin(ODIR, "rMATS", "summary.csv"),
     conda: "../envs/plot.yaml"

@@ -1,8 +1,9 @@
 rule analyze_bench:
     input:
-        pjoin(ODIR, "rMATS", "summary.txt"),
+        pjoin(ODIR, "rMATS", "summary.csv"),
         pjoin(ODIR, "whippet", "psi.diff"),
-        expand(pjoin(ODIR, "pantas2", "quant.w{w}.csv"), w=Ws)
+        pjoin(ODIR, "salmon_suppa", "suppa.csv"),
+        expand(pjoin(ODIR, "pantas", "quant.w{w}.csv"), w=Ws)
     output:
         pjoin(ODIR, "results", "bench.csv")
     params:
@@ -18,11 +19,11 @@ rule analyze_results:
         r=pjoin(ODIR, "rMATS", "summary.csv"),
         w=pjoin(ODIR, "whippet", "psi.diff"),
         s=pjoin(ODIR, "salmon_suppa", "suppa.csv"),
-        q=expand(pjoin(ODIR, "pantas2", "quant.w{w}.csv"), w=Ws)
+        q=expand(pjoin(ODIR, "pantas", "quant.w{w}.csv"), w=Ws)
     output:
         pjoin(ODIR, "results", "res.csv")
     params:
-        pantas_dir = pjoin(ODIR, "pantas2"),
+        pantas_dir = pjoin(ODIR, "pantas"),
         res_dir = pjoin(ODIR, "results"),
         Ws = Ws,
         p_value = p_value,

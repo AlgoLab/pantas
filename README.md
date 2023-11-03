@@ -5,7 +5,7 @@ This repository contains the codebase of pantas, a pangenomic approach for perfo
 Alongside pantas, we provide a set of utilities to build and index a (annotated) spliced pangenome. We devised [two alternative construction pipelines](https://github.com/AlgoLab/pantas/tree/main#input-preparation), one for full genome analysis and one for the analysis of a panel of genes of interest (reduced).
 
 
-### Installation
+## Installation
 ``` sh
 git clone https://github.com/AlgoLab/pantas.git
 
@@ -14,7 +14,7 @@ mamba create -c bioconda -c conda-forge pantas python=3.10 biopython gffutils in
 mamba activate pantas
 ```
 
-### pantas pipeline
+## pantas pipeline
 ``` sh
 # Augment the annotated spliced pangenome with alignment information (run this for each replicate)
 python3 ./scripts/alignments_augmentation_from_gaf.py [condition1-rep1.gaf] [spliced-pangenome.annotated.gfa] > [condition1-rep1.gfa]
@@ -27,8 +27,8 @@ python3 ./scripts/quantify3.py -c1 condition1-rep1.csv condition1-rep2.csv condi
                                -c2 condition2-rep1.csv condition2-rep2.csv condition2-rep3.csv > [quantification.csv]
 ```
 
-##### Event calling
-The `call.py` script provides several arguments that can be used to tweak the event calling. Please refer to `python3 ./scripts/call.py --help`:
+### Event calling
+The `call.py` script provides several arguments that can be used to tweak the event calling:
 ```
   --rc RC                        Minimum read count (default: 3)
   --rca RCA                      Minimum read count for annotated events (default: -1)
@@ -37,13 +37,13 @@ The `call.py` script provides several arguments that can be used to tweak the ev
   --events EVENTS [EVENTS ...]   Events to call (default: [ES, SS, IR])
 ```
 
-Moreover, to call events from a reduced spliced pangenome, it is necessary to use the `--rp` argument to provide the list of reference paths in the reduced graph (this file is created during the graph construction/indexing):
+To call events from a reduced spliced pangenome, it is necessary to use the `--rp` argument to provide the list of reference paths in the reduced graph (this file is created during the graph construction/indexing):
 ``` sh
 python3 ./scripts/call.py --rp [spliced-pangenome.refpath] [sample.gfa] [annotation.gtf] > [sample-events.csv]
 ```
 
-##### Input preparation
-The input of pantas are: an annotated spliced pangenome and the replicates aligned to this structure.
+### Input preparation
+The input of pantas are: an annotated spliced pangenome and the replicates aligned to this graph.
 
 To build and index an annotated spliced pangenome, we provide a snakemake pipeline (`index.smk`): 
 ``` sh
@@ -86,7 +86,7 @@ To map each replicate to the annotated spliced pangenome, we suggest to use `vg 
 vg mpmap -x [spliced-pangenome.xg] -g [spliced-pangenome.gcsa] -d [spliced-pangenome.dist] -f [sample_1.fq] -f [sample_2.fq] -F GAF > [sample.gaf]
 ```
 
-### Example
+## Example
 The `example` subdirectory contains example data that can be used to test pantas:
 ``` sh
 # Prepare the graph
@@ -109,14 +109,14 @@ python3 ./scripts/call.py --rca 0 example/reads.gfa example/4.gtf > example/read
 python3 ./scripts/quantify3.py -c1 example/reads.events.csv -c2 example/reads.events.csv > example/quant.csv
 ```
 
-### Experiments
+## Experiments
 Experimental evaluation scripts can be found in the `./exps` subdirectory of this repository. We provide three snakemake pipelines which also contain more information on how to use pantas.
 * `./exps/dm-sim/` is the evaluation on simulated data from Drosophila Melanogaster
 * `./exps/dm-sim/` is the evaluation on real data from Drosophila Melanogaster (here we used an annotated spliced pangenome)
 * `./exps/homo-real/` is the evaluation on real data from human (here we used a *reduced* annotated spliced pangenome)
 
 
-### Authors
-pantas is developed by Simone Ciccolella, Davide Cozzi, and Luca Denti.
+## Authors
+pantas is developed by [Simone Ciccolella](https://github.com/sciccolella), [Davide Cozzi](https://github.com/dlcgold), and [Luca Denti](https://github.com/ldenti).
 
 For inquiries on this software please open an [issue](https://github.com/algolab/pantas/issues).

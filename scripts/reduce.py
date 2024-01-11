@@ -37,16 +37,15 @@ def main():
         ref_positions[n] = p
         p += nodes_l[n]
 
-    print(len(tree))
+    print("Intervals in the tree:", len(tree))
     tree.merge_overlaps()
-    print(len(tree))
+    print("Intervals after merging:", len(tree))
     intervals = []
     for i in tree:
         intervals.append((i.begin, i.end - 1))
     intervals.sort()
     starts = [x[0] for x in intervals[1:]]
     ends = [x[1] for x in intervals[:-1]]
-    print(len(intervals))
 
     gfa = open(ogfa_path, "w")
     gfarefpath = open(ogfa_path + ".refpath", "w")
@@ -72,11 +71,13 @@ def main():
             if tidx.endswith("_R1"):
                 print(line, file=gfa, end="")
 
+    print("Last inserted vertex id:", curr_node_idx)
     curr_node_idx += 1  # just to be sure
-    print(curr_node_idx)
+
     dummy_seq = "N" * 32
     ref_path_new = []
     p = 0
+    ndummy = 0
     for r in ref_path:
         if len(tree[r]) > 0:
             ref_path_new.append(r)
@@ -84,11 +85,13 @@ def main():
                 print("S", curr_node_idx, dummy_seq, file=gfa, sep="\t")
                 print("L", r, "+", curr_node_idx, "+", "0M", file=gfa, sep="\t")
                 ref_path_new.append(curr_node_idx)
+                ndummy += 1
             elif r in starts:
                 print("L", curr_node_idx, "+", r, "+", "0M", file=gfa, sep="\t")
                 curr_node_idx += 1
         else:
             pass  # print(r, "X")
+    print("No. dummy vertices:", ndummy)
     print(
         "P",
         ref_path_name,

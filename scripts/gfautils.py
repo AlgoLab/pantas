@@ -104,13 +104,12 @@ class GFA:
                     self.add_node(nid, seq, fields)
                 elif line.startswith("P"):
                     _, pid, p, overlap, *fields = line.split()
-                    assert not ("+," in p[:-1] and "-," in p[:-1])
-                    if "+," in p[:-1]:
-                        self.add_path(pid, p[:-1].split("+,"), overlap, fields)
-                    else:
-                        self.add_path(
-                            pid, p[:-1].split("-,"), overlap, fields, is_reverse=True
-                        )
+                    # FIXME: assuming all + or all -
+                    is_reverse = p[-1] == "-"
+                    delim = "-," if is_reverse else "+,"
+                    self.add_path(
+                        pid, p[:-1].split(delim), overlap, fields, is_reverse=is_reverse
+                    )
                 elif line.startswith("L"):
                     (
                         _,

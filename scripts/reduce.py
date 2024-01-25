@@ -44,8 +44,8 @@ def main():
     for i in tree:
         intervals.append((i.begin, i.end - 1))
     intervals.sort()
-    starts = [x[0] for x in intervals[1:]]
-    ends = [x[1] for x in intervals[:-1]]
+    starts = [x[0] for x in intervals[1:]]  # start node ids of overlapping gene regions
+    ends = [x[1] for x in intervals[:-1]]  # end node ids of overlapping gene regions
 
     gfa = open(ogfa_path, "w")
     gfarefpath = open(ogfa_path + ".refpath", "w")
@@ -57,7 +57,9 @@ def main():
             curr_node_idx = max(curr_node_idx, idx)
             hit = len(tree[idx]) > 0
             if hit:
+                # we are on a gene(s) locus
                 if idx in ref_positions:
+                    # we are on the reference path
                     line = line[:-1] + "\t" + "RP:i:" + str(ref_positions[idx]) + "\n"
                 print(line, file=gfa, end="")
         elif line.startswith("L"):
@@ -71,6 +73,8 @@ def main():
             if tidx.endswith("_R1"):
                 print(line, file=gfa, end="")
 
+    # we have inserted all vertices/edges coming from the genes. We have a connected component for each locus
+
     print("Last inserted vertex id:", curr_node_idx)
     curr_node_idx += 1  # just to be sure
 
@@ -79,9 +83,17 @@ def main():
     p = 0
     ndummy = 0
     for r in ref_path:
+        # iterate over reference path to extract the new path and concatenate components with dummy vertices
         if len(tree[r]) > 0:
             ref_path_new.append(r)
-            if r in ends:
+            if r in starts and r in ends:
+                print("L", curr_node_idx, "+", r, "+", "0M", file=gfa, sep="\t")
+                curr_node_idx += 1
+                print("S", curr_node_idx, dummy_seq, file=gfa, sep="\t")
+                print("L", r, "+", curr_node_idx, "+", "0M", file=gfa, sep="\t")
+                ref_path_new.append(curr_node_idx)
+                ndummy += 1
+            elif r in ends:
                 print("S", curr_node_idx, dummy_seq, file=gfa, sep="\t")
                 print("L", r, "+", curr_node_idx, "+", "0M", file=gfa, sep="\t")
                 ref_path_new.append(curr_node_idx)

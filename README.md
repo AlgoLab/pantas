@@ -10,7 +10,8 @@ Alongside pantas, we provide a set of utilities to build and index a (annotated)
 git clone https://github.com/AlgoLab/pantas.git
 
 # Install dependencies (all available from bioconda)
-mamba create -c bioconda -c conda-forge pantas python=3.10 biopython gffutils intervaltree bcftools samtools gffread vg=1.50.1 snakemake-minimal
+mamba create -c bioconda -c conda-forge -n pantas \
+             python=3.10 biopython gffutils intervaltree bcftools samtools gffread vg=1.50.1 snakemake-minimal
 mamba activate pantas
 ```
 
@@ -23,7 +24,8 @@ mamba activate pantas
 ./pantas call [sample.gfa] [annotation.gtf] > [sample-events.csv]
 
 # Quantify events across conditions (provide the two conditions with comma-separated path to the events csv)
-pantas quant condition1-rep1.csv,condition1-rep2.csv,condition1-rep3.csv condition2-rep1.csv,condition2-rep2.csv,condition2-rep3.csv > [quantification.csv]
+pantas quant condition1-rep1.csv,condition1-rep2.csv,condition1-rep3.csv \
+             condition2-rep1.csv,condition2-rep2.csv,condition2-rep3.csv > [quantification.csv]
 ```
 
 ### Event calling
@@ -88,24 +90,65 @@ vg mpmap -x [spliced-pangenome.xg] -g [spliced-pangenome.gcsa] -d [spliced-pange
 The `example` subdirectory contains example data that can be used to test pantas:
 ``` sh
 # Prepare the graph
+# This should take ~1 minute
 snakemake -s index.smk -c4 --config fa=example/4.fa gtf=example/4.gtf vcf=example/4.vcf.gz wd=example/pantas-index
 
 # Align the RNA-Seq sample to the graph
+# This should take ~10 seconds
 vg mpmap -x example/pantas-index/spliced-pangenome.xg \
          -g example/pantas-index/spliced-pangenome.gcsa \
 	 -d example/pantas-index/spliced-pangenome.dist \
 	 -f example/reads_1.fq -f example/reads_2.fq -F GAF > example/reads.gaf
 
 # Augment the annotated spliced pangenome with alignment information
+# This should be immediate
 ./pantas augment example/reads.gaf example/pantas-index/spliced-pangenome.annotated.gfa > example/reads.gfa
 
 # Call all annotated events with minimum support 0 (since example RNA-Seq sample is very small)
 # Note that using -W 0 is equivalent to extract all events from the graph
+# This should take less than 2 seconds
 ./pantas call -W 0 example/reads.gfa example/4.gtf > example/reads.events.csv
 
 # Quantify the events across the two conditions (an an example here we are using the same file twice)
+# This should be immediate
 ./pantas quant example/reads.events.csv example/reads.events.csv > example/quant.csv
 ```
+
+## Custom output format
+#### Annotated and augmented spliced pangenome
+The annotated spliced pangenome augmented with alignment information (output of `augment` mode of pantas) is stored in a GFA file where optional fields are used to store the annotation. We refer to the [documentation](docs/README.md).
+
+#### Events
+The events (output of `call` mode) are stored in a CSV file:
+* event type (ES, A3, A5, IR)
+* annotated/novel
+* chromosome (e.g., 4)
+* gene name (e.g., FBgn0004859)
+* strand (e.g., +)
+* junction1, based on annotation (e.g., FBtr0308074.4.5 or `?` if novel)
+* junction1, in graph space (e.g., 2057>2065, meaning the junction link segments 2057 and 2065)
+* junction1, on linear reference (e.g., 4:50614-50744)
+* support for junction1 (e.g., 3)
+* junction2, junction2 based on annotation, junction2 in graph space, junction2 on linear reference, support for junction2
+* junction3, junction3 based on annotation, junction3 in graph space, junction3 on linear reference, support for junction3
+
+We note that in the case of an exon skipping (or a cassette exon), all three junctions will be reported. In the case of an alternative splice site events, only two junctions are reported (1 and 2). A point (`.`) indicates that the junction is not used in the event.
+
+#### Quantification
+The differential quantification across conditions (output of `quant` mode of pantas) is stored in a CSV file:
+* event type
+* annotated/novel
+* chromosome
+* gene name
+* strand
+* junction1, on linear reference
+* junction2, on linear reference
+* junction3, on linear reference
+* support for canonical isoform involved in the event (one value per condition, separated by /)
+* support for minor isoform involved in the event (one value per condition, separated by /)
+* PSI value for condition 1
+* PSI value for condition 2
+* ΔPSI
 
 ## Experiments
 Experimental evaluation scripts can be found in the `./exps` subdirectory of this repository. We provide three snakemake pipelines which also contain more information on how to use pantas.

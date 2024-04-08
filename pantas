@@ -1,0 +1,120 @@
+#!/bin/bash
+
+SCRIPT_NAME="pantas"
+VERSION="1.0.0"
+
+SCRIPTS_DIR="$(dirname $0)/scripts"
+
+USAGE=$''"${SCRIPT_NAME}"' [augment|call|quant|version] -h'
+
+AUG_USAGE=$''"${SCRIPT_NAME}"' augment <GAF> <GFA>
+
+Arguments:
+    -h               Print this help and exit
+'
+
+CALL_USAGE=$''"${SCRIPT_NAME}"' call <GFA> <GTF>
+
+Arguments:
+    -p <FPATH>       File containing the list of reference paths in the reduced graph (default: "")
+    -w <INT>         Minimum read count (default: 3)
+    -W <INT>         Minimum read count for annotated events (default: -1)
+    -n               Call novel events (default: False)
+    -a               Do not call known annotated events (default: False)
+    -h               Print this help and exit
+'
+
+QUANT_USAGE=$'Usage: '"${SCRIPT_NAME}"' quant <C1> <C2>
+
+Arguments:
+    -h               Print this help and exit
+'
+
+MODE=$1
+shift # to "remove" subcommand for getopts
+
+if [ "$MODE" == "version" ]; then
+	echo "$SCRIPT_NAME, $VERSION"
+elif [ "$MODE" == "augment" ]; then
+	while getopts "h" flag; do
+		case "${flag}" in
+		h)
+			$(echo >&2 "${AUG_USAGE}")
+			exit 0
+			;;
+		esac
+	done
+	if [[ $# -lt $((${OPTIND} + 1)) ]]; then
+		(echo >&2 "ERROR: Wrong number of arguments.")
+		(echo >&2 "")
+		(echo >&2 "${AUG_USAGE}")
+		exit 1
+	fi
+
+	GAF=${@:$OPTIND:1}
+	GFA=${@:$OPTIND+1:1}
+	python3 $SCRIPTS_DIR/alignments_augmentation_from_gaf.py $GAF $GFA
+elif [ "$MODE" == "call" ]; then
+	rca=""
+	rc=""
+	noanno=""
+	novel=""
+	while getopts "w:W:anh" flag; do
+		case "${flag}" in
+		h)
+			$(echo >&2 "${CALL_USAGE}")
+			exit 0
+			;;
+		w)
+			rc="--rc ${OPTARG}"
+			;;
+		W)
+			rca="--rca ${OPTARG}"
+			;;
+		a)
+			noanno="--no-annotated"
+			;;
+		n)
+			novel="--novel"
+			;;
+		esac
+	done
+	if [[ $# -lt $((${OPTIND} + 1)) ]]; then
+		(echo >&2 "ERROR: Wrong number of arguments.")
+		(echo >&2 "")
+		(echo >&2 "${CALL_USAGE}")
+		exit 1
+	fi
+
+	GFA=${@:$OPTIND:1}
+	GTF=${@:$OPTIND+1:1}
+	python3 $SCRIPTS_DIR/call.py $rca $rc $noanno $novel $GFA $GTF
+elif [ "$MODE" == "quant" ]; then
+	C1=""
+	C2=""
+	while getopts "1:2:h" flag; do
+		case "${flag}" in
+		h)
+			$(echo >&2 "${QUANT_USAGE}")
+			exit 0
+			;;
+		esac
+	done
+	if [[ $# -lt $((${OPTIND} + 1)) ]]; then
+		(echo >&2 "ERROR: Wrong number of arguments.")
+		(echo >&2 "")
+		(echo >&2 "${QUANT_USAGE}")
+		exit 1
+	fi
+
+	C1=${@:$OPTIND:1}
+	C2=${@:$OPTIND+1:1}
+	C1=$(echo $C1 | tr "," " ")
+	C2=$(echo $C2 | tr "," " ")
+	python3 $SCRIPTS_DIR/quantify3.py -c1 $C1 -c2 $C2
+else
+	echo $USAGE
+	exit 1
+fi
+
+exit 0

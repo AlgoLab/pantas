@@ -2,14 +2,14 @@
 
 This repository contains the codebase of pantas, a pangenomic approach for performing differential AS events quantification across RNA-Seq conditions. pantas is based on the notion of annotated spliced pangenomes, which are [spliced pangenomes](https://doi.org/10.1038/s41592-022-01731-9) augmented with additional information needed for AS events inference and quantification.
 
-Alongside pantas, we provide a set of utilities to build and index a (annotated) spliced pangenome. We devised [two alternative construction pipelines](https://github.com/AlgoLab/pantas/tree/main#input-preparation), one for full genome analysis and one for the analysis of a panel of genes of interest (reduced).
+Alongside pantas, we provide a set of utilities to build and index a (annotated) spliced pangenome. We devised [two alternative construction pipelines](https://github.com/AlgoLab/pantas/tree/main#input-preparation), one for full genome analysis and one for the analysis of a panel of genes of interest (reduced indexing).
 
 
 ## Installation
 ``` sh
 git clone https://github.com/AlgoLab/pantas.git
 
-# Install dependencies
+# Install dependencies (all available from bioconda)
 mamba create -c bioconda -c conda-forge pantas python=3.10 biopython gffutils intervaltree bcftools samtools gffread vg=1.50.1 snakemake-minimal
 mamba activate pantas
 ```
@@ -17,27 +17,25 @@ mamba activate pantas
 ## pantas pipeline
 ``` sh
 # Augment the annotated spliced pangenome with alignment information (run this for each replicate)
-python3 ./scripts/alignments_augmentation_from_gaf.py [condition1-rep1.gaf] [spliced-pangenome.annotated.gfa] > [condition1-rep1.gfa]
+./pantas augment [condition1-rep1.gaf] [spliced-pangenome.annotated.gfa] > [condition1-rep1.gfa]
 
-# Call events from each graph
-python3 ./scripts/call.py [sample.gfa] [annotation.gtf] > [sample-events.csv]
+# Call events from each **augmented** graph
+./pantas call [sample.gfa] [annotation.gtf] > [sample-events.csv]
 
-# Quantify events across conditions
-python3 ./scripts/quantify3.py -c1 condition1-rep1.csv condition1-rep2.csv condition1-rep3.csv \
-                               -c2 condition2-rep1.csv condition2-rep2.csv condition2-rep3.csv > [quantification.csv]
+# Quantify events across conditions (provide the two conditions with comma-separated path to the events csv)
+pantas quant condition1-rep1.csv,condition1-rep2.csv,condition1-rep3.csv condition2-rep1.csv,condition2-rep2.csv,condition2-rep3.csv > [quantification.csv]
 ```
 
 ### Event calling
-The `call.py` script provides several arguments that can be used to tweak the event calling:
+The `call` mode of pantas provides several arguments that can be used to tweak the event calling:
 ```
-  --rc RC                        Minimum read count (default: 3)
-  --rca RCA                      Minimum read count for annotated events (default: -1)
-  --novel                        Call novel events (default: False)
-  --no-annotated                 Do not call known annotated events (default: False)
-  --events EVENTS [EVENTS ...]   Events to call (default: [ES, SS, IR])
+  -w <INT>       Minimum read count (default: 3)
+  -W <INT>       Minimum read count for annotated events (default: -1)
+  -n             Call novel events (default: False)
+  -a             Do not call known annotated events (default: False)
 ```
 
-To call events from a reduced spliced pangenome, it is necessary to use the `--rp` argument to provide the list of reference paths in the reduced graph (this file is created during the graph construction/indexing):
+To call events from a reduced spliced pangenome, it is necessary to use the `-p` argument to provide the list of reference paths in the reduced graph (this file is created during the graph construction/indexing):
 ``` sh
 python3 ./scripts/call.py --rp [spliced-pangenome.refpath] [sample.gfa] [annotation.gtf] > [sample-events.csv]
 ```
@@ -99,14 +97,14 @@ vg mpmap -x example/pantas-index/spliced-pangenome.xg \
 	 -f example/reads_1.fq -f example/reads_2.fq -F GAF > example/reads.gaf
 
 # Augment the annotated spliced pangenome with alignment information
-python3 ./scripts/alignments_augmentation_from_gaf.py example/reads.gaf example/pantas-index/spliced-pangenome.annotated.gfa > example/reads.gfa
+./pantas augment example/reads.gaf example/pantas-index/spliced-pangenome.annotated.gfa > example/reads.gfa
 
 # Call all annotated events with minimum support 0 (since example RNA-Seq sample is very small)
-# Note that using --rca 0 is equivalent to extract all events from the graph
-python3 ./scripts/call.py --rca 0 example/reads.gfa example/4.gtf > example/reads.events.csv
+# Note that using -W 0 is equivalent to extract all events from the graph
+./pantas call -W 0 example/reads.gfa example/4.gtf > example/reads.events.csv
 
 # Quantify the events across the two conditions (an an example here we are using the same file twice)
-python3 ./scripts/quantify3.py -c1 example/reads.events.csv -c2 example/reads.events.csv > example/quant.csv
+./pantas quant example/reads.events.csv example/reads.events.csv > example/quant.csv
 ```
 
 ## Experiments

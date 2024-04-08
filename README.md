@@ -24,7 +24,7 @@ mamba activate pantas
 ./pantas call [sample.gfa] [annotation.gtf] > [sample-events.csv]
 
 # Quantify events across conditions (provide the two conditions with comma-separated path to the events csv)
-pantas quant condition1-rep1.csv,condition1-rep2.csv,condition1-rep3.csv \
+./pantas quant condition1-rep1.csv,condition1-rep2.csv,condition1-rep3.csv \
              condition2-rep1.csv,condition2-rep2.csv,condition2-rep3.csv > [quantification.csv]
 ```
 

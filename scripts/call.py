@@ -1,19 +1,21 @@
+import sys
 import itertools
 import re
-import sys
 from math import floor
 
 
-def dopass(*args):
+def dopass(*_):
     pass
 
 
 eprint = dopass
 
-def fix_tr_(t :str) -> str:
+
+def fix_tr_(t: str) -> str:
     if not "_" in t:
         return t
-    return t[:t.index("_")]
+    return t[: t.index("_")]
+
 
 def collapse_linkcounts(lc: list):
     count = sum([x[1] for x in lc])
@@ -188,8 +190,15 @@ def get_path_transcript(path: dict, pid: str, start=None, end=None):
 
 
 def check_junction(ix_j: tuple, segments: dict, links: dict, window: int, rc: int):
+    return check_junction_retall(ix_j, segments, links, window, rc)[0]
+
+
+def check_junction_retall(
+    ix_j: tuple, segments: dict, links: dict, window: int, rc: int
+):
     next_n0 = get_outgoing_nodes(segments, ix_j[0], rc=rc)
     prev_n1 = get_incoming_nodes(segments, ix_j[1], rc=rc)
+    is_complete = False
 
     eprint(f"pre {next_n0=}")
     eprint(f"pre {prev_n1=}")
@@ -214,7 +223,7 @@ def check_junction(ix_j: tuple, segments: dict, links: dict, window: int, rc: in
         eprint(f"{i=} {_subpath_n=}")
         eprint(f"{i=} {_subpath_p=}")
     else:
-        return False
+        return False, 0, None, False
 
     while i < window:
         i += 1
@@ -237,6 +246,7 @@ def check_junction(ix_j: tuple, segments: dict, links: dict, window: int, rc: in
             _subpath_n.append(_max_n[0])
             _subpath_count += _max_n[1]
             i = window
+            is_complete = True
             break
 
         if len(_intron_next) > 0 and len(_intron_prev) > 0:
@@ -256,14 +266,15 @@ def check_junction(ix_j: tuple, segments: dict, links: dict, window: int, rc: in
 
             if len(set(_subpath_n) & set(_subpath_p)) > 1:
                 i = window
+                is_complete = True
                 break
 
         else:
             break
 
     if i == window:
-        return True
-    return False
+        return True, _subpath_count, (_subpath_n, _subpath_p), is_complete
+    return False, 0, None, False
 
 
 def main(args):
@@ -280,7 +291,7 @@ def main(args):
         if line.startswith("S"):
             _, nid, seq, *fields = line.split()
             gfaS[nid] = build_attrs(fields, args.d)
-            gfaS[nid]["LN"] = len(seq) # Done to avoid LN in GFA
+            gfaS[nid]["LN"] = len(seq)  # Done to avoid LN in GFA
             # TODO: uncomment if needed
             # gfaS[nid]['seq'] = seq
             gfaS[nid]["I"] = []
@@ -305,13 +316,13 @@ def main(args):
                 _,
                 nid_to,
                 _,
-                overlap,
+                _,  # overlap
                 *fields,
             ) = line.split()
             gfaL[(nid_from, nid_to)] = build_attrs(fields, args.d)
             gfaS[nid_from]["O"].append(nid_to)
             gfaS[nid_to]["I"].append(nid_from)
-            # TODO: uncomment if needed
+            # NOTE: uncomment if needed
             # gfaL[(nid_from, nid_to)]['overlap'] = overlap
             if "JN" in gfaL[(nid_from, nid_to)]:
                 junctions.append((nid_from, nid_to))
@@ -541,13 +552,17 @@ def main(args):
                                                 for _ajn in _a_j_name:
                                                     print(
                                                         "A5"
-                                                        if genestrand[transcript2gene[_tj]]
+                                                        if genestrand[
+                                                            transcript2gene[_tj]
+                                                        ]
                                                         == "+"
                                                         else "A3",
                                                         "annotated",
                                                         genechr[transcript2gene[_tj]],
                                                         transcript2gene[_tj],
-                                                        genestrand[transcript2gene[_tj]],
+                                                        genestrand[
+                                                            transcript2gene[_tj]
+                                                        ],
                                                         _j,
                                                         ">".join(ix_j),
                                                         f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *ix_j)}",
@@ -620,13 +635,17 @@ def main(args):
                                                     # and the second is the one containing the event
                                                     print(
                                                         "A3"
-                                                        if genestrand[transcript2gene[_tj]]
+                                                        if genestrand[
+                                                            transcript2gene[_tj]
+                                                        ]
                                                         == "+"
                                                         else "A5",
                                                         "annotated",
                                                         genechr[transcript2gene[_tj]],
                                                         transcript2gene[_tj],
-                                                        genestrand[transcript2gene[_tj]],
+                                                        genestrand[
+                                                            transcript2gene[_tj]
+                                                        ],
                                                         _ajn,
                                                         ">".join(_a_j),
                                                         f"{genechr[transcript2gene[_tr]]}:{get_refpos(gfaS, *_a_j)}",
@@ -668,9 +687,28 @@ def main(args):
                                 _tj = fix_tr_(_tj)
                                 _te = fix_tr_(_te)
                                 if transcript2gene[_tj] == transcript2gene[_te]:
-                                    #FIXME: this is only a test
-                                    _count_sum = -1
-                                    _subpath = ["x", "y"]
+                                    # FIXME: this is an heuristic in place of having the paths in the graph
+                                    (
+                                        _found,
+                                        _count_sum,
+                                        _subpaths,
+                                        _complete,
+                                    ) = check_junction_retall(
+                                        [ix_j[0], ix_j[1]],
+                                        gfaS,
+                                        gfaL,
+                                        args.irw,
+                                        args.rc,
+                                    )
+                                    if not _found:
+                                        continue
+                                    # FIXME: the subpath is not correct
+                                    if _complete:
+                                        _subpath = _subpaths[0] + _subpaths[1]
+                                        _splen = len(set(_subpath))
+                                    else:
+                                        _subpath = _subpaths[0] + [".."] + _subpaths[1]
+                                        _splen = len(_subpath) - 1
 
                                     # get retained nodes to get their read count
                                     # _subpath = get_path_transcript(
@@ -696,7 +734,7 @@ def main(args):
                                         _e,
                                         ">".join(_subpath),
                                         ".",  # CHECKME: this should not be needed
-                                        _count_sum // len(_subpath),
+                                        _count_sum // _splen,
                                         ".",
                                         ".",
                                         ".",
@@ -767,21 +805,33 @@ def main(args):
                                         _es_j2_name = f"{_tr}.{_exno_max-1}.{_exno_max}"
 
                                         if genestrand[transcript2gene[_tr]] == "-":
-                                            _es_j1_name = f"{_tr}.{_exno_max-1}.{_exno_max}"
-                                            _es_j2_name = f"{_tr}.{_exno_min}.{_exno_min+1}"
+                                            _es_j1_name = (
+                                                f"{_tr}.{_exno_max-1}.{_exno_max}"
+                                            )
+                                            _es_j2_name = (
+                                                f"{_tr}.{_exno_min}.{_exno_min+1}"
+                                            )
 
-                                        _n_j1 = [x for x in junctions if x[0] == ix_j[0]]
-                                        _n_j2 = [x for x in junctions if x[1] == ix_j[1]]
+                                        _n_j1 = [
+                                            x for x in junctions if x[0] == ix_j[0]
+                                        ]
+                                        _n_j2 = [
+                                            x for x in junctions if x[1] == ix_j[1]
+                                        ]
                                         eprint(f"{_n_j1=}")
                                         eprint(f"{_n_j2=}")
                                         eprint(f"{_es_j1_name=}")
                                         eprint(f"{_es_j2_name=}")
 
                                         _es_j1 = [
-                                            x for x in _n_j1 if _es_j1_name in gfaL[x]["JN"]
+                                            x
+                                            for x in _n_j1
+                                            if _es_j1_name in gfaL[x]["JN"]
                                         ]
                                         _es_j2 = [
-                                            x for x in _n_j2 if _es_j2_name in gfaL[x]["JN"]
+                                            x
+                                            for x in _n_j2
+                                            if _es_j2_name in gfaL[x]["JN"]
                                         ]
                                         eprint(f"{_es_j1=}")
                                         eprint(f"{_es_j2=}")
@@ -827,19 +877,22 @@ def main(args):
                                     _tex0 = int(_fex0_i.split(".")[-1])
                                     _tex1 = int(_fex1_j.split(".")[-1])
 
-
-                                # _tex0 = int(_fex0[0].split(".")[-1])
-                                # _tex1 = int(_fex1[0].split(".")[-1])
+                                    # _tex0 = int(_fex0[0].split(".")[-1])
+                                    # _tex1 = int(_fex1[0].split(".")[-1])
                                     if abs(_tex0 - _tex1) == 1:
                                         ex_next_n0 = set().union(
                                             *[
                                                 get_set_exons(gfaS, x)
-                                                for x in get_outgoing_nodes(gfaS, ix_j[0])
+                                                for x in get_outgoing_nodes(
+                                                    gfaS, ix_j[0]
+                                                )
                                             ]
                                         )
                                         eprint(f"check A5b {ex_next_n0=}")
                                         if _fex0[0] in ex_next_n0:
-                                            _a_j = [x for x in junctions if x[1] == ix_j[1]]
+                                            _a_j = [
+                                                x for x in junctions if x[1] == ix_j[1]
+                                            ]
                                             _a_j = list(
                                                 filter(
                                                     lambda x: any(
@@ -889,12 +942,16 @@ def main(args):
                                         ex_prev_n1 = set().union(
                                             *[
                                                 get_set_exons(gfaS, x)
-                                                for x in get_incoming_nodes(gfaS, ix_j[1])
+                                                for x in get_incoming_nodes(
+                                                    gfaS, ix_j[1]
+                                                )
                                             ]
                                         )
                                         eprint(f"check A3a {ex_prev_n1=}")
                                         if _fex1[0] in ex_prev_n1:
-                                            _a_j = [x for x in junctions if x[0] == ix_j[0]]
+                                            _a_j = [
+                                                x for x in junctions if x[0] == ix_j[0]
+                                            ]
                                             _a_j = list(
                                                 filter(
                                                     lambda x: any(
@@ -965,15 +1022,38 @@ def main(args):
                             if len(cap_ir) > 0:
                                 for ex_ir in cap_ir:
                                     _tr = ".".join(ex_ir.split(".")[:-1])
-                                    _subpath = get_path_transcript(
-                                        gfaP, _tr, start=ix_j[0], end=ix_j[1]
+                                    # FIXME: this is an heuristic in place of having the paths in the graph
+                                    (
+                                        _found,
+                                        _count_sum,
+                                        _subpaths,
+                                        _complete,
+                                    ) = check_junction_retall(
+                                        [ix_j[0], ix_j[1]],
+                                        gfaS,
+                                        gfaL,
+                                        args.irw,
+                                        args.rc,
                                     )
-                                    assert len(_subpath) > 2
-                                    # excluding the junction nodes
-                                    _subpath = _subpath[1:-1]
-                                    _count_sum = 0
-                                    for _in in _subpath:
-                                        _count_sum += gfaS[_in].get("NC", 0)
+                                    if not _found:
+                                        continue
+                                    # FIXME: the subpath is not correct
+                                    if _complete:
+                                        _subpath = _subpaths[0] + _subpaths[1]
+                                        _splen = len(set(_subpath))
+                                    else:
+                                        _subpath = _subpaths[0] + [".."] + _subpaths[1]
+                                        _splen = len(set(_subpath)) - 1
+
+                                    # _subpath = get_path_transcript(
+                                    #     gfaP, _tr, start=ix_j[0], end=ix_j[1]
+                                    # )
+                                    # assert len(_subpath) > 2
+                                    # # excluding the junction nodes
+                                    # _subpath = _subpath[1:-1]
+                                    # _count_sum = 0
+                                    # for _in in _subpath:
+                                    #     _count_sum += gfaS[_in].get("NC", 0)
                                     eprint("IRr")
 
                                     # if genestrand[transcript2gene[_tr]] == "+":
@@ -994,7 +1074,7 @@ def main(args):
                                         ex_ir,
                                         ">".join(_subpath),
                                         ".",  # CHECKME: this should not be needed
-                                        _count_sum // len(_subpath),
+                                        _count_sum // _splen,
                                         ".",
                                         ".",
                                         ".",
@@ -1023,8 +1103,7 @@ def main(args):
                                 eprint(f"{exons_nX=}")
 
                                 tr_list_nX = [
-                                    list(get_transcript_from_exons(x))
-                                    for x in exons_nX
+                                    list(get_transcript_from_exons(x)) for x in exons_nX
                                 ]
 
                                 # INFO: flatting a list of [[], []]
@@ -1041,9 +1120,7 @@ def main(args):
                                         _tmp_ += _x_
                                     tr_list_nX = [_tmp_]
 
-                                transcripts_nX = set(
-                                    *tr_list_nX
-                                )
+                                transcripts_nX = set(*tr_list_nX)
 
                                 eprint(f"{transcripts_nX=}")
 
@@ -1072,7 +1149,9 @@ def main(args):
                                     ]
                                     eprint(f"{_fnX=}")
 
-                                    for _fex0_i, _fexX_j in itertools.product(_fex0, _fexX):
+                                    for _fex0_i, _fexX_j in itertools.product(
+                                        _fex0, _fexX
+                                    ):
                                         _tex0 = int(_fex0_i.split(".")[-1])
                                         _texX = int(_fexX_j.split(".")[-1])
 
@@ -1111,13 +1190,17 @@ def main(args):
                                                 for _ajn in _a_j_name:
                                                     print(
                                                         "A3"
-                                                        if genestrand[transcript2gene[_tr]]
+                                                        if genestrand[
+                                                            transcript2gene[_tr]
+                                                        ]
                                                         == "+"
                                                         else "A5",
                                                         "novel",
                                                         genechr[transcript2gene[_tr]],
                                                         transcript2gene[_tr],
-                                                        genestrand[transcript2gene[_tr]],
+                                                        genestrand[
+                                                            transcript2gene[_tr]
+                                                        ],
                                                         _ajn,
                                                         ">".join(_a_j),
                                                         f"{genechr[transcript2gene[_tr]]}:{get_refpos_node(gfaS, _a_j[0], 'LN')}-{get_refpos_node(gfaS, _a_j[1], 'RP')}",
@@ -1152,8 +1235,7 @@ def main(args):
                                 exons_nX = [get_set_exons(gfaS, x) for x in nX]
                                 eprint(f"{exons_nX=}")
                                 tr_list_nX = [
-                                    list(get_transcript_from_exons(x))
-                                    for x in exons_nX
+                                    list(get_transcript_from_exons(x)) for x in exons_nX
                                 ]
 
                                 # INFO: flatting a list of [[], []]
@@ -1170,9 +1252,7 @@ def main(args):
                                         _tmp_ += _x_
                                     tr_list_nX = [_tmp_]
 
-                                transcripts_nX = set(
-                                    *tr_list_nX
-                                )
+                                transcripts_nX = set(*tr_list_nX)
                                 eprint(f"{transcripts_nX=}")
 
                                 for _tr in transcripts_nX & transcripts_n1:
@@ -1201,7 +1281,9 @@ def main(args):
                                     ]
                                     eprint(f"{_fnX=}")
 
-                                    for _fex0_i, _fexX_j in itertools.product(_fex0, _fexX):
+                                    for _fex0_i, _fexX_j in itertools.product(
+                                        _fex0, _fexX
+                                    ):
                                         _tex0 = int(_fex0_i.split(".")[-1])
                                         _texX = int(_fexX_j.split(".")[-1])
                                         if abs(_tex0 - _texX) == 1:

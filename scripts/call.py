@@ -467,16 +467,29 @@ def main(args):
                                         _n_j2 = [
                                             x for x in junctions if x[1] == ix_j[1]
                                         ]
-                                        _es_j1 = [
-                                            x
-                                            for x in _n_j1
-                                            if _es_j1_name in gfaL[x]["JN"]
-                                        ]
-                                        _es_j2 = [
-                                            x
-                                            for x in _n_j2
-                                            if _es_j2_name in gfaL[x]["JN"]
-                                        ]
+
+                                        _es_j1 = list(
+                                            filter(
+                                                lambda x: any(
+                                                    [
+                                                        y.startswith(_tr)
+                                                        for y in gfaL[x]["JN"]
+                                                    ]
+                                                ),
+                                                _n_j1,
+                                            )
+                                        )
+                                        _es_j2 = list(
+                                            filter(
+                                                lambda x: any(
+                                                    [
+                                                        y.startswith(_tr)
+                                                        for y in gfaL[x]["JN"]
+                                                    ]
+                                                ),
+                                                _n_j2,
+                                            )
+                                        )
 
                                         if len(_es_j1) == 1 and len(_es_j2) == 1:
                                             print(
@@ -825,16 +838,28 @@ def main(args):
                                         eprint(f"{_es_j1_name=}")
                                         eprint(f"{_es_j2_name=}")
 
-                                        _es_j1 = [
-                                            x
-                                            for x in _n_j1
-                                            if _es_j1_name in gfaL[x]["JN"]
-                                        ]
-                                        _es_j2 = [
-                                            x
-                                            for x in _n_j2
-                                            if _es_j2_name in gfaL[x]["JN"]
-                                        ]
+                                        _es_j1 = list(
+                                            filter(
+                                                lambda x: any(
+                                                    [
+                                                        y.startswith(_tr)
+                                                        for y in gfaL[x]["JN"]
+                                                    ]
+                                                ),
+                                                _n_j1,
+                                            )
+                                        )
+                                        _es_j2 = list(
+                                            filter(
+                                                lambda x: any(
+                                                    [
+                                                        y.startswith(_tr)
+                                                        for y in gfaL[x]["JN"]
+                                                    ]
+                                                ),
+                                                _n_j2,
+                                            )
+                                        )
                                         eprint(f"{_es_j1=}")
                                         eprint(f"{_es_j2=}")
 

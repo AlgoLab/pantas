@@ -12,9 +12,11 @@ eprint = dopass
 
 
 def fix_tr_(t: str) -> str:
-    if not "_" in t:
+    # we could use some sort of regex here. If last is [RH][0-9]+, then remove it
+    if t.split("_")[-1][0] in ["R", "H"]:
+        return "_".join(t.split("_")[:-1])
+    else:
         return t
-    return t[: t.index("_")]
 
 
 def collapse_linkcounts(lc: list):

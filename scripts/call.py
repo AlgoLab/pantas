@@ -448,19 +448,6 @@ def main(args):
                                     _te = fix_tr_(_te)
                                     if transcript2gene[_tj] == transcript2gene[_te]:
                                         # Find the junctions of this exon
-                                        _exno_min = min(_tex0, _tex1)
-                                        _exno_max = max(_tex0, _tex1)
-                                        _es_j1_name = f"{_tr}.{_exno_min}.{_exno_min+1}"
-                                        _es_j2_name = f"{_tr}.{_exno_max-1}.{_exno_max}"
-
-                                        if genestrand[transcript2gene[_tj]] == "-":
-                                            _es_j1_name = (
-                                                f"{_tr}.{_exno_max-1}.{_exno_max}"
-                                            )
-                                            _es_j2_name = (
-                                                f"{_tr}.{_exno_min}.{_exno_min+1}"
-                                            )
-
                                         _n_j1 = [
                                             x for x in junctions if x[0] == ix_j[0]
                                         ]
@@ -490,6 +477,12 @@ def main(args):
                                                 _n_j2,
                                             )
                                         )
+
+                                        _es_j1_name = [x for x in gfaL[_es_j1[0]]["JN"] if x.startswith(_tr)][0]
+                                        _es_j2_name = [x for x in gfaL[_es_j2[0]]["JN"] if x.startswith(_tr)][0]
+                                        if genestrand[transcript2gene[_tr]] == "-":
+                                            # CHECKME: do we need to swap the names? Which one do we want first?
+                                            pass
 
                                         if len(_es_j1) == 1 and len(_es_j2) == 1:
                                             print(
@@ -814,19 +807,6 @@ def main(args):
                                     _tex1 = int(_fex1_j.split(".")[-1])
 
                                     if abs(_tex0 - _tex1) > 1:
-                                        _exno_min = min(_tex0, _tex1)
-                                        _exno_max = max(_tex0, _tex1)
-                                        _es_j1_name = f"{_tr}.{_exno_min}.{_exno_min+1}"
-                                        _es_j2_name = f"{_tr}.{_exno_max-1}.{_exno_max}"
-
-                                        if genestrand[transcript2gene[_tr]] == "-":
-                                            _es_j1_name = (
-                                                f"{_tr}.{_exno_max-1}.{_exno_max}"
-                                            )
-                                            _es_j2_name = (
-                                                f"{_tr}.{_exno_min}.{_exno_min+1}"
-                                            )
-
                                         _n_j1 = [
                                             x for x in junctions if x[0] == ix_j[0]
                                         ]
@@ -835,8 +815,6 @@ def main(args):
                                         ]
                                         eprint(f"{_n_j1=}")
                                         eprint(f"{_n_j2=}")
-                                        eprint(f"{_es_j1_name=}")
-                                        eprint(f"{_es_j2_name=}")
 
                                         _es_j1 = list(
                                             filter(
@@ -862,6 +840,14 @@ def main(args):
                                         )
                                         eprint(f"{_es_j1=}")
                                         eprint(f"{_es_j2=}")
+
+                                        _es_j1_name = [x for x in gfaL[_es_j1[0]]["JN"] if x.startswith(_tr)][0]
+                                        _es_j2_name = [x for x in gfaL[_es_j2[0]]["JN"] if x.startswith(_tr)][0]
+                                        if genestrand[transcript2gene[_tr]] == "-":
+                                            # CHECKME: do we need to swap the names? Which one do we want first?
+                                            pass
+                                        eprint(f"{_es_j1_name=}")
+                                        eprint(f"{_es_j2_name=}")
 
                                         if len(_es_j1) > 0 and len(_es_j2) > 0:
                                             print(

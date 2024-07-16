@@ -4,3 +4,4 @@ __pycache__/
 example/OUT/
 *.gaf
 .vscode
+index/annotate

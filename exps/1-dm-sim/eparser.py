@@ -6,8 +6,10 @@ ETYPES = ["ES", "IR", "A3", "A5", "CE"]
 
 
 def parse_region(string: str) -> list[int]:
-    if string == ".":
-        return string
+    if string == "." or string == "?":
+        return "."
+    if string.endswith("?"):
+        string = string[:-1]
     reg = re.match(r"(?P<chr>[\w\d]+):(?P<start>\d+)-(?P<end>\d+)", string)
     if not reg:
         print(
@@ -97,9 +99,16 @@ class EventPantas(Event):
         self,
         event_type: str,
         annotation_type: str,
+        htype: str,
         chrom: str,
         gene: str,
         strand: str,
+        junction1_name: str,
+        junction2_name: str,
+        junction3_name: str,
+        junction1_nodes: str,
+        junction2_nodes: str,
+        junction3_nodes: str,
         junction1_refpos: str,
         junction2_refpos: str,
         junction3_refpos: str,
@@ -128,23 +137,23 @@ class EventPantas(Event):
     def build_conditions(self):
         match self.etype:
             case "ES":
-                self.event_j = parse_region(self.junction1_refpos)
+                self.event_j = parse_region(self.junction3_refpos)
                 self.canonic_j = [
+                    parse_region(self.junction1_refpos),
                     parse_region(self.junction2_refpos),
-                    parse_region(self.junction3_refpos),
                 ]
 
             case "A5":
-                self.event_j = parse_region(self.junction1_refpos)
-                self.canonic_j = parse_region(self.junction2_refpos)
+                self.event_j = parse_region(self.junction2_refpos)
+                self.canonic_j = parse_region(self.junction1_refpos)
 
             case "A3":
-                self.event_j = parse_region(self.junction1_refpos)
-                self.canonic_j = parse_region(self.junction2_refpos)
+                self.event_j = parse_region(self.junction2_refpos)
+                self.canonic_j = parse_region(self.junction1_refpos)
 
             case "IR":
-                self.event_j = parse_region(self.junction1_refpos)
-                self.canonic_j = parse_region(self.junction2_refpos)
+                self.event_j = parse_region(self.junction2_refpos)
+                self.canonic_j = parse_region(self.junction1_refpos)
                 if self.event_j == ".":
                     self.event_j = self.canonic_j
                     self.canonic_j = "."
@@ -194,6 +203,11 @@ class EventTruth(Event):
         if event_type == "ES":
             self.event_cov_c1 = self.rc_c1[2]
             self.event_cov_c2 = self.rc_c2[2]
+        elif event_type == "IR":
+            # this works for annotated events
+            # CHECKME for novels
+            self.event_cov_c1 = self.rc_c1[0]
+            self.event_cov_c2 = self.rc_c2[0]
         else:
             self.event_cov_c1 = self.rc_c1[1]
             self.event_cov_c2 = self.rc_c2[1]
@@ -221,7 +235,6 @@ class EventTruth(Event):
                 self.event_j = fix_region(parse_region(self.junction1_refpos))
                 # self.canonic_j = fix_region(parse_region(self.junction2_refpos))
                 self.canonic_j = "."
-
             case "CE":
                 # TODO: fix
                 self.event_j = [

@@ -104,9 +104,11 @@ def get_refpos_node(segments: dict, nid: str, key: str, jn_w: int = -1):
             # assert jn_w > 0
             add = (
                 min(
-                    [(x[0], abs(jn_w - x[1])) for x in segments[nid]["OL"]]
-                    if "OL" in segments[nid]
-                    else [(segments[nid]["LN"], 0)],
+                    (
+                        [(x[0], abs(jn_w - x[1])) for x in segments[nid]["OL"]]
+                        if "OL" in segments[nid]
+                        else [(segments[nid]["LN"], 0)]
+                    ),
                     key=lambda y: y[1],
                 )[0]
                 + 1
@@ -116,9 +118,11 @@ def get_refpos_node(segments: dict, nid: str, key: str, jn_w: int = -1):
         elif key == "IL":
             # assert jn_w > 0
             add = min(
-                [(x[0], abs(jn_w - x[1])) for x in segments[nid]["IL"]]
-                if "IL" in segments[nid]
-                else [(0, 1)],
+                (
+                    [(x[0], abs(jn_w - x[1])) for x in segments[nid]["IL"]]
+                    if "IL" in segments[nid]
+                    else [(0, 1)]
+                ),
                 key=lambda y: y[1],
             )[0]
         elif key == "MAXIL":
@@ -211,6 +215,7 @@ def get_haplotranscripts_from_exon(exon: str) -> dict:
     t, h = "_".join(ht.split("_")[:-1]), ht.split("_")[-1]
     HTs[t] = set([h])
     return HTs
+
 
 def get_haplotranscripts_from_exons(exons: set) -> dict:
     HTs = dict()
@@ -447,8 +452,24 @@ def main(args):
 
             # we want exons on same gene only
             # FIXME: this can be done way better
-            _exons1 = set(e for e in _exons1 if len(_genes & set(transcript2gene[t] for t in get_haplotranscripts_from_exon(e))) > 0)
-            _exons2 = set(e for e in _exons2 if len(_genes & set(transcript2gene[t] for t in get_haplotranscripts_from_exon(e))) > 0)
+            _exons1 = set(
+                e
+                for e in _exons1
+                if len(
+                    _genes
+                    & set(transcript2gene[t] for t in get_haplotranscripts_from_exon(e))
+                )
+                > 0
+            )
+            _exons2 = set(
+                e
+                for e in _exons2
+                if len(
+                    _genes
+                    & set(transcript2gene[t] for t in get_haplotranscripts_from_exon(e))
+                )
+                > 0
+            )
 
             assert len(_exons1) > 0 and len(_exons2) > 0
 
@@ -456,7 +477,7 @@ def main(args):
             Js1 = set(x for x in junctions if x[0] == _j[0]) - set([_j])
             # Find the incoming junctions of the tail of the junction we are checking
             Js2 = set(x for x in junctions if x[1] == _j[1]) - set([_j])
-            
+
             # filter by weigth # CHECKME: do we want this?
             # Js1 = set(filter(lambda x: gfaL[x]["RC"] >= args.rca, Js1))
             # Js2 = set(filter(lambda x: gfaL[x]["RC"] >= args.rca, Js2))
@@ -498,9 +519,9 @@ def main(args):
                         gfaL[j2]["JN"]
                     )
 
-                    haplotranscripts_inclusion = (set(haplotranscripts1) & set(
-                        haplotranscripts2
-                    )) - set(_ht)
+                    haplotranscripts_inclusion = (
+                        set(haplotranscripts1) & set(haplotranscripts2)
+                    ) - set(_ht)
                     if len(haplotranscripts_inclusion) == 0:
                         # no transcript
                         continue
@@ -526,8 +547,22 @@ def main(args):
                         _gene,
                         genestrand[_gene],
                         "|".join(gfaL[_j]["JN"]),
-                        "|".join([x for x in gfaL[j1]["JN"] if "_".join(x.split("_")[:-1]) in haplotranscripts_inclusion]),
-                        "|".join([x for x in gfaL[j2]["JN"] if "_".join(x.split("_")[:-1]) in haplotranscripts_inclusion]),
+                        "|".join(
+                            [
+                                x
+                                for x in gfaL[j1]["JN"]
+                                if "_".join(x.split("_")[:-1])
+                                in haplotranscripts_inclusion
+                            ]
+                        ),
+                        "|".join(
+                            [
+                                x
+                                for x in gfaL[j2]["JN"]
+                                if "_".join(x.split("_")[:-1])
+                                in haplotranscripts_inclusion
+                            ]
+                        ),
                         ">".join(_j),
                         gfaL[_j]["RC"],
                         ">".join(j1),
@@ -569,7 +604,9 @@ def main(args):
                                 _gene,
                                 genestrand[_gene],
                                 "|".join(gfaL[_j]["JN"]),
-                                "|".join(gfaL[j2]["JN"]), # TODO: do we have to filter which transcripts we want? I don't think so. _j and j2 are always annotated with disjoint sets of transcripts 
+                                "|".join(
+                                    gfaL[j2]["JN"]
+                                ),  # TODO: do we have to filter which transcripts we want? I don't think so. _j and j2 are always annotated with disjoint sets of transcripts
                                 ".",
                                 ">".join(_j),
                                 gfaL[_j]["RC"],
@@ -609,7 +646,9 @@ def main(args):
                                 _gene,
                                 genestrand[_gene],
                                 "|".join(gfaL[_j]["JN"]),
-                                "|".join(gfaL[j1]["JN"]), # TODO: filter which transcripts we want
+                                "|".join(
+                                    gfaL[j1]["JN"]
+                                ),  # TODO: filter which transcripts we want
                                 ".",
                                 ">".join(_j),
                                 gfaL[_j]["RC"],
@@ -677,7 +716,7 @@ def main(args):
                     _gene,
                     genestrand[_gene],
                     "|".join(gfaL[_j]["JN"]),
-                    ".", # TODO: recover exon if we want
+                    ".",  # TODO: recover exon if we want
                     ".",
                     ">".join(_j),
                     gfaL[_j]["RC"],

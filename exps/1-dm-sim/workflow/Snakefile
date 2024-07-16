@@ -64,10 +64,12 @@ rule run:
         ),
         # rmats
         expand(pjoin(ODIR, "{sample}", "rMATS-anno.csv"), sample=samples),
+        expand(pjoin(ODIR, "{sample}", "rMATS-novel.csv"), sample=samples),
         # suppa2
         expand(pjoin(ODIR, "{sample}", "SUPPA2-anno.csv"), sample=samples),
         # whippet
         expand(pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff"), sample=samples),
+        # expand(pjoin(ODIR, "{sample}", "novel", "whippet", "psi.diff"), sample=samples),
         # expand(
         #     pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"),
         #     sample=samples,

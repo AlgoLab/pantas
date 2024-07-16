@@ -1,0 +1,15 @@
+name: pantas2
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - python=3.10
+  - biopython
+  - bcftools
+  - samtools
+  - tabix
+  - gffutils
+  - gffread
+  - csvkit
+  - snakemake-minimal
+  - vg=1.50.1

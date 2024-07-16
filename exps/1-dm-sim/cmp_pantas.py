@@ -62,7 +62,7 @@ def main(args):
                 continue
             line = line.strip()
             _e = line.split(",")
-            e = eparser.EventPantas(*_e)
+            e = eparser.EventRmats(*_e)
             if isnan(e.psi_c1) or isnan(e.psi_c2):
                 continue
             # if abs(e.dpsi) > FILTER:
@@ -95,7 +95,7 @@ def main(args):
                 continue
             line = line.strip()
             _e = line.split(",")
-            e = eparser.EventPantas(*_e)
+            e = eparser.EventRmats(*_e)
             # if isnan(e.psi_c1) or isnan(e.psi_c2):
             #     continue
             # if abs(e.dpsi) > FILTER:
@@ -145,51 +145,51 @@ def main(args):
                 str_event += ",FN"
                 print("FN", e1.to_csv(), file=sys.stderr)
 
-            # eqsr = [
-            #     x
-            #     for x in event_rmats[etype]
-            #     if eparser.eq_event(e1, x, relax=args.relax)
-            # ]
-            # if len(eqsr) > 0:
-            #     # True positives
-            #     assert len(eqsr) == 1
-            #     TP_RMATS[etype] += 1
-            #     str_event += ",TP"
-            # else:
-            #     # False negatives
-            #     FN_RMATS[etype] += 1
-            #     str_event += ",FN"
-            #     # print("FN", e1.to_csv())
+            eqsr = [
+                x
+                for x in event_rmats[etype]
+                if eparser.eq_event(e1, x, relax=args.relax)
+            ]
+            if len(eqsr) > 0:
+                # True positives
+                assert len(eqsr) == 1
+                TP_RMATS[etype] += 1
+                str_event += ",TP"
+            else:
+                # False negatives
+                FN_RMATS[etype] += 1
+                str_event += ",FN"
+                # print("FN", e1.to_csv())
 
-            # eqsw = [
-            #     x
-            #     for x in event_whippet[etype]
-            #     if eparser.eq_event(e1, x, relax=args.relax)
-            # ]
-            # if len(eqsw) > 0:
-            #     # True positives
-            #     assert len(eqsw) == 1
-            #     TP_WHIPPET[etype] += 1
-            #     str_event += ",TP"
-            # else:
-            #     # False negatives
-            #     FN_WHIPPET[etype] += 1
-            #     str_event += ",FN"
+            eqsw = [
+                x
+                for x in event_whippet[etype]
+                if eparser.eq_event(e1, x, relax=args.relax)
+            ]
+            if len(eqsw) > 0:
+                # True positives
+                assert len(eqsw) == 1
+                TP_WHIPPET[etype] += 1
+                str_event += ",TP"
+            else:
+                # False negatives
+                FN_WHIPPET[etype] += 1
+                str_event += ",FN"
 
-            # eqss = [
-            #     x
-            #     for x in event_suppa[etype]
-            #     if eparser.eq_event(e1, x, relax=args.relax)
-            # ]
-            # if len(eqss) > 0:
-            #     # True positives
-            #     assert len(eqss) == 1
-            #     TP_SUPPA[etype] += 1
-            #     str_event += ",TP"
-            # else:
-            #     # False negatives
-            #     FN_SUPPA[etype] += 1
-            #     str_event += ",FN"
+            eqss = [
+                x
+                for x in event_suppa[etype]
+                if eparser.eq_event(e1, x, relax=args.relax)
+            ]
+            if len(eqss) > 0:
+                # True positives
+                assert len(eqss) == 1
+                TP_SUPPA[etype] += 1
+                str_event += ",TP"
+            else:
+                # False negatives
+                FN_SUPPA[etype] += 1
+                str_event += ",FN"
 
             # print(str_event)
 
@@ -207,44 +207,45 @@ def main(args):
                 # False positives
                 FP_PANTAS[etype] += 1
                 print("FP-PANTAS", e2.to_csv(), file=sys.stderr)
-        # for e2 in event_rmats[etype]:
-        #     if abs(e2.dpsi) > FILTER:
-        #         continue
-        #     eqs = [
-        #         x
-        #         for x in event_truth[etype]
-        #         if eparser.eq_event(e2, x, relax=args.relax)
-        #     ]
-        #     if len(eqs) == 0:
-        #         # False positives
-        #         FP_RMATS[etype] += 1
-        #         # print("FP-RMATS", e2.to_csv())
 
-        # for e2 in event_whippet[etype]:
-        #     if abs(e2.dpsi) > FILTER:
-        #         continue
-        #     eqs = [
-        #         x
-        #         for x in event_truth[etype]
-        #         if eparser.eq_event(e2, x, relax=args.relax)
-        #     ]
-        #     if len(eqs) == 0:
-        #         # False positives
-        #         FP_WHIPPET[etype] += 1
-        #         # print("FP-WHIPPET", e2.to_csv())
+        for e2 in event_rmats[etype]:
+            if abs(e2.dpsi) > FILTER:
+                continue
+            eqs = [
+                x
+                for x in event_truth[etype]
+                if eparser.eq_event(e2, x, relax=args.relax)
+            ]
+            if len(eqs) == 0:
+                # False positives
+                FP_RMATS[etype] += 1
+                # print("FP-RMATS", e2.to_csv())
 
-        # for e2 in event_suppa[etype]:
-        #     if abs(e2.dpsi) > FILTER:
-        #         continue
-        #     eqs = [
-        #         x
-        #         for x in event_truth[etype]
-        #         if eparser.eq_event(e2, x, relax=args.relax)
-        #     ]
-        #     if len(eqs) == 0:
-        #         # False positives
-        #         FP_SUPPA[etype] += 1
-        #         # print("FP-WHIPPET", e2.to_csv())
+        for e2 in event_whippet[etype]:
+            if abs(e2.dpsi) > FILTER:
+                continue
+            eqs = [
+                x
+                for x in event_truth[etype]
+                if eparser.eq_event(e2, x, relax=args.relax)
+            ]
+            if len(eqs) == 0:
+                # False positives
+                FP_WHIPPET[etype] += 1
+                # print("FP-WHIPPET", e2.to_csv())
+
+        for e2 in event_suppa[etype]:
+            if abs(e2.dpsi) > FILTER:
+                continue
+            eqs = [
+                x
+                for x in event_truth[etype]
+                if eparser.eq_event(e2, x, relax=args.relax)
+            ]
+            if len(eqs) == 0:
+                # False positives
+                FP_SUPPA[etype] += 1
+                # print("FP-WHIPPET", e2.to_csv())
 
     # print("PANTAS")
     print("tool", "etype", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=",")

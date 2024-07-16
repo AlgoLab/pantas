@@ -33,8 +33,8 @@ tabix -p vcf DGRP2.genes.norm.vcf.gz
 
 ## Setup environment
 ``` sh
-mamba create -n pantas2 -c bioconda -c conda-forge python=3.11.5 r-base numpy samtools bcftools biopython intervaltree snakemake-minimal vg=1.50.1 julia
-conda activate pantas2
+mamba create -n pantas-simexps -c bioconda -c conda-forge python=3.11.5 r-base numpy samtools bcftools biopython intervaltree snakemake-minimal vg=1.56
+conda activate pantas-simexps
 R
 > install.packages("remotes")
 > remotes::install_github("biomedbigdata/ASimulatoR")
@@ -43,6 +43,6 @@ R
 
 ### Run experiments
 ```
-snakemake -pc16 --config fa=/path/to/reference.fa gtf=/path/to/annotation.gtf vcf=/path/to/population.vcf.gz odir=/path/to/output/directory n=<nreads> [-n]
+snakemake -pc16 --config fa=/path/to/reference.fa gtf=/path/to/annotation.gtf vcf=/path/to/population.vcf.gz odir=/path/to/output/directory n=<nreads> --use-conda [-n]
 # Results: $odir/DGRP-897/compare-*.csv
 ```

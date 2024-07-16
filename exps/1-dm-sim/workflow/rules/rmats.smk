@@ -68,5 +68,5 @@ rule build_rmats:
         pjoin(ODIR, "{sample}", "rMATS-{annov}.csv"),
     shell:
         """
-        python3 build_rmats.py {wildcards.annov} {input.calls} > {output}
+        python3 scripts/build_rmats.py {wildcards.annov} {input.calls} > {output}
         """

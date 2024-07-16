@@ -51,7 +51,7 @@ rule simulate:
     threads: workflow.cores
     shell:
         """
-        Rscript asimulator.R {params.input_dir} {params.output_dir} {L} {N} {seed} {threads}
+        Rscript scripts/asimulator.R {params.input_dir} {params.output_dir} {L} {N} {seed} {threads}
         """
 
 
@@ -78,7 +78,7 @@ rule clean_samples:
         pjoin(ODIR, "{sample}", "asim-output", "sample_0{x}_2.clean.fq"),
     shell:
         """
-        python3 filter_reads.py {input.fq1} {input.fq2}
+        python3 scripts/filter_reads.py {input.fq1} {input.fq2}
         """
 
 
@@ -91,7 +91,7 @@ rule get_rc:
         csv=pjoin(ODIR, "{sample}", "asim-output", "read-counts.{x}.csv"),
     shell:
         """
-        python3 simrc.py {input.fq1} {input.tsv1} {input.tsv2} > {output.csv}
+        python3 scripts/simrc.py {input.fq1} {input.tsv1} {input.tsv2} > {output.csv}
         """
 
 
@@ -110,12 +110,11 @@ rule merge_rc:
 
 rule get_truth:
     input:
-        pyscript="build_truth.py",
         tsv=pjoin(ODIR, "{sample}", "asim-output", "event_annotation.tsv"),
         csv=pjoin(ODIR, "{sample}", "asim-output", "read-counts.csv"),
     output:
         csv=pjoin(ODIR, "{sample}", "truth.csv"),
     shell:
         """
-        python3 {input.pyscript} {input.tsv} {input.csv} > {output.csv}
+        python3 scripts/build_truth.py {input.tsv} {input.csv} > {output.csv}
         """

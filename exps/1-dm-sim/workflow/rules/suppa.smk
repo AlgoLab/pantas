@@ -35,7 +35,7 @@ rule suppa2:
     shell:
         """
         # NOTE: script is update to work with single replicate per condition
-        /usr/bin/time -vo {log} bash run_suppa2.sh {input.ioe} "{params.quants}" {output.outd}
+        /usr/bin/time -vo {log} bash scripts/run_suppa2.sh {input.ioe} "{params.quants}" {output.outd}
         """
 
 
@@ -46,5 +46,5 @@ rule build_suppa:
         csv=pjoin(ODIR, "{sample}", "SUPPA2-anno.csv"),
     shell:
         """
-        python3 build_suppa.py {input.calls} 100 > {output.csv}
+        python3 scripts/build_suppa.py {input.calls} 100 > {output.csv}
         """

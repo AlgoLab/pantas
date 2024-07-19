@@ -3,10 +3,10 @@
 #include <fstream>
 #include <iostream>
 #include <map>
-#include <string.h>
 #include <string>
 #include <unordered_set>
 
+#include "bdsg/packed_graph.hpp"
 #include "gbwt/gbwt.h"
 
 using namespace std;
@@ -17,10 +17,14 @@ typedef unordered_set<edge_t> edges_t;
 int main(int argc, char *argv[]) {
   time_t timestamp;
 
-  char *gfa_fn = argv[1];
+  char *pg_fn = argv[1];
   char *info_fn = argv[2];
   char *hap_gbwt_fn = argv[3];
   char *tr_gbwt_fn = argv[4];
+
+  // Open packed graph
+  bdsg::PackedGraph *graph = new bdsg::PackedGraph();
+  graph->deserialize(pg_fn);
 
   // Assuming bidirectional gbwt for reference and haplotypes (seems the case
   // with vg)
@@ -91,8 +95,9 @@ int main(int argc, char *argv[]) {
 
   map<int, string> VTAGS;
   map<edge_t, string> JTAGS;
-  int hh = 1, tt = 1;
+  int hh = 1, tt = 1, n;
   uint32_t x, y;
+  handlegraph::handle_t hx, hy;
   edge_t e;
   vector<string> tpaths;
   gbwt::vector_type path;
@@ -101,6 +106,8 @@ int main(int argc, char *argv[]) {
 
   // TODO: parallelize
 
+  set<int>
+      kept_ht; // set of haplotype transcripts that have been kept after pruning
   time(&timestamp);
   cerr << "\n@ " << ctime(&timestamp) << HAPS.size() << " haplotypes and "
        << HATR.size() << " haplotype-aware transcripts" << endl;
@@ -117,7 +124,7 @@ int main(int argc, char *argv[]) {
     haplotype.clear();
     path = hap_gbwt_idx.extract(HAPS[hpath]);
     // TODO: check path is on + strand
-    for (int n = 0; n < path.size() - 1; ++n) {
+    for (n = 0; n < path.size() - 1; ++n) {
       x = (uint32_t)gbwt::Node::id(path[n]);
       y = (uint32_t)gbwt::Node::id(path[n + 1]);
       haplotype.insert(((uint64_t)x << 32) | y);
@@ -132,6 +139,21 @@ int main(int argc, char *argv[]) {
       // if(gbwt::Path::is_reverse(pi))
       if (path.size() > 1 && gbwt::Node::id(path[0]) > gbwt::Node::id(path[1]))
         gbwt::reversePath(path);
+
+      // Check if haplotype-aware transcript has been pruned
+      for (n = 0; n < path.size() - 1; ++n) {
+        x = (uint32_t)gbwt::Node::id(path[n]);
+        y = (uint32_t)gbwt::Node::id(path[n + 1]);
+        if (!graph->has_node(x) or !graph->has_node(y))
+          break;
+        hx = graph->get_handle(x);
+        hy = graph->get_handle(y);
+        if (!graph->has_edge(hx, hy))
+          break;
+      }
+      if (n < path.size() - 1)
+        break;
+      kept_ht.insert(HATR[t]);
 
       int en = 1; // exon number
 
@@ -175,43 +197,67 @@ int main(int argc, char *argv[]) {
   cerr << "\n@ " << ctime(&timestamp) << "Dumping gfa to stdout ("
        << VTAGS.size() << " exonic vertices and " << JTAGS.size()
        << " junctions)" << endl;
-  ifstream gfa_f(gfa_fn);
-  string line;
-  int p, pp;
-  while (getline(gfa_f, line)) {
-    if (line[0] == 'S') {
-      p = 2;
-      while (line[p] != '\t')
-        ++p;
-      x = (uint32_t)stoi(line.substr(2, p - 2));
-      if (VTAGS.find(x) != VTAGS.end()) {
-        VTAGS[x].pop_back();
-        cout << line << "\t" << VTAGS[x] << endl;
-      } else {
-        cout << line << endl;
-      }
-    } else if (line[0] == 'L') {
-      p = 2;
-      while (line[p] != '\t')
-        ++p;
-      x = (uint32_t)stoi(line.substr(2, p - 2));
-      p += 3;
-      pp = p;
-      while (line[pp] != '\t')
-        ++pp;
-      y = (uint32_t)stoi(line.substr(p, pp - p));
+
+  cout << "H\tVN:Z:1.1" << endl;
+  for (x = graph->min_node_id(); x <= graph->max_node_id(); ++x) {
+    if (!graph->has_node(x))
+      // move to next
+      continue;
+    hx = graph->get_handle(x);
+    if (VTAGS.find(x) != VTAGS.end()) {
+      VTAGS[x].pop_back();
+      cout << "S"
+           << "\t" << x << "\t" << graph->get_sequence(hx) << "\t" << VTAGS[x]
+           << endl;
+    } else {
+      cout << "S"
+           << "\t" << x << "\t" << graph->get_sequence(hx) << endl;
+    }
+
+    set<bdsg::handle_t> outs;
+    graph->follow_edges(hx, false, [&outs](const bdsg::handle_t &hy) {
+      outs.insert(hy);
+      return true;
+    });
+    for (const bdsg::handle_t hy : outs) {
+      y = (uint32_t)graph->get_id(hy);
       edge_t e = ((uint64_t)x << 32) | y;
       if (JTAGS.find(e) != JTAGS.end()) {
         JTAGS[e].pop_back();
-        cout << line << "\t" << JTAGS[e] << endl;
+        cout << "L"
+             << "\t" << x << "\t"
+             << "+"
+             << "\t" << y << "\t"
+             << "+"
+             << "\t"
+             << "*"
+             << "\t" << JTAGS[e] << endl;
       } else {
-        cout << line << endl;
+        cout << "L"
+             << "\t" << x << "\t"
+             << "+"
+             << "\t" << y << "\t"
+             << "+"
+             << "\t"
+             << "*" << endl;
       }
-    } else {
-      cout << line << endl;
     }
   }
-  gfa_f.close();
+
+  // print paths
+  for (const auto &t : kept_ht) {
+    tpath = tr_gbwt_idx.metadata.full_path(t).sample_name;
+    path = tr_gbwt_idx.extract(t);
+    if (path.size() > 1 && gbwt::Node::id(path[0]) > gbwt::Node::id(path[1]))
+      gbwt::reversePath(path);
+    cout << "P"
+         << "\t" << tpath << "\t" << gbwt::Node::id(path[0]) << "+";
+    for (n = 1; n < path.size(); ++n) {
+      cout << "," << gbwt::Node::id(path[n]) << "+";
+    }
+    cout << "\t"
+         << "*" << endl;
+  }
 
   time(&timestamp);
   cerr << "\n@ " << ctime(&timestamp) << "Done." << endl;

@@ -32,6 +32,14 @@ def main():
                 path = [str(int(x[:-1]) + shift) + "+" for x in path.split(",")]
                 # we are sure to have something in rest
                 print("P", pname, ",".join(path), "\t".join(rest), sep="\t")
+            elif line.startswith("W"):
+                _, wname, i1, i2, i3, i4, path = line.strip("\n").split("\t")
+                strand = path[0]
+                path = path[1:]
+                path = [str(int(x)+shift) for x in path.split(strand)]
+                if i2 == "":
+                    i2 = "-"
+                print("W", wname, i1, i2, i3, i4, strand + strand.join(path), sep="\t")
         print(
             f"Dumped {gfa_fn} shifting by {shift}. New shift: {max_idx}",
             file=sys.stderr,

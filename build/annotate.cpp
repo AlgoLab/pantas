@@ -198,7 +198,10 @@ int main(int argc, char *argv[]) {
        << VTAGS.size() << " exonic vertices and " << JTAGS.size()
        << " junctions)" << endl;
 
+  // print header
   cout << "H\tVN:Z:1.1" << endl;
+
+  // print segments
   for (x = graph->min_node_id(); x <= graph->max_node_id(); ++x) {
     if (!graph->has_node(x))
       // move to next
@@ -213,7 +216,14 @@ int main(int argc, char *argv[]) {
       cout << "S"
            << "\t" << x << "\t" << graph->get_sequence(hx) << endl;
     }
+  }
 
+  // print links
+  for (x = graph->min_node_id(); x <= graph->max_node_id(); ++x) {
+    if (!graph->has_node(x))
+      // move to next
+      continue;
+    hx = graph->get_handle(x);
     set<bdsg::handle_t> outs;
     graph->follow_edges(hx, false, [&outs](const bdsg::handle_t &hy) {
       outs.insert(hy);

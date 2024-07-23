@@ -65,92 +65,91 @@ class Event:
         # on multiple haplotype-aware transcripts. We use the update function to
         # update the sets. When printing (to_csv()), we prioritize transcripts on reference "_R1"
 
-        match self.etype:
-            case "ES":
+        if self.etype == "ES":
+            self.event_cov = junction1_coverage
+            self.event_j = parse_nodes(junction1_nodes)
+            self.canonic_cov = (junction2_coverage + junction3_coverage) // 2
+            self.canonic_j = [
+                parse_nodes(junction2_nodes),
+                parse_nodes(junction3_nodes),
+            ]
+            self.event_nodes = [junction1_nodes]
+            self.canonic_nodes = sorted(
+                [junction2_nodes, junction3_nodes]
+            )  # CHECKME: this should work since ids are topological sorted
+            self.event_jname = [junction1_name]
+            self.canonic_jname = [junction2_name, junction3_name]
+        elif self.etype == "A5":
+            if self.strand == "+":
                 self.event_cov = junction1_coverage
                 self.event_j = parse_nodes(junction1_nodes)
-                self.canonic_cov = (junction2_coverage + junction3_coverage) // 2
-                self.canonic_j = [
-                    parse_nodes(junction2_nodes),
-                    parse_nodes(junction3_nodes),
-                ]
-                self.event_nodes = [junction1_nodes]
-                self.canonic_nodes = sorted(
-                    [junction2_nodes, junction3_nodes]
-                )  # CHECKME: this should work since ids are topological sorted
-                self.event_jname = [junction1_name]
-                self.canonic_jname = [junction2_name, junction3_name]
-            case "A5":
-                if self.strand == "+":
-                    self.event_cov = junction1_coverage
-                    self.event_j = parse_nodes(junction1_nodes)
-                    self.canonic_cov = junction2_coverage
-                    self.canonic_j = parse_nodes(junction2_nodes)
-                    self.event_nodes = [junction1_nodes, "."]
-                    self.canonic_nodes = [junction2_nodes]
-                    self.event_jname = [junction1_name, "."]
-                    self.canonic_jname = [junction2_name]
-                else:
-                    self.event_cov = junction2_coverage
-                    self.event_j = parse_nodes(junction2_nodes)
-                    self.canonic_cov = junction1_coverage
-                    self.canonic_j = parse_nodes(junction1_nodes)
-                    self.event_nodes = [junction2_nodes, "."]
-                    self.canonic_nodes = [junction1_nodes]
-                    self.event_jname = [junction2_name, "."]
-                    self.canonic_jname = [junction1_name]
-            case "A3":
-                if self.strand == "+":
-                    self.event_cov = junction2_coverage
-                    self.event_j = parse_nodes(junction2_nodes)
-                    self.canonic_cov = junction1_coverage
-                    self.canonic_j = parse_nodes(junction1_nodes)
-                    self.event_nodes = [junction2_nodes, "."]
-                    self.canonic_nodes = [junction1_nodes]
-                    self.event_jname = [junction2_name, "."]
-                    self.canonic_jname = [junction1_name]
-                else:
-                    self.event_cov = junction1_coverage
-                    self.event_j = parse_nodes(junction1_nodes)
-                    self.canonic_cov = junction2_coverage
-                    self.canonic_j = parse_nodes(junction2_nodes)
-                    self.event_nodes = [junction1_nodes, "."]
-                    self.canonic_nodes = [junction2_nodes]
-                    self.event_jname = [junction1_name, "."]
-                    self.canonic_jname = [junction2_name]
-            case "IR":
-                if annotation_type == "novel" and junction2_name == "?":
-                    self.event_cov = junction2_coverage
-                    self.event_j = parse_nodes(junction2_nodes)
-                    self.canonic_cov = junction1_coverage
-                    self.canonic_j = parse_nodes(junction1_nodes)
-                    self.event_nodes = [junction2_nodes, "."]
-                    self.canonic_nodes = [junction1_nodes]
-                    self.event_jname = [junction2_name, "."]
-                    self.canonic_jname = [junction1_name]
-                else:
-                    self.event_cov = junction1_coverage
-                    self.event_j = parse_nodes(junction1_nodes)
-                    self.canonic_cov = junction2_coverage
-                    self.canonic_j = parse_nodes(junction2_nodes)
-                    self.event_nodes = [junction1_nodes, "."]
-                    self.canonic_nodes = [junction2_nodes]
-                    self.event_jname = [junction1_name, "."]
-                    self.canonic_jname = [junction2_name]
-            case "CE":
-                self.event_cov = (junction2_coverage + junction3_coverage) // 2
-                self.event_j = [
-                    parse_nodes(junction2_nodes),
-                    parse_nodes(junction3_nodes),
-                ]
+                self.canonic_cov = junction2_coverage
+                self.canonic_j = parse_nodes(junction2_nodes)
+                self.event_nodes = [junction1_nodes, "."]
+                self.canonic_nodes = [junction2_nodes]
+                self.event_jname = [junction1_name, "."]
+                self.canonic_jname = [junction2_name]
+            else:
+                self.event_cov = junction2_coverage
+                self.event_j = parse_nodes(junction2_nodes)
                 self.canonic_cov = junction1_coverage
                 self.canonic_j = parse_nodes(junction1_nodes)
-                self.event_nodes = sorted(
-                    [junction2_nodes, junction3_nodes]
-                )  # CHECKME: this should work since ids are topological sorted
+                self.event_nodes = [junction2_nodes, "."]
                 self.canonic_nodes = [junction1_nodes]
-                self.event_jname = [junction2_name, junction3_name]
+                self.event_jname = [junction2_name, "."]
                 self.canonic_jname = [junction1_name]
+        elif self.etype == "A3":
+            if self.strand == "+":
+                self.event_cov = junction2_coverage
+                self.event_j = parse_nodes(junction2_nodes)
+                self.canonic_cov = junction1_coverage
+                self.canonic_j = parse_nodes(junction1_nodes)
+                self.event_nodes = [junction2_nodes, "."]
+                self.canonic_nodes = [junction1_nodes]
+                self.event_jname = [junction2_name, "."]
+                self.canonic_jname = [junction1_name]
+            else:
+                self.event_cov = junction1_coverage
+                self.event_j = parse_nodes(junction1_nodes)
+                self.canonic_cov = junction2_coverage
+                self.canonic_j = parse_nodes(junction2_nodes)
+                self.event_nodes = [junction1_nodes, "."]
+                self.canonic_nodes = [junction2_nodes]
+                self.event_jname = [junction1_name, "."]
+                self.canonic_jname = [junction2_name]
+        elif self.etype == "IR":
+            if annotation_type == "novel" and junction2_name == "?":
+                self.event_cov = junction2_coverage
+                self.event_j = parse_nodes(junction2_nodes)
+                self.canonic_cov = junction1_coverage
+                self.canonic_j = parse_nodes(junction1_nodes)
+                self.event_nodes = [junction2_nodes, "."]
+                self.canonic_nodes = [junction1_nodes]
+                self.event_jname = [junction2_name, "."]
+                self.canonic_jname = [junction1_name]
+            else:
+                self.event_cov = junction1_coverage
+                self.event_j = parse_nodes(junction1_nodes)
+                self.canonic_cov = junction2_coverage
+                self.canonic_j = parse_nodes(junction2_nodes)
+                self.event_nodes = [junction1_nodes, "."]
+                self.canonic_nodes = [junction2_nodes]
+                self.event_jname = [junction1_name, "."]
+                self.canonic_jname = [junction2_name]
+        elif self.etype == "CE":
+            self.event_cov = (junction2_coverage + junction3_coverage) // 2
+            self.event_j = [
+                parse_nodes(junction2_nodes),
+                parse_nodes(junction3_nodes),
+            ]
+            self.canonic_cov = junction1_coverage
+            self.canonic_j = parse_nodes(junction1_nodes)
+            self.event_nodes = sorted(
+                [junction2_nodes, junction3_nodes]
+            )  # CHECKME: this should work since ids are topological sorted
+            self.canonic_nodes = [junction1_nodes]
+            self.event_jname = [junction2_name, junction3_name]
+            self.canonic_jname = [junction1_name]
         self.add_replicate(replicate, self.event_cov, self.canonic_cov)
 
     def __repr__(self) -> str:

@@ -36,7 +36,7 @@ rule pantas2_build:
     threads: workflow.cores
     shell:
         """
-        /usr/bin/time -vo {log.time} bash ../../index/build.sh {input.fa} {input.gtf} {input.vcf} {params.wd} {threads}
+        /usr/bin/time -vo {log.time} bash ../../pantas build -t {threads} -o {params.wd} {input.fa} {input.gtf} {input.vcf}
         """
 
 

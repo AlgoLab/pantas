@@ -5,7 +5,7 @@ VERSION="1.0.0"
 
 REPO_ROOT="$(dirname $0)"
 
-USAGE=$''"${SCRIPT_NAME}"' [build|index|augment|call|quant|version] -h'
+USAGE=$''"${SCRIPT_NAME}"' [build|augment|call|quant|remap|version] -h'
 
 BUILD_USAGE=$''"${SCRIPT_NAME}"' build <FA> <GTF> <VCF>
 
@@ -26,17 +26,24 @@ Arguments:
 CALL_USAGE=$''"${SCRIPT_NAME}"' call <GFA> <GTF>
 
 Arguments:
-    -p <FPATH>       File containing the list of reference paths in the reduced graph (default: "")
-    -w <INT>         Minimum read count (default: 3)
-    -W <INT>         Minimum read count for annotated events (default: -1)
+    -w <INT>         Minimum read count for supporting junction (default: 1)
+    -i <INT>         Intronic search window for novel events,
+                     larger values reduce FP but increase time (default: 5)
     -n               Call novel events (default: False)
     -a               Do not call known annotated events (default: False)
     -h               Print this help and exit
 '
 
-QUANT_USAGE=$'Usage: '"${SCRIPT_NAME}"' quant <C1> <C2>
+QUANT_USAGE=$'Usage: '"${SCRIPT_NAME}"' quant <C1.R1> <C1.R2> <C1.Rx> <C2.R1> <C2.R2> <C2.Rx>
 
 Arguments:
+    -h               Print this help and exit
+'
+
+REMAP_USAGE=$''"${SCRIPT_NAME}"' remap <GFA> <GTF>
+
+Arguments:
+    -i <INT>         Minimum intron size (default: 25)
     -h               Print this help and exit
 '
 
@@ -109,17 +116,18 @@ elif [ "$MODE" == "call" ]; then
 	rc=""
 	noanno=""
 	novel=""
-	while getopts "w:W:anh" flag; do
+	isw=5
+	while getopts "w:anh" flag; do
 		case "${flag}" in
 		h)
 			$(echo >&2 "${CALL_USAGE}")
 			exit 0
 			;;
 		w)
-			rc="--rc ${OPTARG}"
+			rc="--rca ${OPTARG}"
 			;;
-		W)
-			rca="--rca ${OPTARG}"
+		i)
+			isw=${OPTARG}
 			;;
 		a)
 			noanno="--no-annotated"
@@ -138,11 +146,9 @@ elif [ "$MODE" == "call" ]; then
 
 	GFA=${@:$OPTIND:1}
 	GTF=${@:$OPTIND+1:1}
-	python3 $REPO_ROOT/scripts/call.py $rca $rc $noanno $novel $GFA $GTF
+	python3 $REPO_ROOT/scripts/call.py --isw $isw $rc $noanno $novel $GFA $GTF
 elif [ "$MODE" == "quant" ]; then
-	C1=""
-	C2=""
-	while getopts "1:2:h" flag; do
+	while getopts "h" flag; do
 		case "${flag}" in
 		h)
 			$(echo >&2 "${QUANT_USAGE}")
@@ -156,12 +162,40 @@ elif [ "$MODE" == "quant" ]; then
 		(echo >&2 "${QUANT_USAGE}")
 		exit 1
 	fi
+	nfp=$#
+	if [[ $((nfp % 2)) -eq 1 ]]; then
+		(echo >&2 "ERROR: Wrong number of replicates.")
+		(echo >&2 "")
+		(echo >&2 "${QUANT_USAGE}")
+		exit 1
+	fi
+	nr=$((nfp / 2))
 
-	C1=${@:$OPTIND:1}
-	C2=${@:$OPTIND+1:1}
-	C1=$(echo $C1 | tr "," " ")
-	C2=$(echo $C2 | tr "," " ")
-	python3 $REPO_ROOT/scripts/quantify3.py -c1 $C1 -c2 $C2
+	C1=${@:$OPTIND:$nr}
+	C2=${@:$OPTIND+$nr:$nr}
+	python3 $REPO_ROOT/scripts/quantify.py -c1 $C1 -c2 $C2
+elif [ "$MODE" == "remap" ]; then
+	min_intron_size=25
+	while getopts "i:h" flag; do
+		case "${flag}" in
+		i)
+			min_intron_size=${OPTARG}
+			;;
+		h)
+			$(echo >&2 "${REMAP_USAGE}")
+			exit 0
+			;;
+		esac
+	done
+	if [[ $# -lt $((${OPTIND} + 1)) ]]; then
+		(echo >&2 "ERROR: Wrong number of arguments.")
+		(echo >&2 "")
+		(echo >&2 "${REMAP_USAGE}")
+		exit 1
+	fi
+	CSV=${@:$OPTIND:1}
+	GTF=${@:$OPTIND+1:1}
+	python3 $REPO_ROOT/scripts/remap.py -i $min_intron_size $CSV $GTF
 else
 	echo $USAGE
 	exit 1

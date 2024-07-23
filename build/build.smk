@@ -6,30 +6,16 @@ FA = config["fa"]
 GTF = config["gtf"]
 VCF = config["vcf"]
 WD = config["wd"]
+HPRUNING = config["hp"] == 1
+# --add-ref-paths and --add-hap-paths are needed if we want to prune but keep transcripts
+# but --add-hap-paths makes the indexing too memory intensive (>256GB)
+# --add-ref-paths seems to work on drosophila. If we remove also this, we may end up with no reference transcripts and this may break something
 
-if not isfile(FA + ".fai"):
-    print("\n\nInput reference not indexed, please index with samtools faidx\n\n")
-    sys.exit(1)
-
-chroms = []
-for line in open(FA + ".fai"):
-    chroms.append(line.split("\t")[0])
-
-tprefix = ""
+chroms = set()
 for line in open(GTF):
     if line.startswith("#"):
         continue
-    line = line.strip("\n").split("\t")
-    t, info = line[2], line[-1]
-    if t in ["mRNA", "transcript"]:
-        info = info.split(";")
-        for i in info:
-            i = i.strip(" ")
-            i0, i1 = i.split(" ")
-            if i0 == "transcript_id":
-                tprefix = i1[1:5]
-                break
-        break
+    chroms.add(line.strip("\n").split("\t")[0])
 
 
 rule run:
@@ -163,6 +149,8 @@ rule rna_2:
         txt=pjoin(WD, "chroms", "{c}", "pantranscriptome.info"),
         tgbwt=pjoin(WD, "chroms", "{c}", "pantranscriptome.gbwt"),
         pg=pjoin(WD, "chroms", "{c}", "pantranscriptome.pg"),
+    params:
+        add_paths = "--add-ref-paths" + ("" if HPRUNING else " --add-hap-paths")
     log:
         pjoin(WD, "chroms", "{c}", "pantranscriptome.log"),
     benchmark:
@@ -170,10 +158,7 @@ rule rna_2:
     threads: workflow.cores / 2
     shell:
         """
-        # --add-ref-paths and --add-hap-paths are needed if we want to prune but keep transcripts
-        # but --add-hap-paths makes the indexing too memory intensive (>256GB)
-        # --add-ref-paths seems to work on drosophila. If we remove this, we may end up with no reference transcripts and this may break something
-        vg rna --progress --add-ref-paths --threads {threads} --haplotypes {input.gbwt} --transcripts {input.gtf} --write-info {output.txt} --write-gbwt {output.tgbwt} {input.pg} > {output.pg} 2> {log}
+        vg rna --progress {params.add_paths} --threads {threads} --haplotypes {input.gbwt} --transcripts {input.gtf} --write-info {output.txt} --write-gbwt {output.tgbwt} {input.pg} > {output.pg} 2> {log}
         """
 
 

@@ -3,9 +3,19 @@
 SCRIPT_NAME="pantas"
 VERSION="1.0.0"
 
-SCRIPTS_DIR="$(dirname $0)/scripts"
+REPO_ROOT="$(dirname $0)"
 
-USAGE=$''"${SCRIPT_NAME}"' [augment|call|quant|version] -h'
+USAGE=$''"${SCRIPT_NAME}"' [build|index|augment|call|quant|version] -h'
+
+BUILD_USAGE=$''"${SCRIPT_NAME}"' build <FA> <GTF> <VCF>
+
+Arguments:
+    -o <FPATH>       Output directory (default: .)
+	-a               Perform aggressive pruning,
+	                 do not restore haplotype transcripts (default: False)
+    -t <INT>         Number of threads (default: 8)
+    -h               Print this help and exit
+'
 
 AUG_USAGE=$''"${SCRIPT_NAME}"' augment <GAF> <GFA>
 
@@ -35,6 +45,46 @@ shift # to "remove" subcommand for getopts
 
 if [ "$MODE" == "version" ]; then
 	echo "$SCRIPT_NAME, $VERSION"
+elif [ "$MODE" == "build" ]; then
+	WD="."
+	nt=8
+	hp=0
+	while getopts "o:t:ah" flag; do
+		case "${flag}" in
+		h)
+			$(echo >&2 "${BUILD_USAGE}")
+			exit 0
+			;;
+		o)
+			WD=${OPTARG}
+			;;
+		a)
+		    hp=1
+			;;
+		t)
+			nt=${OPTARG}
+			;;
+		esac
+	done
+	if [[ $# -lt $((${OPTIND} + 2)) ]]; then
+		(echo >&2 "ERROR: Wrong number of arguments.")
+		(echo >&2 "")
+		(echo >&2 "${BUILD_USAGE}")
+		exit 1
+	fi
+
+	FA=${@:$OPTIND:1}
+	GTF=${@:$OPTIND+1:1}
+	VCF=${@:$OPTIND+2:1}
+
+	if [ "${WD:0:1}" != "/" ]
+	then
+		WD=$(pwd)/$WD
+	fi
+	pushd $REPO_ROOT/build &> /dev/null
+	echo $hp
+	snakemake -c$nt --config fa=$FA gtf=$GTF vcf=$VCF wd=$WD hp=$hp -s build.smk
+	popd &> /dev/null
 elif [ "$MODE" == "augment" ]; then
 	while getopts "h" flag; do
 		case "${flag}" in
@@ -53,7 +103,7 @@ elif [ "$MODE" == "augment" ]; then
 
 	GAF=${@:$OPTIND:1}
 	GFA=${@:$OPTIND+1:1}
-	python3 $SCRIPTS_DIR/alignments_augmentation_from_gaf.py $GAF $GFA
+	python3 $REPO_ROOT/scripts/alignments_augmentation_from_gaf.py $GAF $GFA
 elif [ "$MODE" == "call" ]; then
 	rca=""
 	rc=""
@@ -88,7 +138,7 @@ elif [ "$MODE" == "call" ]; then
 
 	GFA=${@:$OPTIND:1}
 	GTF=${@:$OPTIND+1:1}
-	python3 $SCRIPTS_DIR/call.py $rca $rc $noanno $novel $GFA $GTF
+	python3 $REPO_ROOT/scripts/call.py $rca $rc $noanno $novel $GFA $GTF
 elif [ "$MODE" == "quant" ]; then
 	C1=""
 	C2=""
@@ -111,7 +161,7 @@ elif [ "$MODE" == "quant" ]; then
 	C2=${@:$OPTIND+1:1}
 	C1=$(echo $C1 | tr "," " ")
 	C2=$(echo $C2 | tr "," " ")
-	python3 $SCRIPTS_DIR/quantify3.py -c1 $C1 -c2 $C2
+	python3 $REPO_ROOT/scripts/quantify3.py -c1 $C1 -c2 $C2
 else
 	echo $USAGE
 	exit 1

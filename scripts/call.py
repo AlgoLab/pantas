@@ -214,24 +214,23 @@ def main(args):
             genestrand[gidx] = line[6]
             genechr[gidx] = line[0]
 
-    if args.header:
-        print(
-            "event_type",
-            "annotated/novel",
-            "chrom",
-            "gene",
-            "strand",
-            "transcripts1",
-            "transcripts2",
-            "transcripts3",
-            "nodes1",
-            "coverage1",
-            "nodes2",
-            "coverage2",
-            "nodes3",
-            "coverage3",
-            sep=",",
-        )
+    print(
+        "event_type",
+        "annotated/novel",
+        "chrom",
+        "gene",
+        "strand",
+        "transcripts1",
+        "transcripts2",
+        "transcripts3",
+        "nodes1",
+        "coverage1",
+        "nodes2",
+        "coverage2",
+        "nodes3",
+        "coverage3",
+        sep=",",
+    )
 
     # TODO: we may need adjacency lists
 
@@ -749,7 +748,7 @@ def main(args):
                     pvisitl = 1
                     _i = 0
                     # we don't need to store the subpath
-                    while len(visit & exonic_next) == 0 and _i < 5:  # FIXME: hardcoded
+                    while len(visit & exonic_next) == 0 and _i < args.isw:  # FIXME: hardcoded
                         n = visit.pop()
                         pvisitl -= 1
                         visit |= set(get_outgoing_nodes(gfaS, n))
@@ -757,7 +756,7 @@ def main(args):
                             _i += 1
                             pvisitl = len(visit)
                     # TODO: here we are reporting only one event per novel junction. We could do a visit for **each** exonic_next
-                    if _i < 5:
+                    if _i < args.isw:
                         # we report the event since we found a path
                         j1 = (_j[0], next(iter(visit & exonic_next)))
                         _genes = set(
@@ -797,7 +796,7 @@ def main(args):
                     pvisitl = 1
                     _i = 0
                     # we don't need to store the subpath
-                    while len(visit & exonic_prev) == 0 and _i < 5:  # FIXME: hardcoded
+                    while len(visit & exonic_prev) == 0 and _i < args.isw:
                         n = visit.pop()
                         pvisitl -= 1
                         visit |= set(get_incoming_nodes(gfaS, n))
@@ -805,7 +804,7 @@ def main(args):
                             _i += 1
                             pvisitl = len(visit)
                     # TODO: here we are reporting only one event per novel junction. We could do a visit for **each** exonic_next
-                    if _i < 5:
+                    if _i < args.isw:
                         # we report the event since we found a path
                         j1 = (next(iter(visit & exonic_prev)), _j[1])
                         _genes = set(
@@ -888,7 +887,96 @@ def main(args):
                             ".",
                             sep=",",
                         )
-                    # --- in any case, see if we can "connect" two exons
+
+        if "IR" in args.events or "ES" in args.events:
+            for _j in junctions:
+                if gfaL[_j]["RC"] < args.rca:
+                    continue
+                _ht = get_haplotranscripts_from_junction(gfaL[_j]["JN"])
+                _genes = set(transcript2gene[t] for t in _ht)
+                if len(_genes) > 1:
+                    # FIXME: this could be a quite strong assumption
+                    continue
+                _gene = next(iter(_genes))
+
+                _exons0 = get_set_exons(gfaS, _j[0])
+                _exons1 = get_set_exons(gfaS, _j[1])
+
+                # eprint(
+                #     f"Checking annotated junction {_j[0]} -> {_j[1]}", file=sys.stderr
+                # )
+
+                # we want exons on same gene only
+                # FIXME: this can be done way better
+                _exons0 = set(
+                    e
+                    for e in _exons0
+                    if len(
+                        _genes
+                        & set(
+                            transcript2gene[t]
+                            for t in get_haplotranscripts_from_exon(e)
+                        )
+                    )
+                    > 0
+                )
+                _exons1 = set(
+                    e
+                    for e in _exons1
+                    if len(
+                        _genes
+                        & set(
+                            transcript2gene[t]
+                            for t in get_haplotranscripts_from_exon(e)
+                        )
+                    )
+                    > 0
+                )
+
+                assert len(_exons0) > 0 and len(_exons1) > 0
+
+                # Find the outgoing novel junctions of the head of the junction we are checking
+                Js1 = set(x for x in noveljunctions if x[0] == _j[0]) - set([_j])
+                # Find the incoming novel junctions of the tail of the junction we are checking
+                Js2 = set(x for x in noveljunctions if x[1] == _j[1]) - set([_j])
+
+                # filter by weigth # CHECKME: do we want this?
+                # Js1 = set(filter(lambda x: gfaL[x]["RC"] >= args.rca, Js1))
+                # Js2 = set(filter(lambda x: gfaL[x]["RC"] >= args.rca, Js2))
+
+                # Cassete exons
+                if "ES" in args.events:
+                    # print(_j, Js1, Js2,  file=sys.stderr)
+                    if len(Js1) > 0 and len(Js2) > 0:
+                        # eprint(f"Checking novel CE", file=sys.stderr)
+                        novel_exons = set()
+                        for j1, j2 in itertools.product(Js1, Js2):
+                            # find the novel exon
+                            if j1[1] <= j2[0]:
+                                # this holds if we assume topological sorting
+                                # CHECKME: do we need additional conditions?
+                                novel_exons.add((j1[1], j2[0]))
+                        for es, ee in novel_exons:
+                            j1 = (_j[0], es)
+                            j2 = (ee, _j[1])
+                            print(
+                                "CE",
+                                "novel",
+                                genechr[_gene],
+                                _gene,
+                                genestrand[_gene],
+                                "|".join(gfaL[_j]["JN"]),
+                                "?",
+                                "?",
+                                ">".join(_j),
+                                gfaL[_j]["RC"],
+                                ">".join(j1),
+                                gfaL[j1]["RC"],
+                                ">".join(j2),
+                                gfaL[j2]["RC"],
+                                sep=",",
+                            )
+                if "IR" in args.events:
                     # FIXME: we may confuse ES with IR
                     # if any([gfaL[(_j[0], x)]["RC"] >= args.rca for x in get_outgoing_nodes(gfaS, _j[0]) if (_j[0], x) not in junctions]) and any([gfaL[(x, _j[1])]["RC"] >= args.rca for x in get_incoming_nodes(gfaS, _j[1]) if (x, _j[1]) not in junctions]):
                     # Assuming that we may have a variation after/before the exons, we check few edges based on topological sorting
@@ -993,93 +1081,6 @@ def main(args):
                                     sep=",",
                                 )
 
-        # Cassete exons
-        if "SE" in args.events:
-            for _j in junctions:
-                if gfaL[_j]["RC"] < args.rca:
-                    continue
-                _ht = get_haplotranscripts_from_junction(gfaL[_j]["JN"])
-                _genes = set(transcript2gene[t] for t in _ht)
-                if len(_genes) > 1:
-                    # FIXME: this could be a quite strong assumption
-                    continue
-                _gene = next(iter(_genes))
-
-                _exons1 = get_set_exons(gfaS, _j[0])
-                _exons2 = get_set_exons(gfaS, _j[1])
-
-                # eprint(
-                #     f"Checking annotated junction {_j[0]} -> {_j[1]}", file=sys.stderr
-                # )
-
-                # we want exons on same gene only
-                # FIXME: this can be done way better
-                _exons1 = set(
-                    e
-                    for e in _exons1
-                    if len(
-                        _genes
-                        & set(
-                            transcript2gene[t]
-                            for t in get_haplotranscripts_from_exon(e)
-                        )
-                    )
-                    > 0
-                )
-                _exons2 = set(
-                    e
-                    for e in _exons2
-                    if len(
-                        _genes
-                        & set(
-                            transcript2gene[t]
-                            for t in get_haplotranscripts_from_exon(e)
-                        )
-                    )
-                    > 0
-                )
-
-                assert len(_exons1) > 0 and len(_exons2) > 0
-
-                # Find the outgoing novel junctions of the head of the junction we are checking
-                Js1 = set(x for x in noveljunctions if x[0] == _j[0]) - set([_j])
-                # Find the incoming novel junctions of the tail of the junction we are checking
-                Js2 = set(x for x in noveljunctions if x[1] == _j[1]) - set([_j])
-
-                # filter by weigth
-                Js1 = set(filter(lambda x: gfaL[x]["RC"] >= args.rca, Js1))
-                Js2 = set(filter(lambda x: gfaL[x]["RC"] >= args.rca, Js2))
-
-                if len(Js1) > 0 and len(Js2) > 0:
-                    # eprint(f"Checking novel CE", file=sys.stderr)
-                    novel_exons = set()
-                    for j1, j2 in itertools.product(Js1, Js2):
-                        # find the novel exon
-                        if j1[1] <= j2[0]:
-                            # this holds if we assume topological sorting
-                            # FIXME: do we need additional conditions?
-                            novel_exons.add((j1[1], j2[0]))
-                    for es, ee in novel_exons:
-                        j1 = (_j[0], es)
-                        j2 = (ee, _j[1])
-                        print(
-                            "CE",
-                            "novel",
-                            genechr[_gene],
-                            _gene,
-                            genestrand[_gene],
-                            "|".join(gfaL[_j]["JN"]),
-                            "?",
-                            "?",
-                            ">".join(_j),
-                            gfaL[_j]["RC"],
-                            ">".join(j1),
-                            gfaL[j1]["RC"],
-                            ">".join(j2),
-                            gfaL[j2]["RC"],
-                            sep=",",
-                        )
-
     if args.novel:
         check_novel()
 
@@ -1093,22 +1094,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("GFA", help="Spliced pangenome in GFA format")
     parser.add_argument("GTF", help="Annotation in GTF format")
-    parser.add_argument(
-        "--rp",
-        help='Reduceed spliced pangenome reference paths (default: "")',
-        dest="RP",
-        type=str,
-        required=False,
-        default="",
-    )
-    parser.add_argument(
-        "--rc",
-        help="Minimum read count (default: 3)",
-        dest="rc",
-        type=int,
-        required=False,
-        default=3,
-    )
     parser.add_argument(
         "--rca",
         help="Minimum read count for annotated events (default: -1)",
@@ -1140,8 +1125,8 @@ if __name__ == "__main__":
         default=["ES", "SS", "IR"],
     )
     parser.add_argument(
-        "--w",
-        dest="irw",
+        "--isw",
+        dest="isw",
         help="Intronic search window for novel events, larger values reduce FP but increase time (default: 5)",
         type=int,
         default=5,
@@ -1157,13 +1142,6 @@ if __name__ == "__main__":
         "--debug",
         dest="debug",
         help="Debug (default: False)",
-        action="store_true",
-        default=False,
-    )
-    parser.add_argument(
-        "--header",
-        dest="header",
-        help="Print CSV header (default: False)",
         action="store_true",
         default=False,
     )

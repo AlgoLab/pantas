@@ -106,7 +106,6 @@ rule pantas2_mpmap_bam:
 
 rule pantas_weight:
     input:
-        script="../../scripts/alignments_augmentation_from_gaf.py",
         gfa=pjoin(
             ODIR,
             "{sample}",
@@ -122,13 +121,12 @@ rule pantas_weight:
         pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "weight{x}.time"),
     shell:
         """
-        /usr/bin/time -vo {log} python3 {input.script} {input.gaf} {input.gfa} > {output.gfa}
+        /usr/bin/time -vo {log} bash ../../pantas augment {input.gaf} {input.gfa} > {output.gfa}
         """
 
 
 rule pantas_call:
     input:
-        script="../../scripts/call.py",
         gfa=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "graph_{x}.gfa"),
         gtf=lambda wildcards: (
             pjoin(ODIR, "{sample}", "asim-output", "splicing_variants.gtf")
@@ -139,20 +137,18 @@ rule pantas_call:
         csv=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "events_{x}.w{w}.csv"),
         # log=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "events_{x}.w{w}.log"),
     params:
-        novelp=lambda wildcards: "" if wildcards.annov == "anno" else "--novel",
-        # --no-annotated
+        novelp=lambda wildcards: "" if wildcards.annov == "anno" else "-n -a",
     threads: workflow.cores / 2
     log:
         pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "call{x}.w{w}.time"),
     shell:
         """
-        /usr/bin/time -vo {log} python3 {input.script} --header {params.novelp} --rca {wildcards.w} {input.gfa} {input.gtf} > {output.csv}
+        /usr/bin/time -vo {log} bash ../../pantas call {params.novelp} -w {wildcards.w} {input.gfa} {input.gtf} > {output.csv}
         """
 
 
 rule pantas_quant:
     input:
-        py="../../scripts/quantify.py",
         csv1=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "events_1.w{w}.csv"),
         csv2=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "events_2.w{w}.csv"),
     output:
@@ -161,13 +157,12 @@ rule pantas_quant:
         pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "quant.w{w}.time"),
     shell:
         """
-        /usr/bin/time -vo {log} python3 {input.py} -c1 {input.csv1} -c2 {input.csv2} > {output.csv}
+        /usr/bin/time -vo {log} bash ../../pantas quant {input.csv1} {input.csv2} > {output.csv}
         """
 
 
 rule pantas_remap:
     input:
-        py="../../scripts/remap.py",
         csv=pjoin(ODIR, "{sample}", "{annov}", "pantas2", "quant.w{w}.csv"),
         gtf=lambda wildcards: (
             pjoin(ODIR, "{sample}", "asim-output", "splicing_variants.gtf")
@@ -180,5 +175,5 @@ rule pantas_remap:
         pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "remap.w{w}.time"),
     shell:
         """
-        /usr/bin/time -vo {log} python3 {input.py} {input.csv} {input.gtf} > {output.csv}
+        /usr/bin/time -vo {log} bash ../../pantas remap {input.csv} {input.gtf} > {output.csv}
         """

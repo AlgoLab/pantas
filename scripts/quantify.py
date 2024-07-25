@@ -396,9 +396,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-w",
         dest="w",
-        help="Minimum value of read count of the event to be valid (Default: 1)",
+        help="Minimum value of read counts on each junction of the event to be valid (Default: 0)",
         type=int,
-        default=1,
+        default=0,
     )
     args = parser.parse_args()
 

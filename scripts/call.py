@@ -667,7 +667,7 @@ def main(args):
                                 continue
                             _gene = next(iter(_genes))
                             print(
-                                ("A3" if genestrand[_gene] == "+" else "A5"),
+                                "A3" if genestrand[_gene] == "+" else "A5",
                                 "novel",
                                 genechr[_gene],
                                 _gene,
@@ -820,7 +820,7 @@ def main(args):
                             continue
                         _gene = next(iter(_genes))
                         print(
-                            ("A3" if genestrand[_gene] == "+" else "A5") + "'",
+                            "A3" if genestrand[_gene] == "+" else "A5",
                             "novel",
                             genechr[_gene],
                             _gene,
@@ -1050,11 +1050,7 @@ def main(args):
                                 _gene = next(iter(_genes))
 
                                 # we report just one junction on one transcript
-                                jann = (
-                                    exon_pairs[0][0]
-                                    + "."
-                                    + exon_pairs[0][1].split(".")[-1]
-                                )
+                                jann = "|".join([e1 + "." + e2.split(".")[-1] for e1, e2 in exon_pairs])
                                 print(
                                     "IR",
                                     "novel",

@@ -77,6 +77,7 @@ int main(int argc, char *argv[]) {
       continue;
     HAPS[hpath] = gbwt::Path::encode(i, false);
   }
+  assert(HAPS.find(contig) != HAPS.end());
 
   // Opening haplotype-aware transcripts gBWT
   time(&timestamp);
@@ -254,19 +255,42 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // print paths
-  for (const auto &t : kept_ht) {
-    tpath = tr_gbwt_idx.metadata.full_path(t).sample_name;
-    path = tr_gbwt_idx.extract(t);
-    if (path.size() > 1 && gbwt::Node::id(path[0]) > gbwt::Node::id(path[1]))
-      gbwt::reversePath(path);
-    cout << "P"
-         << "\t" << tpath << "\t" << gbwt::Node::id(path[0]) << "+";
+  // print reference path
+  path = hap_gbwt_idx.extract(HAPS[contig]);
+  cout << "P"
+         << "\t" << contig << "\t" << gbwt::Node::id(path[0]) << "+";
     for (n = 1; n < path.size(); ++n) {
       cout << "," << gbwt::Node::id(path[n]) << "+";
     }
     cout << "\t"
          << "*" << endl;
+
+  // print transcript paths
+  string sep = "+";
+  for (const auto &t : kept_ht) {
+    tpath = tr_gbwt_idx.metadata.full_path(t).sample_name;
+    path = tr_gbwt_idx.extract(t);
+    if (path.size() > 1 && gbwt::Node::id(path[0]) > gbwt::Node::id(path[1])) {
+      sep = "-";
+    }
+    cout << "P"
+         << "\t" << tpath << "\t" << gbwt::Node::id(path[0]) << sep;
+    for (n = 1; n < path.size(); ++n) {
+      cout << "," << gbwt::Node::id(path[n]) << sep;
+    }
+    cout << "\t"
+         << "*" << endl;
+
+    // CHECKME: it is not clear to me if mpmap needs both directions or just one
+    // gbwt::reversePath(path);
+    // sep = sep == "+" ? "-" : "+";
+    // cout << "P"
+    //      << "\t" << tpath << "'" << "\t" << gbwt::Node::id(path[0]) << sep;
+    // for (n = 1; n < path.size(); ++n) {
+    //   cout << "," << gbwt::Node::id(path[n]) << sep;
+    // }
+    // cout << "\t"
+    //      << "*" << endl;
   }
 
   time(&timestamp);

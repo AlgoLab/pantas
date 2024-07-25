@@ -162,7 +162,7 @@ def main(args):
                     junction2_nodes = "."
                     W1, W2 = W2, W1
                     psi_c1, psi_c2 = psi_c2, psi_c1
-                    dpsi = 1.0 - float(dpsi)
+                    dpsi = -float(dpsi)
                 elif positions[1] == "?":
                     pass
                 else:
@@ -177,7 +177,7 @@ def main(args):
                         )
                         W1, W2 = W2, W1
                         psi_c1, psi_c2 = psi_c2, psi_c1
-                        dpsi = 1.0 - float(dpsi)
+                        dpsi = -float(dpsi)
             elif etype == "IR":
                 junction1_name = junction2_name
                 junction2_name = "?"
@@ -187,7 +187,7 @@ def main(args):
                 junction2_nodes = "."
                 W1, W2 = W2, W1
                 psi_c1, psi_c2 = psi_c2, psi_c1
-                dpsi = 1.0 - float(dpsi)
+                dpsi = -float(dpsi)
 
         htype = "reference"
         if annotation_type == "annotated":

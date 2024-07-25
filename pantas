@@ -37,6 +37,8 @@ Arguments:
 QUANT_USAGE=$'Usage: '"${SCRIPT_NAME}"' quant <C1.R1> <C1.R2> <C1.Rx> <C2.R1> <C2.R2> <C2.Rx>
 
 Arguments:
+    -w <INT>         Minimum read count for all junctions (default: 1)
+    -a               Report all events (not only those correctly quantified in both conditions)
     -h               Print this help and exit
 '
 
@@ -148,8 +150,16 @@ elif [ "$MODE" == "call" ]; then
 	GTF=${@:$OPTIND+1:1}
 	python3 $REPO_ROOT/scripts/call.py --isw $isw $rc $noanno $novel $GFA $GTF
 elif [ "$MODE" == "quant" ]; then
-	while getopts "h" flag; do
+	both="--both"
+	w=0
+	while getopts "w:ah" flag; do
 		case "${flag}" in
+		w)
+			w=${OPTARG}
+			;;
+		a)
+			both=""
+			;;
 		h)
 			$(echo >&2 "${QUANT_USAGE}")
 			exit 0
@@ -162,7 +172,7 @@ elif [ "$MODE" == "quant" ]; then
 		(echo >&2 "${QUANT_USAGE}")
 		exit 1
 	fi
-	nfp=$#
+	nfp=$(($# - ${OPTIND} + 1))
 	if [[ $((nfp % 2)) -eq 1 ]]; then
 		(echo >&2 "ERROR: Wrong number of replicates.")
 		(echo >&2 "")
@@ -173,7 +183,7 @@ elif [ "$MODE" == "quant" ]; then
 
 	C1=${@:$OPTIND:$nr}
 	C2=${@:$OPTIND+$nr:$nr}
-	python3 $REPO_ROOT/scripts/quantify.py -c1 $C1 -c2 $C2
+	python3 $REPO_ROOT/scripts/quantify.py -w $w $both --c1 $C1 --c2 $C2
 elif [ "$MODE" == "remap" ]; then
 	min_intron_size=25
 	while getopts "i:h" flag; do

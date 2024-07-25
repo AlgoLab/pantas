@@ -260,6 +260,8 @@ def main(args):
         _ei = parse_pantas(fpath, i)
         for etype in ETYPES:
             for _ee in _ei[etype]:
+                if _ee.canonic_cov < args.w or _ee.event_cov < args.w:
+                    continue
                 eqs = [x for x in events_1[etype] if eq_event(_ee, x)]
                 if len(eqs) > 0:
                     assert len(eqs) == 1
@@ -276,6 +278,8 @@ def main(args):
         _ei = parse_pantas(fpath, i)
         for etype in ETYPES:
             for _ee in _ei[etype]:
+                if _ee.canonic_cov < args.w or _ee.event_cov < args.w:
+                    continue
                 eqs = [x for x in events_2[etype] if eq_event(_ee, x)]
                 if len(eqs) > 0:
                     assert len(eqs) == 1
@@ -315,8 +319,6 @@ def main(args):
                 dpsi = max(0, psi1) - max(0, psi2)
                 if psi1 == -1 and psi2 == -1:
                     dpsi = -1
-                if abs(dpsi) < args.mindpsi:
-                    continue
                 print(
                     e1.to_csv(),
                     f"{e1.get_canonic_cov()}/{e1.get_event_cov()}",
@@ -330,8 +332,6 @@ def main(args):
                 if args.both:
                     continue
                 if not e1.psi() == -1:
-                    if e1.get_event_cov() < args.minrc:
-                        continue
                     psi2 = "NaN"
                     dpsi = "NaN"
                     w2 = "."
@@ -348,8 +348,6 @@ def main(args):
             for e2 in events_2[etype]:
                 eqs = [x for x in events_1[etype] if eq_event(e2, x)]
                 if len(eqs) == 0 and not e2.psi() == -1:
-                    if e2.get_event_cov() < args.minrc:
-                        continue
                     psi1 = "NaN"
                     dpsi = "NaN"
                     w1 = "."
@@ -372,7 +370,7 @@ if __name__ == "__main__":
         description="",
     )
     parser.add_argument(
-        "-c1",
+        "--c1",
         help="Replicates of condition 1",
         dest="c1",
         type=str,
@@ -380,7 +378,7 @@ if __name__ == "__main__":
         nargs="+",
     )
     parser.add_argument(
-        "-c2",
+        "--c2",
         help="Replicates of condition 2",
         dest="c2",
         type=str,
@@ -395,21 +393,12 @@ if __name__ == "__main__":
         default=False,
         action="store_true",
     )
-
-    # CHECKME: do we want these?
     parser.add_argument(
-        "--mindpsi",
-        dest="mindpsi",
-        help="Minimum value of delta-psi (absolute value) to be valid (Default: 0.0)",
-        type=float,
-        default=0.0,
-    )
-    parser.add_argument(
-        "--minrc",
-        dest="minrc",
-        help="Minimum value of read count of the event to be valid (Default: 0)",
+        "-w",
+        dest="w",
+        help="Minimum value of read count of the event to be valid (Default: 1)",
         type=int,
-        default=0,
+        default=1,
     )
     args = parser.parse_args()
 

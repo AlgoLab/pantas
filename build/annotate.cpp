@@ -255,9 +255,13 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // print reference path
-  path = hap_gbwt_idx.extract(HAPS[contig]);
-  cout << "P"
+  if (graph->get_path_count() == 0) {
+    // we do not have paths in the graph (we pruned it)
+    cerr << "Extracting paths from the .gbwt" << endl;
+
+    // print reference path
+    path = hap_gbwt_idx.extract(HAPS[contig]);
+    cout << "P"
          << "\t" << contig << "\t" << gbwt::Node::id(path[0]) << "+";
     for (n = 1; n < path.size(); ++n) {
       cout << "," << gbwt::Node::id(path[n]) << "+";
@@ -265,33 +269,58 @@ int main(int argc, char *argv[]) {
     cout << "\t"
          << "*" << endl;
 
-  // print transcript paths
-  string sep = "+";
-  for (const auto &t : kept_ht) {
-    tpath = tr_gbwt_idx.metadata.full_path(t).sample_name;
-    path = tr_gbwt_idx.extract(t);
-    if (path.size() > 1 && gbwt::Node::id(path[0]) > gbwt::Node::id(path[1])) {
-      sep = "-";
-    }
-    cout << "P"
-         << "\t" << tpath << "\t" << gbwt::Node::id(path[0]) << sep;
-    for (n = 1; n < path.size(); ++n) {
-      cout << "," << gbwt::Node::id(path[n]) << sep;
-    }
-    cout << "\t"
-         << "*" << endl;
+    // print transcript paths
+    string sep = "+";
+    for (const auto &t : kept_ht) {
+      tpath = tr_gbwt_idx.metadata.full_path(t).sample_name;
+      path = tr_gbwt_idx.extract(t);
+      if (path.size() > 1 &&
+          gbwt::Node::id(path[0]) > gbwt::Node::id(path[1])) {
+        sep = "-";
+      }
+      cout << "P"
+           << "\t" << tpath << "\t" << gbwt::Node::id(path[0]) << sep;
+      for (n = 1; n < path.size(); ++n) {
+        cout << "," << gbwt::Node::id(path[n]) << sep;
+      }
+      cout << "\t"
+           << "*" << endl;
 
-    // CHECKME: it is not clear to me if mpmap needs both directions or just one
-    // gbwt::reversePath(path);
-    // sep = sep == "+" ? "-" : "+";
-    // cout << "P"
-    //      << "\t" << tpath << "'" << "\t" << gbwt::Node::id(path[0]) << sep;
-    // for (n = 1; n < path.size(); ++n) {
-    //   cout << "," << gbwt::Node::id(path[n]) << sep;
-    // }
-    // cout << "\t"
-    //      << "*" << endl;
+      // CHECKME: it is not clear to me if mpmap needs both directions or just
+      // one gbwt::reversePath(path); sep = sep == "+" ? "-" : "+"; cout << "P"
+      //      << "\t" << tpath << "'" << "\t" << gbwt::Node::id(path[0]) << sep;
+      // for (n = 1; n < path.size(); ++n) {
+      //   cout << "," << gbwt::Node::id(path[n]) << sep;
+      // }
+      // cout << "\t"
+      //      << "*" << endl;
+    }
+  } else {
+    // we have paths in the graph (reduce instead of prune)
+    cerr << "Extracting paths from the .pg" << endl;
+
+    vector<bdsg::path_handle_t> paths;
+    graph->for_each_path_handle(
+        [&paths](const bdsg::path_handle_t &ph) { paths.push_back(ph); });
+    assert(graph->get_path_count() == paths.size());
+
+    bdsg::step_handle_t step;
+    for (const bdsg::path_handle_t &ph : paths) {
+      step = graph->path_begin(ph);
+      cout << "P"
+           << "\t" << graph->get_path_name(ph) << "\t"
+           << graph->get_id(graph->get_handle_of_step(step)) << "+";
+      step = graph->get_next_step(step);
+      while (step != graph->path_end(ph)) {
+        cout << "," << graph->get_id(graph->get_handle_of_step(step)) << "+";
+        step = graph->get_next_step(step);
+      }
+      cout << "\t"
+           << "*" << endl;
+    }
   }
+
+  delete graph;
 
   time(&timestamp);
   cerr << "\n@ " << ctime(&timestamp) << "Done." << endl;

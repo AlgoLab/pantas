@@ -6,7 +6,7 @@ FA = config["fa"]
 GTF = config["gtf"]
 VCF = config["vcf"]
 WD = config["wd"]
-HPRUNING = config["hp"] == 1
+HPRUNING = config["hp"]
 # --add-ref-paths and --add-hap-paths are needed if we want to prune but keep transcripts
 # but --add-hap-paths makes the indexing too memory intensive (>256GB)
 # --add-ref-paths seems to work on drosophila. If we remove also this, we may end up with no reference transcripts and this may break something
@@ -150,7 +150,7 @@ rule rna_2:
         tgbwt=pjoin(WD, "chroms", "{c}", "pantranscriptome.gbwt"),
         pg=pjoin(WD, "chroms", "{c}", "pantranscriptome.pg"),
     params:
-        add_paths = "--add-ref-paths" + ("" if HPRUNING else " --add-hap-paths")
+        add_paths = "--add-ref-paths" + ("" if HPRUNING == 1 else " --add-hap-paths")
     log:
         pjoin(WD, "chroms", "{c}", "pantranscriptome.log"),
     benchmark:
@@ -177,10 +177,33 @@ rule prune:
         vg prune --progress --threads {threads} --restore-paths {input.pg} > {output.pg} 2> {log}
         """
 
+rule pg2gfa:
+    input:
+        "{x}.pg"
+    output:
+        "{x}.gfa"
+    shell:
+        """
+        vg view {input} > {output}
+        """
+
+rule reduce:
+    input:
+        gfa=pjoin(WD, "chroms", "{c}", "pantranscriptome.gfa"),
+    output:
+        pg=pjoin(WD, "chroms", "{c}", "pantranscriptome-reduced.pg"),
+    benchmark:
+        pjoin(WD, "benchmarks", "{c}", "7-reduce.txt")
+    threads: 1
+    shell:
+        """
+        python3 reduce.py {input.gfa} | vg convert --gfa-in --packed-out - > {output.pg}
+        """
+
 
 rule annotate:
     input:
-        pg=rules.prune.output.pg,
+        pg=rules.prune.output.pg  if HPRUNING != 2 else rules.reduce.output.pg,
         txt=rules.rna_2.output.txt,
         gbwt=rules.gbwt.output.gbwt,
         tgbwt=rules.rna_2.output.tgbwt,

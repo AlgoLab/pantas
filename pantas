@@ -11,8 +11,9 @@ BUILD_USAGE=$''"${SCRIPT_NAME}"' build <FA> <GTF> <VCF>
 
 Arguments:
     -o <FPATH>       Output directory (default: .)
-	-a               Perform aggressive pruning,
-	                 do not restore haplotype transcripts (default: False)
+    -a               Perform aggressive pruning,
+                     do not restore haplotype transcripts (default: False)
+    -r               Reduce the graph instead of pruning it
     -t <INT>         Number of threads (default: 8)
     -h               Print this help and exit
 '
@@ -58,7 +59,7 @@ elif [ "$MODE" == "build" ]; then
 	WD="."
 	nt=8
 	hp=0
-	while getopts "o:t:ah" flag; do
+	while getopts "o:t:arh" flag; do
 		case "${flag}" in
 		h)
 			$(echo >&2 "${BUILD_USAGE}")
@@ -69,6 +70,9 @@ elif [ "$MODE" == "build" ]; then
 			;;
 		a)
 		    hp=1
+			;;
+		r)
+		    hp=2
 			;;
 		t)
 			nt=${OPTARG}
@@ -91,8 +95,7 @@ elif [ "$MODE" == "build" ]; then
 		WD=$(pwd)/$WD
 	fi
 	pushd $REPO_ROOT/build &> /dev/null
-	echo $hp
-	snakemake -c$nt --config fa=$FA gtf=$GTF vcf=$VCF wd=$WD hp=$hp -s build.smk
+	snakemake -p -c$nt --config fa=$FA gtf=$GTF vcf=$VCF wd=$WD hp=$hp -s build.smk
 	popd &> /dev/null
 elif [ "$MODE" == "augment" ]; then
 	while getopts "h" flag; do

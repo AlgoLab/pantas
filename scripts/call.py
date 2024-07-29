@@ -21,7 +21,8 @@ def collapse_linkcounts(lc: list):
     return [pos, count]
 
 
-def build_attrs(fields: str, d: int):
+# FIXME: d was in CLI but in the current version we do not need it
+def build_attrs(fields: str, d: int = 3):
     attrs = dict()
     for f in fields:
         name, _, value = f.split(":")
@@ -145,7 +146,7 @@ def main(args):
         line = line.strip()
         if line.startswith("S"):
             _, nid, seq, *fields = line.split()
-            gfaS[nid] = build_attrs(fields, args.d)
+            gfaS[nid] = build_attrs(fields)
             gfaS[nid]["LN"] = len(seq)  # Done to avoid LN in GFA
             # TODO: uncomment if needed
             # gfaS[nid]['seq'] = seq
@@ -169,7 +170,7 @@ def main(args):
                 _,  # overlap
                 *fields,
             ) = line.split()
-            gfaL[(nid_from, nid_to)] = build_attrs(fields, args.d)
+            gfaL[(nid_from, nid_to)] = build_attrs(fields)
             gfaS[nid_from]["O"].append(nid_to)
             gfaS[nid_to]["I"].append(nid_from)
             # NOTE: uncomment if needed
@@ -236,10 +237,7 @@ def main(args):
 
     # Check all the junctions
     def check_nonnovel():
-        # used = set() # CHECKME: do we want this? can we have a junction to be part of multiple events? probably yes
         for _j in junctions:
-            # if ix_j in used:
-            #     continue
             if gfaL[_j]["RC"] < args.rca:
                 continue
             _ht = get_haplotranscripts_from_junction(gfaL[_j]["JN"])
@@ -326,56 +324,53 @@ def main(args):
                     haplotranscripts_inclusion = (
                         set(haplotranscripts1) & set(haplotranscripts2)
                     ) - set(_ht)
-                    if len(haplotranscripts_inclusion) == 0:
-                        # no transcript
-                        continue
+                    if len(haplotranscripts_inclusion) > 0:
+                        # we have some transcript that includes exons in between the junction
 
-                    # exons1_1 and exons2_2 are already computed for the junction
-                    # exons1_1 = get_set_exons(gfaS, j1[0])
-                    exons1_2 = get_set_exons(gfaS, j1[1])
-                    exons2_1 = get_set_exons(gfaS, j2[0])
-                    # exons2_2 = get_set_exons(gfaS, j2[1])
+                        # exons1_1 and exons2_2 are already computed for the junction
+                        # exons1_1 = get_set_exons(gfaS, j1[0])
+                        exons1_2 = get_set_exons(gfaS, j1[1])
+                        exons2_1 = get_set_exons(gfaS, j2[0])
+                        # exons2_2 = get_set_exons(gfaS, j2[1])
 
-                    # this does not work for multiple exons skipping. commenting
-                    # if len(exons1_2) & len(exons2_1) == 0:
-                    #     continue
-                    if len((exons1_2 | exons2_1) - (_exons1 | _exons2)) == 0:
-                        # no change in exon
-                        continue
-
-                    # TODO: we could report an event only if on "same" haplotype
-                    # but maybe we are already doing so
-                    print(
-                        "ES",
-                        "annotated",
-                        genechr[_gene],
-                        _gene,
-                        genestrand[_gene],
-                        "|".join(gfaL[_j]["JN"]),
-                        "|".join(
-                            [
-                                x
-                                for x in gfaL[j1]["JN"]
-                                if "_".join(x.split("_")[:-1])
-                                in haplotranscripts_inclusion
-                            ]
-                        ),
-                        "|".join(
-                            [
-                                x
-                                for x in gfaL[j2]["JN"]
-                                if "_".join(x.split("_")[:-1])
-                                in haplotranscripts_inclusion
-                            ]
-                        ),
-                        ">".join(_j),
-                        gfaL[_j]["RC"],
-                        ">".join(j1),
-                        gfaL[j1]["RC"],
-                        ">".join(j2),
-                        gfaL[j2]["RC"],
-                        sep=",",
-                    )
+                        # this does not work for multiple exons skipping. commenting
+                        # if len(exons1_2) & len(exons2_1) == 0:
+                        #     continue
+                        if len((exons1_2 | exons2_1) - (_exons1 | _exons2)) > 0:
+                            # we have new exons in between the junction
+                            # TODO: we could report an event only if on "same" haplotype
+                            # but maybe we are already doing so
+                            print(
+                                "ES",
+                                "annotated",
+                                genechr[_gene],
+                                _gene,
+                                genestrand[_gene],
+                                "|".join(gfaL[_j]["JN"]),
+                                "|".join(
+                                    [
+                                        x
+                                        for x in gfaL[j1]["JN"]
+                                        if "_".join(x.split("_")[:-1])
+                                        in haplotranscripts_inclusion
+                                    ]
+                                ),
+                                "|".join(
+                                    [
+                                        x
+                                        for x in gfaL[j2]["JN"]
+                                        if "_".join(x.split("_")[:-1])
+                                        in haplotranscripts_inclusion
+                                    ]
+                                ),
+                                ">".join(_j),
+                                gfaL[_j]["RC"],
+                                ">".join(j1),
+                                gfaL[j1]["RC"],
+                                ">".join(j2),
+                                gfaL[j2]["RC"],
+                                sep=",",
+                            )
 
             if "SS" in args.events:
                 # eprint("Checking annotated SS", file=sys.stderr)
@@ -497,16 +492,6 @@ def main(args):
                             if nn <= n2 and e in get_set_exons(gfaS, nn):
                                 break
                         # Here I am assuming that if i_exons is not empty, then there must be a path between n1 and n2 (since there is an exon for sure)
-                        # if nn == -1:
-                        #     print(
-                        #         ,
-                        #         n1,
-                        #         n2,
-                        #         n,
-                        #         get_outgoing_nodes(gfaS, n),
-                        #         subpath,
-                        #         flush=True,
-                        #     )
                         assert nn != -1, "Error while reconstrucing IR path"
                         subpath.append(nn)
                         n = nn
@@ -514,28 +499,27 @@ def main(args):
                     # CHECKME: we need just one exon, since all exons we can find should produce the same path
                     break
 
-                if len(retained_transcripts) == 0:
-                    continue
-                print(
-                    "IR",
-                    "annotated",
-                    genechr[_gene],
-                    _gene,
-                    genestrand[_gene],
-                    "|".join(gfaL[_j]["JN"]),
-                    ".",  # TODO: recover exon if we want
-                    ".",
-                    ">".join(_j),
-                    gfaL[_j]["RC"],
-                    ">".join(subpath),
-                    ceil(
-                        sum([gfaS[x]["NC"] if x in gfaS else 0 for x in subpath])
-                        / len(subpath)
-                    ),
-                    ".",
-                    ".",
-                    sep=",",
-                )
+                if len(retained_transcripts) > 0:
+                    print(
+                        "IR",
+                        "annotated",
+                        genechr[_gene],
+                        _gene,
+                        genestrand[_gene],
+                        "|".join(gfaL[_j]["JN"]),
+                        ".",  # TODO: recover exon if we want
+                        ".",
+                        ">".join(_j),
+                        gfaL[_j]["RC"],
+                        ">".join(subpath),
+                        ceil(
+                            sum([gfaS[x]["NC"] if x in gfaS else 0 for x in subpath])
+                            / len(subpath)
+                        ),
+                        ".",
+                        ".",
+                        sep=",",
+                    )
 
     if not args.annotated:
         check_nonnovel()
@@ -587,45 +571,46 @@ def main(args):
                                 transcript2gene[t] for t in haplotranscripts_inclusion
                             )
                             if len(_genes) > 1:
+                                # CHECKME: do we need this here? We already checked this for the junction
                                 # FIXME: this could be a quite strong assumption
                                 print(
                                     "Skipping ES due to multiple genes",
                                     file=sys.sterr,
                                 )
-                                continue
-                            _gene = next(iter(_genes))
+                            else:
+                                _gene = next(iter(_genes))
 
-                            print(
-                                "ES",
-                                "novel",
-                                genechr[_gene],
-                                _gene,
-                                genestrand[_gene],
-                                "?",
-                                "|".join(
-                                    [
-                                        x
-                                        for x in gfaL[j1]["JN"]
-                                        if "_".join(x.split("_")[:-1])
-                                        in haplotranscripts_inclusion
-                                    ]
-                                ),
-                                "|".join(
-                                    [
-                                        x
-                                        for x in gfaL[j2]["JN"]
-                                        if "_".join(x.split("_")[:-1])
-                                        in haplotranscripts_inclusion
-                                    ]
-                                ),
-                                ">".join(_j),
-                                gfaL[_j]["RC"],
-                                ">".join(j1),
-                                gfaL[j1]["RC"],
-                                ">".join(j2),
-                                gfaL[j2]["RC"],
-                                sep=",",
-                            )
+                                print(
+                                    "ES",
+                                    "novel",
+                                    genechr[_gene],
+                                    _gene,
+                                    genestrand[_gene],
+                                    "?",
+                                    "|".join(
+                                        [
+                                            x
+                                            for x in gfaL[j1]["JN"]
+                                            if "_".join(x.split("_")[:-1])
+                                            in haplotranscripts_inclusion
+                                        ]
+                                    ),
+                                    "|".join(
+                                        [
+                                            x
+                                            for x in gfaL[j2]["JN"]
+                                            if "_".join(x.split("_")[:-1])
+                                            in haplotranscripts_inclusion
+                                        ]
+                                    ),
+                                    ">".join(_j),
+                                    gfaL[_j]["RC"],
+                                    ">".join(j1),
+                                    gfaL[j1]["RC"],
+                                    ">".join(j2),
+                                    gfaL[j2]["RC"],
+                                    sep=",",
+                                )
 
             if "SS" in args.events:
                 if len(cap) != 0:
@@ -659,35 +644,35 @@ def main(args):
                         for j1, transcripts in annotated_js:
                             _genes = set(transcript2gene[t] for t in transcripts)
                             if len(_genes) > 1:
+                                # CHECKME: do we need this here? We already checked this for the junction
                                 # FIXME: this could be a quite strong assumption
                                 print(
                                     "Skipping SS due to multiple genes",
                                     file=sys.sterr,
                                 )
-                                continue
-                            _gene = next(iter(_genes))
-                            print(
-                                "A3" if genestrand[_gene] == "+" else "A5",
-                                "novel",
-                                genechr[_gene],
-                                _gene,
-                                genestrand[_gene],
-                                "?",
-                                "|".join(gfaL[j1]["JN"]),
-                                ".",
-                                ">".join(_j),
-                                gfaL[_j]["RC"],
-                                ">".join(j1),
-                                gfaL[j1]["RC"],
-                                ".",
-                                ".",
-                                sep=",",
-                            )
+                            else:
+                                _gene = next(iter(_genes))
+                                print(
+                                    "A3" if genestrand[_gene] == "+" else "A5",
+                                    "novel",
+                                    genechr[_gene],
+                                    _gene,
+                                    genestrand[_gene],
+                                    "?",
+                                    "|".join(gfaL[j1]["JN"]),
+                                    ".",
+                                    ">".join(_j),
+                                    gfaL[_j]["RC"],
+                                    ">".join(j1),
+                                    gfaL[j1]["RC"],
+                                    ".",
+                                    ".",
+                                    sep=",",
+                                )
                     # -
                     # let's check first exonic node for A5+ or A3-
-                    spliced_exons = (
-                        set()
-                    )  # these are the exons what can be spliced by the novel junction
+                    # these are the exons what can be spliced by the novel junction
+                    spliced_exons = set()
                     if _j[1] in gfaS[_j[0]]["O"]:
                         # the novel junction breaks the node
                         # FIXME: how can we know where? do we need to "change" the reported junction somehow?
@@ -713,30 +698,31 @@ def main(args):
                         for j1, transcripts in annotated_js:
                             _genes = set(transcript2gene[t] for t in transcripts)
                             if len(_genes) > 1:
+                                # CHECKME: do we need this here? We already checked this for the junction
                                 # FIXME: this could be a quite strong assumption
                                 print(
                                     "Skipping SS due to multiple genes",
                                     file=sys.sterr,
                                 )
-                                continue
-                            _gene = next(iter(_genes))
-                            print(
-                                ("A5" if genestrand[_gene] == "+" else "A3"),
-                                "novel",
-                                genechr[_gene],
-                                _gene,
-                                genestrand[_gene],
-                                "?",
-                                "|".join(gfaL[j1]["JN"]),
-                                ".",
-                                ">".join(_j),
-                                gfaL[_j]["RC"],
-                                ">".join(j1),
-                                gfaL[j1]["RC"],
-                                ".",
-                                ".",
-                                sep=",",
-                            )
+                            else:
+                                _gene = next(iter(_genes))
+                                print(
+                                    ("A5" if genestrand[_gene] == "+" else "A3"),
+                                    "novel",
+                                    genechr[_gene],
+                                    _gene,
+                                    genestrand[_gene],
+                                    "?",
+                                    "|".join(gfaL[j1]["JN"]),
+                                    ".",
+                                    ">".join(_j),
+                                    gfaL[_j]["RC"],
+                                    ">".join(j1),
+                                    gfaL[j1]["RC"],
+                                    ".",
+                                    ".",
+                                    sep=",",
+                                )
                 # ---
                 # eprint(f"Checking novel SS (2)", file=sys.stderr)
                 # in any case, we may have an intronic SS
@@ -747,8 +733,10 @@ def main(args):
                     visit = set([_j[1]])
                     pvisitl = 1
                     _i = 0
-                    # we don't need to store the subpath
-                    while len(visit & exonic_next) == 0 and _i < args.isw:  # FIXME: hardcoded
+                    # TODO: we don't need to store the subpath, but we may want it
+                    while (
+                        len(visit & exonic_next) == 0 and _i < args.isw
+                    ):  # FIXME: hardcoded
                         n = visit.pop()
                         pvisitl -= 1
                         visit |= set(get_outgoing_nodes(gfaS, n))
@@ -764,30 +752,31 @@ def main(args):
                             for t in get_haplotranscripts_from_junction(gfaL[j1]["JN"])
                         )
                         if len(_genes) > 1:
+                            # CHECKME: do we need this here? We already checked this for the junction
                             # FIXME: this could be a quite strong assumption
                             print(
                                 "Skipping SS due to multiple genes",
                                 file=sys.sterr,
                             )
-                            continue
-                        _gene = next(iter(_genes))
-                        print(
-                            "A3" if genestrand[_gene] == "+" else "A5",
-                            "novel",
-                            genechr[_gene],
-                            _gene,
-                            genestrand[_gene],
-                            "|".join(gfaL[j1]["JN"]),
-                            "?",
-                            ".",
-                            ">".join(j1),
-                            gfaL[j1]["RC"],
-                            ">".join(_j),
-                            gfaL[_j]["RC"],
-                            ".",
-                            ".",
-                            sep=",",
-                        )
+                        else:
+                            _gene = next(iter(_genes))
+                            print(
+                                "A3" if genestrand[_gene] == "+" else "A5",
+                                "novel",
+                                genechr[_gene],
+                                _gene,
+                                genestrand[_gene],
+                                "|".join(gfaL[j1]["JN"]),
+                                "?",
+                                ".",
+                                ">".join(j1),
+                                gfaL[j1]["RC"],
+                                ">".join(_j),
+                                gfaL[_j]["RC"],
+                                ".",
+                                ".",
+                                sep=",",
+                            )
                 elif len(_exons0) == 0 and len(_exons1) > 0:
                     # first vertex is not on exon. So A5+ or A3-
                     exonic_prev = set(p for p in _prev1 if (p, _j[1]) in junctions)
@@ -795,7 +784,7 @@ def main(args):
                     visit = set([_j[0]])
                     pvisitl = 1
                     _i = 0
-                    # we don't need to store the subpath
+                    # TODO: we don't need to store the subpath, but we may want it
                     while len(visit & exonic_prev) == 0 and _i < args.isw:
                         n = visit.pop()
                         pvisitl -= 1
@@ -812,30 +801,31 @@ def main(args):
                             for t in get_haplotranscripts_from_junction(gfaL[j1]["JN"])
                         )
                         if len(_genes) > 1:
+                            # CHECKME: do we need this here? We already checked this for the junction
                             # FIXME: this could be a quite strong assumption
                             print(
                                 "Skipping SS due to multiple genes",
                                 file=sys.sterr,
                             )
-                            continue
-                        _gene = next(iter(_genes))
-                        print(
-                            "A3" if genestrand[_gene] == "+" else "A5",
-                            "novel",
-                            genechr[_gene],
-                            _gene,
-                            genestrand[_gene],
-                            "|".join(gfaL[j1]["JN"]),
-                            "?",
-                            ".",
-                            ">".join(j1),
-                            gfaL[j1]["RC"],
-                            ">".join(_j),
-                            gfaL[_j]["RC"],
-                            ".",
-                            ".",
-                            sep=",",
-                        )
+                        else:
+                            _gene = next(iter(_genes))
+                            print(
+                                "A3" if genestrand[_gene] == "+" else "A5",
+                                "novel",
+                                genechr[_gene],
+                                _gene,
+                                genestrand[_gene],
+                                "|".join(gfaL[j1]["JN"]),
+                                "?",
+                                ".",
+                                ">".join(j1),
+                                gfaL[j1]["RC"],
+                                ">".join(_j),
+                                gfaL[_j]["RC"],
+                                ".",
+                                ".",
+                                sep=",",
+                            )
 
             if "IR" in args.events:
                 if len(cap) != 0:
@@ -850,43 +840,50 @@ def main(args):
                                 # nn must be on same exon AND be smaller than the vertex we want to reach (this should hold if we assume topological sorting)
                                 if nn <= _j[1] and len(exons & get_set_exons(gfaS, nn)):
                                     break
-                            assert (
-                                nn != -1
-                            ), "Error while reconstrucing novel IR path"  # we **must** have a path from the two nodes since they share exon
+                            # we **must** have a path from the two nodes since they share exon
+                            assert nn != -1, "Error while reconstrucing novel IR path"
                             subpath.append(nn)
-                        retained_transcripts = get_haplotranscripts_from_exons(exons)
-                        _genes = set(transcript2gene[t] for t in retained_transcripts)
-                        if len(_genes) > 1:
-                            # FIXME: this could be a quite strong assumption
-                            print(
-                                "Skipping novel IR due to multiple genes",
-                                file=sys.sterr,
+                        if sum([gfaS[x]["LN"] for x in subpath]) >= args.minintronsize:
+                            retained_transcripts = get_haplotranscripts_from_exons(
+                                exons
                             )
-                            continue
-                        _gene = next(iter(_genes))
-
-                        print(
-                            "IR",
-                            "novel",
-                            genechr[_gene],
-                            _gene,
-                            genestrand[_gene],
-                            "?",
-                            "|".join(exons),
-                            ".",
-                            ">".join(_j),
-                            gfaL[_j]["RC"],
-                            ">".join(subpath),
-                            ceil(
-                                sum(
-                                    [gfaS[x]["NC"] if x in gfaS else 0 for x in subpath]
+                            _genes = set(
+                                transcript2gene[t] for t in retained_transcripts
+                            )
+                            if len(_genes) > 1:
+                                # CHECKME: do we need this here? We already checked this for the junction
+                                # FIXME: this could be a quite strong assumption
+                                print(
+                                    "Skipping novel IR due to multiple genes",
+                                    file=sys.sterr,
                                 )
-                                / len(subpath)
-                            ),
-                            ".",
-                            ".",
-                            sep=",",
-                        )
+                            else:
+                                _gene = next(iter(_genes))
+                                print(
+                                    "IR",
+                                    "novel",
+                                    genechr[_gene],
+                                    _gene,
+                                    genestrand[_gene],
+                                    "?",
+                                    "|".join(exons),
+                                    ".",
+                                    ">".join(_j),
+                                    gfaL[_j]["RC"],
+                                    ">".join(subpath),
+                                    ceil(
+                                        sum(
+                                            [
+                                                gfaS[x]["NC"] if x in gfaS else 0
+                                                for x in subpath
+                                            ]
+                                        )
+                                        / len(subpath)
+                                    ),
+                                    ".",
+                                    ".",
+                                    sep=",",
+                                )
 
         if "IR" in args.events or "ES" in args.events:
             for _j in junctions:
@@ -977,8 +974,6 @@ def main(args):
                                 sep=",",
                             )
                 if "IR" in args.events:
-                    # FIXME: we may confuse ES with IR
-                    # if any([gfaL[(_j[0], x)]["RC"] >= args.rca for x in get_outgoing_nodes(gfaS, _j[0]) if (_j[0], x) not in junctions]) and any([gfaL[(x, _j[1])]["RC"] >= args.rca for x in get_incoming_nodes(gfaS, _j[1]) if (x, _j[1]) not in junctions]):
                     # Assuming that we may have a variation after/before the exons, we check few edges based on topological sorting
                     if any(
                         [
@@ -1029,11 +1024,17 @@ def main(args):
                         if len(exon_pairs) > 0:
                             # we just get the reference path
                             # FIXME: visit and get best path
-                            subpath = [
-                                str(x) for x in range(int(_j[0]) + 1, int(_j[1]) - 1)
-                            ]
-                            if len(subpath) > 0:
-                                # we may have two exons and no intron (at least in drosophila)
+                            subpath = [_j[0]]
+                            while subpath[-1] != _j[1]:
+                                onodes = get_outgoing_nodes(gfaS, subpath[-1])
+                                if _j[1] in onodes:
+                                    subpath.append(_j[1])
+                                else:
+                                    subpath.append(min(onodes))
+                            if (
+                                sum([gfaS[x]["LN"] for x in subpath[1:-1]])
+                                >= args.minintronsize
+                            ):
                                 retained_transcripts = get_haplotranscripts_from_exons(
                                     [ep[0] for ep in exon_pairs]
                                 )
@@ -1041,41 +1042,47 @@ def main(args):
                                     transcript2gene[t] for t in retained_transcripts
                                 )
                                 if len(_genes) > 1:
+                                    # CHECKME: do we need this here? We already checked this for the junction
                                     # FIXME: this could be a quite strong assumption
                                     print(
                                         "Skipping novel IR due to multiple genes",
                                         file=sys.sterr,
                                     )
-                                    continue
-                                _gene = next(iter(_genes))
+                                else:
+                                    _gene = next(iter(_genes))
 
-                                # we report just one junction on one transcript
-                                jann = "|".join([e1 + "." + e2.split(".")[-1] for e1, e2 in exon_pairs])
-                                print(
-                                    "IR",
-                                    "novel",
-                                    genechr[_gene],
-                                    _gene,
-                                    genestrand[_gene],
-                                    jann,
-                                    "?",
-                                    ".",
-                                    ">".join(subpath),
-                                    ceil(
-                                        sum(
-                                            [
-                                                gfaS[x]["NC"] if x in gfaS else 0
-                                                for x in subpath
-                                            ]
-                                        )
-                                        / len(subpath)
-                                    ),
-                                    ">".join(_j),
-                                    gfaL[_j]["RC"],
-                                    ".",
-                                    ".",
-                                    sep=",",
-                                )
+                                    # we report just one junction on one transcript
+                                    jann = "|".join(
+                                        [
+                                            e1 + "." + e2.split(".")[-1]
+                                            for e1, e2 in exon_pairs
+                                        ]
+                                    )
+                                    print(
+                                        "IR",
+                                        "novel",
+                                        genechr[_gene],
+                                        _gene,
+                                        genestrand[_gene],
+                                        jann,
+                                        "?",
+                                        ".",
+                                        ">".join(subpath),
+                                        ceil(
+                                            sum(
+                                                [
+                                                    gfaS[x]["NC"] if x in gfaS else 0
+                                                    for x in subpath
+                                                ]
+                                            )
+                                            / len(subpath)
+                                        ),
+                                        ">".join(_j),
+                                        gfaL[_j]["RC"],
+                                        ".",
+                                        ".",
+                                        sep=",",
+                                    )
 
     if args.novel:
         check_novel()
@@ -1128,11 +1135,11 @@ if __name__ == "__main__":
         default=5,
     )
     parser.add_argument(
-        "--d",
-        dest="d",
-        help="Maximum distance for OL/IL 2-clustering position collapsing (default: 3)",
+        "--minintronsize",
+        dest="minintronsize",
+        help="Minimum intron size (default: 100)",
         type=int,
-        default=3,
+        default=100,
     )
     parser.add_argument(
         "--debug",

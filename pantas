@@ -38,7 +38,7 @@ Arguments:
 QUANT_USAGE=$'Usage: '"${SCRIPT_NAME}"' quant <C1.R1> <C1.R2> <C1.Rx> <C2.R1> <C2.R2> <C2.Rx>
 
 Arguments:
-    -w <INT>         Minimum read count for all junctions (default: 1)
+    -w <INT>         Minimum read count for all junctions (default: 0)
     -a               Report all events (not only those correctly quantified in both conditions)
     -h               Print this help and exit
 '
@@ -117,12 +117,12 @@ elif [ "$MODE" == "augment" ]; then
 	GFA=${@:$OPTIND+1:1}
 	python3 $REPO_ROOT/scripts/alignments_augmentation_from_gaf.py $GAF $GFA
 elif [ "$MODE" == "call" ]; then
-	rca=""
 	rc=""
 	noanno=""
 	novel=""
-	isw=5
-	while getopts "w:anh" flag; do
+	isw=""
+	mis=""
+	while getopts "w:i:l:anh" flag; do
 		case "${flag}" in
 		h)
 			$(echo >&2 "${CALL_USAGE}")
@@ -132,7 +132,10 @@ elif [ "$MODE" == "call" ]; then
 			rc="--rca ${OPTARG}"
 			;;
 		i)
-			isw=${OPTARG}
+			isw="--isw ${OPTARG}"
+			;;
+		l)
+			mis="--minintronsize ${OPTARG}"
 			;;
 		a)
 			noanno="--no-annotated"
@@ -151,14 +154,15 @@ elif [ "$MODE" == "call" ]; then
 
 	GFA=${@:$OPTIND:1}
 	GTF=${@:$OPTIND+1:1}
-	python3 $REPO_ROOT/scripts/call.py --isw $isw $rc $noanno $novel $GFA $GTF
+	(echo >&2 "Running\n\tpython3 $REPO_ROOT/scripts/call.py $mis $isw $rc $noanno $novel $GFA $GTF\n")
+	python3 $REPO_ROOT/scripts/call.py $mis $isw $rc $noanno $novel $GFA $GTF
 elif [ "$MODE" == "quant" ]; then
 	both="--both"
-	w=0
-	while getopts "w:ah" flag; do
+	w=""
+	while getopts "ah" flag; do
 		case "${flag}" in
 		w)
-			w=${OPTARG}
+			w="-w ${OPTARG}"
 			;;
 		a)
 			both=""
@@ -186,13 +190,13 @@ elif [ "$MODE" == "quant" ]; then
 
 	C1=${@:$OPTIND:$nr}
 	C2=${@:$OPTIND+$nr:$nr}
-	python3 $REPO_ROOT/scripts/quantify.py -w $w $both --c1 $C1 --c2 $C2
+	python3 $REPO_ROOT/scripts/quantify.py $w $both --c1 $C1 --c2 $C2
 elif [ "$MODE" == "remap" ]; then
-	min_intron_size=25
+	min_intron_size=""
 	while getopts "i:h" flag; do
 		case "${flag}" in
 		i)
-			min_intron_size=${OPTARG}
+			min_intron_size="-i ${OPTARG}"
 			;;
 		h)
 			$(echo >&2 "${REMAP_USAGE}")
@@ -208,7 +212,7 @@ elif [ "$MODE" == "remap" ]; then
 	fi
 	CSV=${@:$OPTIND:1}
 	GTF=${@:$OPTIND+1:1}
-	python3 $REPO_ROOT/scripts/remap.py -i $min_intron_size $CSV $GTF
+	python3 $REPO_ROOT/scripts/remap.py $min_intron_size $CSV $GTF
 else
 	echo $USAGE
 	exit 1

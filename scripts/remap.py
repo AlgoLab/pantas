@@ -209,7 +209,7 @@ def main(args):
             if etype == "IR" and (positions[0] == "?" and positions[1] == "?"):
                 htype = "haplotype"
 
-        if htype == "reference":
+        if annotation_type == "novel":
             if any(
                 [
                     get_region_size(p) < args.min_intron_size
@@ -256,9 +256,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-i",
         dest="min_intron_size",
-        help="Minimum intron size for a junction (default: 25)",
+        help="Minimum intron size for a novel junction (default: 100)",
         type=int,
-        default=25,
+        default=100,
     )
     args = parser.parse_args()
     main(args)

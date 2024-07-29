@@ -29,6 +29,8 @@ def build_region(regions):
         return "."
     elif type(regions[0]) == int:
         return f"{regions[0]}-{regions[1]}"
+    elif regions[0] == ".":
+        return f"{regions[1][0]}-{regions[1][1]}"
     else:
         return ",".join([f"{r[0]}-{r[1]}" for r in regions])
 
@@ -264,19 +266,17 @@ class EventTruth(Event):
         )
         self.rc_c1 = list(map(int, W1.split("/")))
         self.rc_c2 = list(map(int, W2.split("/")))
+
+        self.min_event_cov = [0]
         if event_type == "ES":
-            self.event_cov_c1 = self.rc_c1[2]
-            self.event_cov_c2 = self.rc_c2[2]
+            self.min_event_cov = [self.rc_c1[2], self.rc_c2[2]]
         elif event_type == "IR":
             # this works for annotated events
             # CHECKME for novels
-            self.event_cov_c1 = self.rc_c1[0]
-            self.event_cov_c2 = self.rc_c2[0]
+            self.min_event_cov = [self.rc_c1[0], self.rc_c2[0]]
         else:
-            self.event_cov_c1 = self.rc_c1[1]
-            self.event_cov_c2 = self.rc_c2[1]
-
-        self.min_event_cov = min(self.event_cov_c1, self.event_cov_c2)
+            self.min_event_cov = [self.rc_c1[1], self.rc_c2[1]]
+        self.min_event_cov = min(self.min_event_cov)
 
     def build_conditions(self):
         match self.etype:
@@ -297,8 +297,7 @@ class EventTruth(Event):
 
             case "IR":
                 self.event_j = fix_region(parse_region(self.junction1_refpos))
-                # self.canonic_j = fix_region(parse_region(self.junction2_refpos))
-                self.canonic_j = "."
+                self.canonic_j = fix_region(parse_region(self.junction2_refpos))
             case "CE":
                 # TODO: fix
                 self.event_j = [
@@ -306,6 +305,7 @@ class EventTruth(Event):
                     parse_region(self.junction3_refpos),
                 ]
                 self.canonic_j = parse_region(self.junction1_refpos)
+
 
 class EventWhippet(Event):
     def __init__(
@@ -363,7 +363,7 @@ class EventWhippet(Event):
                 self.canonic_j = "."
 
 
-def eq_event(e1: Event, e2: Event, relax: int = 0, reverse: bool = False):
+def eq_event_anno(e1: Event, e2: Event, relax: int = 0):
     if e1.etype != e2.etype:
         return False
     if e1.gene != e2.gene:
@@ -384,11 +384,6 @@ def eq_event(e1: Event, e2: Event, relax: int = 0, reverse: bool = False):
         e2_canonic_j = e2.canonic_j
         e2_event_j = e2.event_j
 
-    if reverse:
-        e1_canonic_j = e1.event_j
-        e1_event_j = e1.canonic_j
-        e2_canonic_j = e2.event_j
-        e2_event_j = e2.canonic_j
     if e1.etype == "CE":
         dt0 = abs(e1_canonic_j[0] - e2_canonic_j[0]) <= relax
         dt1 = abs(e1_canonic_j[1] - e2_canonic_j[1]) <= relax
@@ -453,45 +448,38 @@ def eq_event(e1: Event, e2: Event, relax: int = 0, reverse: bool = False):
             de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
             return dt0 & dt1 & de0 & de1
 
+# First event is always truth!
+def eq_event_novel(e1: Event, e2: Event, print_flag: bool = False, relax: int = 0):
+    # this works only for pantas and rmats. No whippet support. SUPPA does not report novel
+    if e1.etype != e2.etype:
+        return False
+    if e1.gene != e2.gene:
+        return False
+    # if print_flag:
+    #     print(e1.etype)
+    #     print(e1.canonic_j, e1.event_j)
+    #     print(e2.canonic_j, e2.event_j)
+    #     print("")
 
-# def eq_event(e1: Event, e2: Event, relax: int = 0, reverse: bool = False):
-#     if e1.etype != e2.etype:
-#         return False
-#     if e1.gene != e2.gene:
-#         return False
-#     e1_canonic_j = e1.canonic_j
-#     e1_event_j = e1.event_j
-#     e2_canonic_j = e2.canonic_j
-#     e2_event_j = e2.event_j
-#     if reverse:
-#         e1_canonic_j = e1.event_j
-#         e1_event_j = e1.canonic_j
-#         e2_canonic_j = e2.event_j
-#         e2_event_j = e2.canonic_j
-#     if e1.etype == "CE":
-#         dt0 = abs(e1_canonic_j[0] - e2_canonic_j[0]) <= relax
-#         dt1 = abs(e1_canonic_j[1] - e2_canonic_j[1]) <= relax
-#         de00 = abs(e1_event_j[0][0] - e2_event_j[0][0]) <= relax
-#         de01 = abs(e1_event_j[0][1] - e2_event_j[0][1]) <= relax
-#         de10 = abs(e1_event_j[1][0] - e2_event_j[1][0]) <= relax
-#         de11 = abs(e1_event_j[1][1] - e2_event_j[1][1]) <= relax
-#         return dt0 & dt1 & de00 & de01 & de10 & de11
-#     elif e1.etype == "ES":
-#         de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
-#         de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
-#         dt00 = abs(e1_canonic_j[0][0] - e2_canonic_j[0][0]) <= relax
-#         dt01 = abs(e1_canonic_j[0][1] - e2_canonic_j[0][1]) <= relax
-#         dt10 = abs(e1_canonic_j[1][0] - e2_canonic_j[1][0]) <= relax
-#         dt11 = abs(e1_canonic_j[1][1] - e2_canonic_j[1][1]) <= relax
-#         return de0 & de1 & dt00 & dt01 & dt10 & dt11
-#     elif e1.etype == "IR":
-#         # print(e1_event_j, e2_event_j)
-#         de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
-#         de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
-#         return de0 & de1
-#     else:
-#         dt0 = abs(e1_canonic_j[0] - e2_canonic_j[0]) <= relax
-#         dt1 = abs(e1_canonic_j[1] - e2_canonic_j[1]) <= relax
-#         de0 = abs(e1_event_j[0] - e2_event_j[0]) <= relax
-#         de1 = abs(e1_event_j[1] - e2_event_j[1]) <= relax
-#         return dt0 & dt1 & de0 & de1
+    if e1.etype == "CE":
+        assert False, "We have a novel cassete exon!"
+    elif e1.etype == "ES":
+        return e1.canonic_j == e2.canonic_j
+    elif e1.etype == "IR":
+        if e1.canonic_j == "." or e1.event_j == ".":
+            e1_j = e1.canonic_j if e1.event_j == "." else e1.event_j
+            return e1_j == e2.event_j
+        elif e2.canonic_j == "." or e2.event_j == ".":
+            e2_j = e2.canonic_j if e2.event_j == "." else e2.event_j
+            return e2_j == e1.event_j
+        else:
+            assert False, "Compare novel IR, why are we here?"
+    else:
+        e2_j = e2.canonic_j if e2.event_j == "." else e2.event_j
+        return e1.canonic_j == e2_j or e1.event_j == e2_j
+
+def eq_event(e1: Event, e2: Event, novel: bool, print_flag=False):
+    if novel:
+        return eq_event_novel(e1, e2, print_flag=print_flag, relax=0)
+    else:
+        return eq_event_anno(e1, e2, relax=0)

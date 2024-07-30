@@ -1,8 +1,8 @@
-software : /data/drosmel/filter/software
-odir : /data/drosmel/filter/output_8750000
-fa : /data/drosmel/ref.chroms.fa
-gtf : /data/drosmel/genes.gtf
-vcf : /data/drosmel/DGRP2.SNPs_only.genes.norm.vcf.gz
+software : /data/plos-review/dros/exp/software
+odir : /data/plos-review/dros/exp/output32haps
+fa : /data/plos-review/dros/ref.chroms.fa
+gtf : /data/plos-review/dros/genes.gtf
+vcf : /data/plos-review/dros/DGRP2.SNPs_only.genes.norm.32haps.vcf.gz
 L : 151
 s1 :
   - SRR14101759,/data/drosmel/samples_8750000/SRR14101759_l150_1_clean.fq.gz,/data/drosmel/samples_8750000/SRR14101759_l150_2_clean.fq.gz

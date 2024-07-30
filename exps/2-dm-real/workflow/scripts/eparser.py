@@ -4,7 +4,7 @@ from abc import abstractmethod, ABC
 
 ETYPES = ["ES", "IR", "A3", "A5", "CE"]
 
-
+"""
 def parse_region(string: str) -> list[int]:
     if string == ".":
         return string
@@ -30,7 +30,37 @@ def build_region(regions):
     else:
         return ",".join([f"{r[0]}-{r[1]}" for r in regions])
 
+"""
 
+def parse_region(string: str) -> list[int]:
+    if string == "." or string == "?":
+        return "."
+    if string.endswith("?"):
+        string = string[:-1]
+    reg = re.match(r"(?P<chr>[\w\d]+):(?P<start>\d+)-(?P<end>\d+)", string)
+    if not reg:
+        print(
+            f"Unable to read region {string}. Ignoring it",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return [int(reg.group("start")), int(reg.group("end"))]
+
+
+def fix_region(reg: list[int]) -> list[int]:
+    return [reg[0] + 1, reg[1] - 1]
+
+
+def build_region(regions):
+    if regions == ".":
+        return "."
+    elif type(regions[0]) == int:
+        return f"{regions[0]}-{regions[1]}"
+    else:
+        return ",".join([f"{r[0]}-{r[1]}" for r in regions])
+        
+        
+        
 class Event(ABC):
     def __init__(
 	    self,
@@ -128,7 +158,38 @@ class EventPantas(Event):
             dpsi,
             pv,
         )
+     
+    def build_conditions(self):
+        match self.etype:
+            case "ES":
+                self.event_j = parse_region(self.junction3_refpos)
+                self.canonic_j = [
+                    parse_region(self.junction1_refpos),
+                    parse_region(self.junction2_refpos),
+                ]
 
+            case "A5":
+                self.event_j = parse_region(self.junction2_refpos)
+                self.canonic_j = parse_region(self.junction1_refpos)
+
+            case "A3":
+                self.event_j = parse_region(self.junction2_refpos)
+                self.canonic_j = parse_region(self.junction1_refpos)
+
+            case "IR":
+                self.event_j = parse_region(self.junction2_refpos)
+                self.canonic_j = parse_region(self.junction1_refpos)
+                if self.event_j == ".":
+                    self.event_j = self.canonic_j
+                    self.canonic_j = "."
+
+            case "CE":
+                self.event_j = [
+                    parse_region(self.junction2_refpos),
+                    parse_region(self.junction3_refpos),
+                ]
+                self.canonic_j = parse_region(self.junction1_refpos)
+"""
     def build_conditions(self):
         match self.etype:
             case "ES":
@@ -159,8 +220,74 @@ class EventPantas(Event):
                     parse_region(self.junction3_refpos),
                 ]
                 self.canonic_j = parse_region(self.junction1_refpos)
+"""
 
 
+class EventRmats(Event):
+    def __init__(
+        self,
+        event_type: str,
+        annotation_type: str,
+        chrom: str,
+        gene: str,
+        strand: str,
+        junction1_refpos: str,
+        junction2_refpos: str,
+        junction3_refpos: str,
+        W1: str,
+        W2: str,
+        psi_c1: str,
+        psi_c2: str,
+        dpsi: str,
+        pv: str = "NaN"
+    ):
+        super().__init__(
+            event_type,
+            annotation_type,
+            chrom,
+            gene,
+            strand,
+            junction1_refpos,
+            junction2_refpos,
+            junction3_refpos,
+            W1,
+            W2,
+            psi_c1,
+            psi_c2,
+            dpsi,
+            pv,
+        )
+    def build_conditions(self):
+        match self.etype:
+            case "ES":
+                self.event_j = parse_region(self.junction1_refpos)
+                self.canonic_j = [
+                    parse_region(self.junction2_refpos),
+                    parse_region(self.junction3_refpos),
+                ]
+
+            case "A5":
+                self.event_j = parse_region(self.junction1_refpos)
+                self.canonic_j = parse_region(self.junction2_refpos)
+
+            case "A3":
+                self.event_j = parse_region(self.junction1_refpos)
+                self.canonic_j = parse_region(self.junction2_refpos)
+
+            case "IR":
+                self.event_j = parse_region(self.junction1_refpos)
+                self.canonic_j = parse_region(self.junction2_refpos)
+                if self.event_j == ".":
+                    self.event_j = self.canonic_j
+                    self.canonic_j = "."
+
+            case "CE":
+                self.event_j = [
+                    parse_region(self.junction2_refpos),
+                    parse_region(self.junction3_refpos),
+                ]
+                self.canonic_j = parse_region(self.junction1_refpos)
+                
 class EventTruth(Event):
     def __init__(
         self,

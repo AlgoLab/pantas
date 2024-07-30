@@ -3,7 +3,7 @@ rule analyze_bench:
         pjoin(ODIR, "rMATS", "summary.csv"),
         pjoin(ODIR, "whippet", "psi.diff"),
         pjoin(ODIR, "salmon_suppa", "suppa.csv"),
-        expand(pjoin(ODIR, "pantas", "quant.w{w}.csv"), w=Ws)
+        expand(pjoin(ODIR, "pantas", "quant-remap.w{w}.csv"), w=Ws)
     output:
         pjoin(ODIR, "results", "bench.csv")
     params:
@@ -19,7 +19,7 @@ rule analyze_results:
         r=pjoin(ODIR, "rMATS", "summary.csv"),
         w=pjoin(ODIR, "whippet", "psi.diff"),
         s=pjoin(ODIR, "salmon_suppa", "suppa.csv"),
-        q=expand(pjoin(ODIR, "pantas", "quant.w{w}.csv"), w=Ws)
+        q=expand(pjoin(ODIR, "pantas", "quant-remap.w{w}.csv"), w=Ws)
     output:
         pjoin(ODIR, "results", "res.csv")
     params:

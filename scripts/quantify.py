@@ -230,9 +230,7 @@ def eq_event(e1: Event, e2: Event):
     if e1.etype[0] == "A":
         return e1.canonic_j == e2.canonic_j and e1.event_j == e2.event_j
     elif e1.etype == "CE":
-        # TODO
-        print("CE not done yet", file=sys.stderr)
-        sys.exit(1)
+        return e1.canonic_j == e2.canonic_j and e1.event_j == e2.event_j
     elif e1.etype == "ES":
         return e1.canonic_j == e2.canonic_j and e1.event_j == e2.event_j
     elif e1.etype == "IR":

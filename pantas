@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 SCRIPT_NAME="pantas"
 VERSION="1.0.0"
 
@@ -30,6 +32,7 @@ Arguments:
     -w <INT>         Minimum read count for supporting junction (default: 1)
     -i <INT>         Intronic search window for novel events,
                      larger values reduce FP but increase time (default: 5)
+    -e <STR>         Events to call (default: ES,SS,IR)
     -n               Call novel events (default: False)
     -a               Do not call known annotated events (default: False)
     -h               Print this help and exit
@@ -118,11 +121,12 @@ elif [ "$MODE" == "augment" ]; then
 	python3 $REPO_ROOT/scripts/alignments_augmentation_from_gaf.py $GAF $GFA
 elif [ "$MODE" == "call" ]; then
 	rc=""
+	events=""
 	noanno=""
 	novel=""
 	isw=""
 	mis=""
-	while getopts "w:i:l:anh" flag; do
+	while getopts "w:e:i:l:anh" flag; do
 		case "${flag}" in
 		h)
 			$(echo >&2 "${CALL_USAGE}")
@@ -130,6 +134,9 @@ elif [ "$MODE" == "call" ]; then
 			;;
 		w)
 			rc="--rca ${OPTARG}"
+			;;
+		e)
+			events="--events $(echo $OPTARG | tr ',' ' ')"
 			;;
 		i)
 			isw="--isw ${OPTARG}"
@@ -154,8 +161,7 @@ elif [ "$MODE" == "call" ]; then
 
 	GFA=${@:$OPTIND:1}
 	GTF=${@:$OPTIND+1:1}
-	(echo >&2 "Running\n\tpython3 $REPO_ROOT/scripts/call.py $mis $isw $rc $noanno $novel $GFA $GTF\n")
-	python3 $REPO_ROOT/scripts/call.py $mis $isw $rc $noanno $novel $GFA $GTF
+	python3 $REPO_ROOT/scripts/call.py $events $mis $isw $rc $noanno $novel $GFA $GTF
 elif [ "$MODE" == "quant" ]; then
 	both="--both"
 	w=""

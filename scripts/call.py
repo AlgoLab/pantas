@@ -1021,15 +1021,19 @@ def main(args):
                             > 0
                         ]
                         if len(exon_pairs) > 0:
-                            # we just get the reference path
-                            # FIXME: visit and get best path
+                            # FIXME: greedy visit that may not always work
                             subpath = [_j[0]]
                             while subpath[-1] != _j[1]:
                                 onodes = get_outgoing_nodes(gfaS, subpath[-1])
+                                onodes = [x for x in onodes if x <= _j[1]]
+                                if len(subpath) == 1:
+                                    onodes.remove(_j[1])
                                 if _j[1] in onodes:
                                     subpath.append(_j[1])
                                 else:
-                                    subpath.append(min(onodes))
+                                    onodes = [x for x in onodes if len(get_outgoing_nodes(gfaS, x)) > 0]
+                                    best_node = max(onodes, key=lambda x: gfaS[x]["NC"])
+                                    subpath.append(best_node)
                             if (
                                 sum([gfaS[x]["LN"] for x in subpath[1:-1]])
                                 >= args.minintronsize

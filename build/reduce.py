@@ -2,18 +2,17 @@ import sys
 from intervaltree import Interval, IntervalTree
 
 # FIXME: we do not store any information on the "original" position of vertices in the reference path
-def main():
-    gfa_path = sys.argv[1]
-
-    k = 0
+def main(args):
+    if args.k > 0:
+        print("Setting k>0 is experimental and not tested", file=sys.stderr)
 
     ref_name = ""
     ref_path = []
     tree = IntervalTree()
-    for line in open(gfa_path):
+    for line in open(args.GFA):
         if line.startswith("P"):
             _, tidx, nodes, _ = line.strip("\n").split("\t")
-            if not tidx.startswith("FBtr"):  # FIXME: hardcoded
+            if not tidx.startswith(args.tridx):
                 ref_name = tidx
                 ref_path = [int(x[:-1]) for x in nodes.split(",")]
                 continue
@@ -25,7 +24,7 @@ def main():
                 nodes.reverse()
             assert all(b >= a for a, b in zip(nodes[:-1], nodes[1:]))
             # ---
-            tree[min_idx - k : max_idx + k + 1] = 1
+            tree[min_idx - args.k : max_idx + args.k + 1] = 1
 
     print(f"We have {len(tree)} unique transcripts", file=sys.stderr)
     tree.merge_overlaps()
@@ -34,7 +33,7 @@ def main():
     for i in tree:
         print(i.begin, i.end - 1, file=sys.stderr)
 
-    for line in open(gfa_path):
+    for line in open(args.GFA):
         if line.startswith("S"):
             _, idx, _ = line.strip("\n").split("\t")
             idx = int(idx)
@@ -47,7 +46,7 @@ def main():
                 print(line, end="")
         elif line.startswith("P"):
             _, tidx, _, _ = line.strip("\n").split("\t")
-            if tidx.startswith("FBtr"):  # FIXME: hardcoded
+            if tidx.startswith(args.tridx):
                 print(line, end="")
 
     ref_subpath = []
@@ -69,4 +68,26 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="Reduce",
+        description="",
+    )
+    parser.add_argument("GFA", help="Graph in GFA format")
+    parser.add_argument(
+        "-k",
+        dest="k",
+        help="Steps each subgraph out by N steps (default: 0)",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "-t",
+        dest="tridx",
+        help="Prefix for transcript identifiers (default: ENST)",
+        type=str,
+        default="ENST",
+    )
+    args = parser.parse_args()
+    main(args)

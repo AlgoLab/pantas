@@ -5,7 +5,7 @@ from math import floor, ceil
 import datetime
 
 
-def dopass(*_):
+def dopass(*_, file=None):
     pass
 
 
@@ -238,6 +238,8 @@ def main(args):
     # Check all the junctions
     def check_nonnovel():
         for _j in junctions:
+            if args.junction != None and "f{_j[0]}-{_j[1]}" != args.junction:
+                continue
             if gfaL[_j]["RC"] < args.rca:
                 continue
             _ht = get_haplotranscripts_from_junction(gfaL[_j]["JN"])
@@ -249,7 +251,7 @@ def main(args):
             _exons1 = get_set_exons(gfaS, _j[0])
             _exons2 = get_set_exons(gfaS, _j[1])
 
-            # eprint(f"Checking annotated junction {_j[0]} -> {_j[1]}", file=sys.stderr)
+            eprint(f"Checking annotated junction {_j[0]} -> {_j[1]}", file=sys.stderr)
 
             # we want exons on same gene only
             # FIXME: this can be done way better
@@ -312,7 +314,7 @@ def main(args):
             )
 
             if "ES" in args.events:
-                # eprint("Checking annotated ES", file=sys.stderr)
+                eprint("Checking annotated ES", file=sys.stderr)
                 for j1, j2 in itertools.product(Js1, Js2):
                     haplotranscripts1 = get_haplotranscripts_from_junction(
                         gfaL[j1]["JN"]
@@ -373,7 +375,7 @@ def main(args):
                             )
 
             if "SS" in args.events:
-                # eprint("Checking annotated SS", file=sys.stderr)
+                eprint("Checking annotated SS", file=sys.stderr)
                 # this is A5 on + / A3 on -
                 if len(Js2) != 0:
                     for n in get_outgoing_nodes(gfaS, _j[0]):
@@ -461,7 +463,7 @@ def main(args):
                             )
 
             if "IR" in args.events:
-                # eprint("Checking annotated IR", file=sys.stderr)
+                eprint("Checking annotated IR", file=sys.stderr)
                 nnext = get_outgoing_nodes(gfaS, _j[0])
                 nprev = get_incoming_nodes(gfaS, _j[1])
 
@@ -527,6 +529,8 @@ def main(args):
     def check_novel():
         # Check all novel junctions
         for _j in noveljunctions:
+            if args.junction != None and f"{_j[0]}-{_j[1]}" != args.junction:
+                continue
             if gfaL[_j]["RC"] < args.rca:
                 continue
             _exons0 = get_set_exons(gfaS, _j[0])
@@ -534,7 +538,7 @@ def main(args):
             if len(_exons0) == 0 and len(_exons1) == 0:
                 # at least one end of the junction must be an annotated exon
                 continue
-            # eprint(f"Checking novel junction {_j[0]} -> {_j[1]}", file=sys.stderr)
+            eprint(f"Checking novel junction {_j[0]} -> {_j[1]}", file=sys.stderr)
             _ht0 = get_haplotranscripts_from_exons(_exons0)
             _ht1 = get_haplotranscripts_from_exons(_exons1)
 
@@ -544,7 +548,7 @@ def main(args):
             _prev1 = get_incoming_nodes(gfaS, _j[1])
 
             if "ES" in args.events:
-                # eprint(f"Checking novel ES", file=sys.stderr)
+                eprint(f"Checking novel ES", file=sys.stderr)
                 if len(_exons0) != 0 and len(_exons1) != 0:
                     # both ends must be annotated exons
                     nodes1 = [n for n in _next0 if (_j[0], n) in junctions]
@@ -614,7 +618,7 @@ def main(args):
 
             if "SS" in args.events:
                 if len(cap) != 0:
-                    # eprint(f"Checking novel SS (1)", file=sys.stderr)
+                    eprint(f"Checking novel SS (1)", file=sys.stderr)
                     # we may have an "internal" SS since both exons share a transcript
                     # -
                     # let's check second exonic node for A3+ or A5-
@@ -724,7 +728,7 @@ def main(args):
                                     sep=",",
                                 )
                 # ---
-                # eprint(f"Checking novel SS (2)", file=sys.stderr)
+                eprint(f"Checking novel SS (2)", file=sys.stderr)
                 # in any case, we may have an intronic SS
                 if len(_exons0) > 0 and len(_exons1) == 0:
                     # second vertex is not on exon. So intronic A3+ or A5-
@@ -829,7 +833,7 @@ def main(args):
 
             if "IR" in args.events:
                 if len(cap) != 0:
-                    # eprint(f"Checking novel IR (1)", file=sys.stderr)
+                    eprint(f"Checking novel IR (1)", file=sys.stderr)
                     exons = _exons0 & _exons1
                     if len(exons) > 0:
                         # novel retained intron inside some exon \in exons
@@ -887,6 +891,8 @@ def main(args):
 
         if "IR" in args.events or "ES" in args.events:
             for _j in junctions:
+                if args.junction != None and "f{_j[0]}-{_j[1]}" != args.junction:
+                    continue
                 if gfaL[_j]["RC"] < args.rca:
                     continue
                 _ht = get_haplotranscripts_from_junction(gfaL[_j]["JN"])
@@ -899,9 +905,9 @@ def main(args):
                 _exons0 = get_set_exons(gfaS, _j[0])
                 _exons1 = get_set_exons(gfaS, _j[1])
 
-                # eprint(
-                #     f"Checking annotated junction {_j[0]} -> {_j[1]}", file=sys.stderr
-                # )
+                eprint(
+                    f"Checking annotated junction {_j[0]} -> {_j[1]}", file=sys.stderr
+                )
 
                 # we want exons on same gene only
                 # FIXME: this can be done way better
@@ -945,7 +951,7 @@ def main(args):
                 if "ES" in args.events:
                     # print(_j, Js1, Js2,  file=sys.stderr)
                     if len(Js1) > 0 and len(Js2) > 0:
-                        # eprint(f"Checking novel CE", file=sys.stderr)
+                        eprint(f"Checking novel CE", file=sys.stderr)
                         novel_exons = set()
                         for j1, j2 in itertools.product(Js1, Js2):
                             # find the novel exon
@@ -990,7 +996,7 @@ def main(args):
                             and (str(x), _j[1]) not in junctions
                         ]
                     ):
-                        # eprint(f"Checking novel IR (2)", file=sys.stderr)
+                        eprint(f"Checking novel IR (2)", file=sys.stderr)
                         # get exonic nodes that are at the real end or start
                         exons0_end = [
                             e
@@ -1147,6 +1153,13 @@ if __name__ == "__main__":
         help="Debug (default: False)",
         action="store_true",
         default=False,
+    )
+    parser.add_argument(
+        "--junction",
+        dest="junction",
+        help="Junction to check, in the form '1-2' (default: None)",
+        type=str,
+        default=None,
     )
     args = parser.parse_args()
     if args.debug:

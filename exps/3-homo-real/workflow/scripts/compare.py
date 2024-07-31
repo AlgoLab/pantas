@@ -23,9 +23,14 @@ def parse_pantas(fpath):
     for line in open(fpath):
         if line.startswith("etype"):
             continue
-        etype, novel, chrom, _, strand, _, i1, i2, _, _, psi1, psi2, dpsi = line.strip(
-            "\n"
-        ).split(",")
+        try:
+            etype, novel, chrom, _, strand, _, i1, i2, _, _, psi1, psi2, dpsi = line.strip(
+                "\n"
+            ).split(",")
+        except ValueError:
+            etype, novel, haplotype, chrom, _, strand, j1_name, j2_name, j3_name, j1_nodes, j2_nodes, j3_nodes, i1, i2, i3, w1, w2, psi1, psi2, dpsi = line.strip(
+                "\n"
+            ).split(",")
         if etype != "ES":
             continue
         dpsi = float(dpsi)
@@ -161,19 +166,21 @@ def main(args):
     truth = {
         k: v
         for k, v in truth.items()
-        if abs(v) >= args.delta and abs(v) <= 1 - args.delta
+        if abs(v) >= args.delta
     }
     print(f"Filtered truth with delta={args.delta}:", len(truth))
     df = []
     df_neg = []
     for t, Es in events.items():
         TPs = set(Es.keys()) & set(truth.keys())
+        if t == "pantas":
+            print(set(truth.keys() - set(Es.keys())))
         for k in TPs:
             best_dpsi = -1
             best_conf = -1
             best_diff = 2
             for dpsi, conf in Es[k]:
-                if abs(dpsi) < args.delta or abs(dpsi) > 1 - args.delta:
+                if abs(dpsi) < args.delta:
                     continue
                 if t == "pantas":
                     pass
@@ -207,7 +214,7 @@ def main(args):
         for k in FPs:
             add_flag = False
             for dpsi, conf in Es[k]:
-                if abs(dpsi) < args.delta or abs(dpsi) > 1 - args.delta:
+                if abs(dpsi) < args.delta:
                     continue
                 if t == "pantas":
                     pass
@@ -375,7 +382,7 @@ def main(args):
     ax1.legend(
         custom_lines,
         legends,
-        title="Tool: #Events (Pearson)",
+        title="Tool: #Events",
         loc="lower center",
         bbox_to_anchor=(0.5, -0.1),
         ncol=2,
@@ -399,6 +406,7 @@ def main(args):
         data=df, x="Tool", y="X", hue="Tool", linewidth=1, edgecolor="black", ax=ax2
     )
     ax2.set_xticklabels(xticks)
+    ax2.set_xlabel("Tool (Pearson)")
     ax2.set_ylabel("|ΔPSI - RTPCR|")
     ax2.set_ylim(-0.01, 0.7)
 
@@ -409,7 +417,8 @@ def main(args):
 
     # Plot
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+    plt.savefig("x.png")
 
 
 if __name__ == "__main__":

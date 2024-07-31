@@ -143,7 +143,7 @@ rule pantas_call:
         pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "call{x}.w{w}.time"),
     shell:
         """
-        /usr/bin/time -vo {log} bash ../../pantas call {params.novelp} -w {wildcards.w} {input.gfa} {input.gtf} > {output.csv}
+        /usr/bin/time -vo {log} bash ../../pantas call -l 25 {params.novelp} -w {wildcards.w} {input.gfa} {input.gtf} > {output.csv}
         """
 
 
@@ -175,5 +175,5 @@ rule pantas_remap:
         pjoin(ODIR, "{sample}", "bench", "{annov}", "pantas2", "remap.w{w}.time"),
     shell:
         """
-        /usr/bin/time -vo {log} bash ../../pantas remap {input.csv} {input.gtf} > {output.csv}
+        /usr/bin/time -vo {log} bash ../../pantas remap -i 25 {input.csv} {input.gtf} > {output.csv}
         """

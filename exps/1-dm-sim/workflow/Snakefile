@@ -58,9 +58,13 @@ rule run:
         expand(pjoin(ODIR, "{sample}", "truth.csv"), sample=samples),
         # pantas
         expand(
-            pjoin(ODIR, "{sample}", "{anno}", "pantas2", "quant-remap.w{w}.csv"),
+            pjoin(ODIR, "{sample}", "anno", "pantas2", "quant-remap.w{w}.csv"),
             w=[0,1,2,3,5,10],
-            anno=["anno", "novel"],
+            sample=samples,
+        ),
+        expand(
+            pjoin(ODIR, "{sample}", "novel", "pantas2", "quant-remap.w{w}.csv"),
+            w=[1,2,3,5,10],
             sample=samples,
         ),
         # rmats

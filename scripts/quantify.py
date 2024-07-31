@@ -330,8 +330,8 @@ def main(args):
                 if args.both:
                     continue
                 if not e1.psi() == -1:
-                    psi2 = "NaN"
-                    dpsi = "NaN"
+                    psi2 = 1
+                    dpsi = max(0, e1.psi()) - max(0, psi2)
                     w2 = "."
                     print(
                         e1.to_csv(),
@@ -346,8 +346,8 @@ def main(args):
             for e2 in events_2[etype]:
                 eqs = [x for x in events_1[etype] if eq_event(e2, x)]
                 if len(eqs) == 0 and not e2.psi() == -1:
-                    psi1 = "NaN"
-                    dpsi = "NaN"
+                    psi1 = 1
+                    dpsi = max(0, psi1) - max(0, e2.psi())
                     w1 = "."
                     print(
                         e2.to_csv(),

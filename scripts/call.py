@@ -884,7 +884,7 @@ def main(args):
 
         if "IR" in args.events or "ES" in args.events:
             for _j in junctions:
-                if args.junction != None and "f{_j[0]}-{_j[1]}" != args.junction:
+                if args.junction != None and f"{_j[0]}-{_j[1]}" != args.junction:
                     continue
                 if gfaL[_j]["RC"] < args.rca:
                     continue

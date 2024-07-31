@@ -549,24 +549,17 @@ def main(args):
 
             if "ES" in args.events:
                 eprint(f"Checking novel ES", file=sys.stderr)
-                if len(_exons0) != 0 and len(_exons1) != 0:
-                    # both ends must be annotated exons
+                if len(_exons0) != 0 and len(_exons1) != 0 and len(_exons0 & _exons1) != len(_exons0):
+                    # both ends must be annotated exons that are different
                     nodes1 = [n for n in _next0 if (_j[0], n) in junctions]
                     nodes2 = [p for p in _prev1 if (p, _j[1]) in junctions]
                     if len(nodes1) != 0 and len(nodes2) != 0:
-                        # no annotated junctions we can check
+                        # we have junctions to check
                         for n, p in itertools.product(nodes1, nodes2):
                             j1 = (_j[0], n)
                             j2 = (p, _j[1])
-                            exons_n = get_set_exons(gfaS, n)
-                            exons_p = get_set_exons(gfaS, p)
-                            if len(exons_n) == 0 and len(exons_p) == 0:
-                                # we have to skip one or more exons
-                                continue
-
-                            nht = get_haplotranscripts_from_exons(exons_n)
-                            pht = get_haplotranscripts_from_exons(exons_p)
-
+                            nht = get_haplotranscripts_from_junction(gfaL[j1]["JN"])
+                            pht = get_haplotranscripts_from_junction(gfaL[j2]["JN"])
                             haplotranscripts_inclusion = set(nht) & set(pht)
                             if len(haplotranscripts_inclusion) == 0:
                                 # no single transcript covers both nodes

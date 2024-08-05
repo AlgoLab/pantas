@@ -139,7 +139,7 @@ rule pantas_quant:
     conda: pjoin(ENVS, "pantas2.yaml")
     shell:
         """
-        /usr/bin/time -vo {log} python3 {input.quant} --c1 {input.csv1s} --c2 {input.csv2s} > {output.csv}
+        /usr/bin/time -vo {log} python3 {input.quant} --c1 {input.csv1s} --c2 {input.csv2s} --both > {output.csv}
         """
         
         

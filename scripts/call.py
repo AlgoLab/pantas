@@ -572,7 +572,7 @@ def main(args):
                                 # FIXME: this could be a quite strong assumption
                                 print(
                                     "Skipping ES due to multiple genes",
-                                    file=sys.sterr,
+                                    file=sys.stderr,
                                 )
                             else:
                                 _gene = next(iter(_genes))
@@ -645,7 +645,7 @@ def main(args):
                                 # FIXME: this could be a quite strong assumption
                                 print(
                                     "Skipping SS due to multiple genes",
-                                    file=sys.sterr,
+                                    file=sys.stderr,
                                 )
                             else:
                                 _gene = next(iter(_genes))
@@ -699,7 +699,7 @@ def main(args):
                                 # FIXME: this could be a quite strong assumption
                                 print(
                                     "Skipping SS due to multiple genes",
-                                    file=sys.sterr,
+                                    file=sys.stderr,
                                 )
                             else:
                                 _gene = next(iter(_genes))
@@ -753,7 +753,7 @@ def main(args):
                             # FIXME: this could be a quite strong assumption
                             print(
                                 "Skipping SS due to multiple genes",
-                                file=sys.sterr,
+                                file=sys.stderr,
                             )
                         else:
                             _gene = next(iter(_genes))
@@ -802,7 +802,7 @@ def main(args):
                             # FIXME: this could be a quite strong assumption
                             print(
                                 "Skipping SS due to multiple genes",
-                                file=sys.sterr,
+                                file=sys.stderr,
                             )
                         else:
                             _gene = next(iter(_genes))
@@ -852,7 +852,7 @@ def main(args):
                                 # FIXME: this could be a quite strong assumption
                                 print(
                                     "Skipping novel IR due to multiple genes",
-                                    file=sys.sterr,
+                                    file=sys.stderr,
                                 )
                             else:
                                 _gene = next(iter(_genes))
@@ -1049,7 +1049,7 @@ def main(args):
                                     # FIXME: this could be a quite strong assumption
                                     print(
                                         "Skipping novel IR due to multiple genes",
-                                        file=sys.sterr,
+                                        file=sys.stderr,
                                     )
                                 else:
                                     _gene = next(iter(_genes))

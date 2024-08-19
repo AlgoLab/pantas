@@ -549,7 +549,11 @@ def main(args):
 
             if "ES" in args.events:
                 eprint(f"Checking novel ES", file=sys.stderr)
-                if len(_exons0) != 0 and len(_exons1) != 0 and len(_exons0 & _exons1) != len(_exons0):
+                if (
+                    len(_exons0) != 0
+                    and len(_exons1) != 0
+                    and len(_exons0 & _exons1) != len(_exons0)
+                ):
                     # both ends must be annotated exons that are different
                     nodes1 = [n for n in _next0 if (_j[0], n) in junctions]
                     nodes2 = [p for p in _prev1 if (p, _j[1]) in junctions]
@@ -731,9 +735,11 @@ def main(args):
                     pvisitl = 1
                     _i = 0
                     # TODO: we don't need to store the subpath, but we may want it
-                    while (
-                        len(visit & exonic_next) == 0 and _i < args.isw
-                    ):  # FIXME: hardcoded
+                    fail = False  # due to prune we may have intronic tips that cannot be extended with the visit (in the best case, we restore only transcripts)
+                    while len(visit & exonic_next) == 0 and _i < args.isw:
+                        if len(visit) == 0:
+                            fail = True
+                            break
                         n = visit.pop()
                         pvisitl -= 1
                         visit |= set(get_outgoing_nodes(gfaS, n))
@@ -741,7 +747,7 @@ def main(args):
                             _i += 1
                             pvisitl = len(visit)
                     # TODO: here we are reporting only one event per novel junction. We could do a visit for **each** exonic_next
-                    if _i < args.isw:
+                    if not fail and _i < args.isw:
                         # we report the event since we found a path
                         j1 = (_j[0], next(iter(visit & exonic_next)))
                         _genes = set(
@@ -782,7 +788,11 @@ def main(args):
                     pvisitl = 1
                     _i = 0
                     # TODO: we don't need to store the subpath, but we may want it
+                    fail = False  # due to prune we may have intronic tips that cannot be extended with the visit (in the best case, we restore only transcripts)
                     while len(visit & exonic_prev) == 0 and _i < args.isw:
+                        if len(visit) == 0:
+                            fail = True
+                            break
                         n = visit.pop()
                         pvisitl -= 1
                         visit |= set(get_incoming_nodes(gfaS, n))
@@ -790,7 +800,7 @@ def main(args):
                             _i += 1
                             pvisitl = len(visit)
                     # TODO: here we are reporting only one event per novel junction. We could do a visit for **each** exonic_next
-                    if _i < args.isw:
+                    if not fail and _i < args.isw:
                         # we report the event since we found a path
                         j1 = (next(iter(visit & exonic_prev)), _j[1])
                         _genes = set(
@@ -1031,7 +1041,11 @@ def main(args):
                                 if _j[1] in onodes:
                                     subpath.append(_j[1])
                                 else:
-                                    onodes = [x for x in onodes if len(get_outgoing_nodes(gfaS, x)) > 0]
+                                    onodes = [
+                                        x
+                                        for x in onodes
+                                        if len(get_outgoing_nodes(gfaS, x)) > 0
+                                    ]
                                     best_node = max(onodes, key=lambda x: gfaS[x]["NC"])
                                     subpath.append(best_node)
                             if (

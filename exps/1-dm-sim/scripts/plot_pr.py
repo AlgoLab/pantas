@@ -48,6 +48,7 @@ def main():
                 style="TrueCov",
                 markers=True,
                 dashes=False,
+                markersize=10,
                 ax=ax,
             )
         else:
@@ -61,6 +62,7 @@ def main():
                 legend=None,
                 markers=True,
                 dashes=False,
+                markersize=10,
                 ax=ax,
             )
         ax.set_title(etype)

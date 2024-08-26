@@ -59,12 +59,12 @@ rule run:
         # pantas
         expand(
             pjoin(ODIR, "{sample}", "anno", "pantas2", "quant-remap.w{w}.csv"),
-            w=[0,1,2,3,5,10],
+            w=[0, 1, 2, 3, 5, 10],
             sample=samples,
         ),
         expand(
             pjoin(ODIR, "{sample}", "novel", "pantas2", "quant-remap.w{w}.csv"),
-            w=[1,2,3,5,10],
+            w=[1, 2, 3, 5, 10],
             sample=samples,
         ),
         # rmats
@@ -74,44 +74,34 @@ rule run:
         expand(pjoin(ODIR, "{sample}", "SUPPA2-anno.csv"), sample=samples),
         # whippet
         expand(pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff"), sample=samples),
-        # expand(pjoin(ODIR, "{sample}", "novel", "whippet", "psi.diff"), sample=samples),
-        # expand(
-        #     pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"),
-        #     sample=samples,
-        #     w=[1, 3, 5, 10],
-        # ),
-        # expand(
-        #     pjoin(ODIR, "{sample}", "compare-anno.w{w}.csv"),
-        #     sample=samples,
-        #     w=[-1, 1, 3, 5, 10],
-        # ),
-        # 
+        # compare
+        expand(pjoin(ODIR, "{sample}", "compare-anno.csv"), sample=samples),
+        expand(pjoin(ODIR, "{sample}", "compare-novel.csv"), sample=samples),
 
 
-# rule compare_all_anno:
-#     input:
-#         py="cmp_pantas.py",
-#         truth=pjoin(ODIR, "{sample}", "truth.csv"),
-#         pantas=pjoin(ODIR, "{sample}", "anno", "pantas2", "quant.w{w}.csv"),
-#         rmats=pjoin(ODIR, "{sample}", "rMATS-anno.csv"),
-#         whippet=pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff"),
-#         suppa2=pjoin(ODIR, "{sample}", "SUPPA2-anno.csv"),
-#     output:
-#         pjoin(ODIR, "{sample}", "compare-anno.w{w}.csv"),
-#     shell:
-#         """
-#         python3 {input.py} -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} -s {input.suppa2} --relax 0 > {output}
-#         """
-# rule compare_all_novel:
-#     input:
-#         py="cmp_pantas.py",
-#         truth=pjoin(ODIR, "{sample}", "truth.csv"),
-#         pantas=pjoin(ODIR, "{sample}", "novel", "pantas2", "quant.w{w}.csv"),
-#         rmats=pjoin(ODIR, "{sample}", "rMATS-novel.csv"),
-#         whippet=pjoin(ODIR, "{sample}", "novel", "whippet", "psi.diff"),
-#     output:
-#         pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"),
-#     shell:
-#         """
-#         python3 {input.py} -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} --relax 3 > {output}
-#         """
+rule compare_all_anno:
+    input:
+        truth=pjoin(ODIR, "{sample}", "truth.csv"),
+        pantas=pjoin(ODIR, "{sample}", "anno", "pantas2", "quant-remap.w5.csv"),
+        rmats=pjoin(ODIR, "{sample}", "rMATS-anno.csv"),
+        whippet=pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff"),
+        suppa2=pjoin(ODIR, "{sample}", "SUPPA2-anno.csv"),
+    output:
+        pjoin(ODIR, "{sample}", "compare-anno.csv"),
+    shell:
+        """
+        for c in 0 1 3 5 10 20 ; do python3 ./scripts/cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} -s {input.suppa2} -d 0.05 -c $c -2 ; done > {output}
+        """
+
+
+rule compare_all_anno:
+    input:
+        truth=pjoin(ODIR, "{sample}", "truth.csv"),
+        pantas=pjoin(ODIR, "{sample}", "anno", "pantas2", "quant-remap.w5.csv"),
+        rmats=pjoin(ODIR, "{sample}", "rMATS-anno.csv"),
+    output:
+        pjoin(ODIR, "{sample}", "compare-novel.csv"),
+    shell:
+        """
+        for c in 0 1 3 5 10 20 ; do python3 ./scripts/cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} -s {input.suppa2} --novel -d 0.05 -c $c -2 ; done > {output}
+        """

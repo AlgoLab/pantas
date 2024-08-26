@@ -13,6 +13,7 @@ def precision_recall_f1(tp: int, fn: int, fp: int) -> list[int]:
     f1 = round(2 * float(tp) / (2 * tp + fp + fn) if tp + fp + fn != 0 else 0, 3)
     return [prec, rec, f1]
 
+
 def is_good(e, DPSI_FILTER, MIN_EVENT_COV, novel=False):
     if abs(e.dpsi) < DPSI_FILTER:
         return False
@@ -21,12 +22,6 @@ def is_good(e, DPSI_FILTER, MIN_EVENT_COV, novel=False):
             return False
     else:
         return e.min_event_cov >= MIN_EVENT_COV
-    # if e.etype == "ES":
-    #     if e.event_cov_c1 < MIN_EVENT_COV or e.event_cov_c2 < MIN_EVENT_COV:
-    #         return False
-    # elif e.etype[0] == "A":
-    #     if any([c < MIN_EVENT_COV for c in e.rc_c1 + e.rc_c2]):
-    #         return False
     return True
 
 
@@ -48,8 +43,8 @@ def main(args):
         e = eparser.EventTruth(
             etype, "truth", chrom, gene, strand, j1, j2, j3, w1, w2, psi1, psi2, dpsi
         )
-        # if abs(e.dpsi) < args.min_dpsi or any([c < args.min_cov for c in e.rc_c1 + e.rc_c2]):
-        #     continue
+        if args.mode2 and not is_good(e, args.min_dpsi, args.min_cov, args.novel):
+            continue
         event_truth[e.etype].append(e)
 
     # sys.exit()
@@ -57,7 +52,6 @@ def main(args):
     event_pantas = {x: [] for x in ETYPES}
     for line in open(args.p, "r"):
         if line.startswith("etype"):
-            # header
             continue
         line = line.strip()
         _e = line.split(",")
@@ -66,30 +60,28 @@ def main(args):
         e = eparser.EventPantas(*_e)
         if isnan(e.psi_c1) or isnan(e.psi_c2):
             continue
-        # if abs(e.dpsi) < args.min_dpsi:
-        #     continue
+        if abs(e.dpsi) < args.min_dpsi:
+            continue
         event_pantas[e.etype].append(e)
 
     event_rmats = {x: [] for x in ETYPES}
     if args.r:
         for line in open(args.r, "r"):
             if line.startswith("etype"):
-                # header
                 continue
             line = line.strip()
             _e = line.split(",")
             e = eparser.EventRmats(*_e)
             if isnan(e.psi_c1) or isnan(e.psi_c2):
                 continue
-            # if abs(e.dpsi) < args.min_dpsi:
-            #     continue
+            if args.mode2 and abs(e.dpsi) < args.min_dpsi:
+                continue
             event_rmats[e.etype].append(e)
 
     event_whippet = {x: [] for x in ETYPES}
     if args.w:
         for line in open(args.w, "r"):
             if line.startswith("Gene"):
-                # header
                 continue
             line = line.strip()
             _e = line.split("\t")
@@ -99,8 +91,8 @@ def main(args):
             e = eparser.EventWhippet(*_e, "anno")
             if isnan(e.psi_c1) or isnan(e.psi_c2):
                 continue
-            # if abs(e.dpsi) < args.min_dpsi:
-            #     continue
+            if args.mode2 and abs(e.dpsi) < args.min_dpsi:
+                continue
             event_whippet[e.etype].append(e)
 
     event_suppa = {x: [] for x in ETYPES}
@@ -112,10 +104,10 @@ def main(args):
             line = line.strip()
             _e = line.split(",")
             e = eparser.EventRmats(*_e)
-            # if isnan(e.psi_c1) or isnan(e.psi_c2):
-            #     continue
-            # if abs(e.dpsi) < args.min_dpsi:
-            #     continue
+            if isnan(e.dpsi):
+                continue
+            if args.mode2 and abs(e.dpsi) < args.min_dpsi:
+                continue
             event_suppa[e.etype].append(e)
 
     TP_PANTAS = {x: 0 for x in ETYPES}
@@ -139,7 +131,9 @@ def main(args):
         if etype not in args.events:
             continue
         for e1 in event_truth[etype]:
-            if not is_good(e1, args.min_dpsi, args.min_cov, args.novel):
+            if not args.mode2 and not is_good(
+                e1, args.min_dpsi, args.min_cov, args.novel
+            ):
                 continue
             str_event = e1.to_csv()
             eqsp = [
@@ -161,9 +155,7 @@ def main(args):
                     print("FN", e1.to_csv(), file=sys.stderr)
 
             eqsr = [
-                x
-                for x in event_rmats[etype]
-                if eparser.eq_event(e1, x, args.novel)
+                x for x in event_rmats[etype] if eparser.eq_event(e1, x, args.novel)
             ]
             if len(eqsr) > 0:
                 # True positives
@@ -178,9 +170,7 @@ def main(args):
                     print("FN RMATS", e1.to_csv())
 
             eqsw = [
-                x
-                for x in event_whippet[etype]
-                if eparser.eq_event(e1, x, args.novel)
+                x for x in event_whippet[etype] if eparser.eq_event(e1, x, args.novel)
             ]
             if len(eqsw) > 0:
                 # True positives
@@ -191,11 +181,11 @@ def main(args):
                 # False negatives
                 FN_WHIPPET[etype] += 1
                 str_event += ",FN"
+                if args.print:
+                    print("FN WHIPPET", e1.to_csv())
 
             eqss = [
-                x
-                for x in event_suppa[etype]
-                if eparser.eq_event(e1, x, args.novel)
+                x for x in event_suppa[etype] if eparser.eq_event(e1, x, args.novel)
             ]
             if len(eqss) > 0:
                 # True positives
@@ -206,6 +196,8 @@ def main(args):
                 # False negatives
                 FN_SUPPA[etype] += 1
                 str_event += ",FN"
+                if args.print:
+                    print("FN SUPPA2", e1.to_csv())
 
             # print(str_event)
 
@@ -214,7 +206,7 @@ def main(args):
         if etype not in args.events:
             continue
         for e2 in event_pantas[etype]:
-            if abs(e2.dpsi) < args.min_dpsi:
+            if not args.mode2 and abs(e2.dpsi) < args.min_dpsi:
                 continue
             # print(len(event_truth[etype]))
             eqs = [
@@ -229,13 +221,9 @@ def main(args):
                     print("FP-PANTAS", e2.to_csv(), file=sys.stderr)
 
         for e2 in event_rmats[etype]:
-            if abs(e2.dpsi) < args.min_dpsi:
+            if not args.mode2 and abs(e2.dpsi) < args.min_dpsi:
                 continue
-            eqs = [
-                x
-                for x in event_truth[etype]
-                if eparser.eq_event(x, e2, args.novel)
-            ]
+            eqs = [x for x in event_truth[etype] if eparser.eq_event(x, e2, args.novel)]
             if len(eqs) == 0:
                 # False positives
                 FP_RMATS[etype] += 1
@@ -243,33 +231,40 @@ def main(args):
                     print("FP-RMATS", e2.to_csv())
 
         for e2 in event_whippet[etype]:
-            if abs(e2.dpsi) < args.min_dpsi:
+            if not args.mode2 and abs(e2.dpsi) < args.min_dpsi:
                 continue
-            eqs = [
-                x
-                for x in event_truth[etype]
-                if eparser.eq_event(x, e2, args.novel)
-            ]
+            eqs = [x for x in event_truth[etype] if eparser.eq_event(x, e2, args.novel)]
             if len(eqs) == 0:
                 # False positives
                 FP_WHIPPET[etype] += 1
-                # print("FP-WHIPPET", e2.to_csv())
+                if args.print:
+                    print("FP-WHIPPET", e2.to_csv(), file=sys.stderr)
 
         for e2 in event_suppa[etype]:
-            if abs(e2.dpsi) < args.min_dpsi:
+            if not args.mode2 and abs(e2.dpsi) < args.min_dpsi:
                 continue
-            eqs = [
-                x
-                for x in event_truth[etype]
-                if eparser.eq_event(x, e2, args.novel)
-            ]
+            eqs = [x for x in event_truth[etype] if eparser.eq_event(x, e2, args.novel)]
             if len(eqs) == 0:
                 # False positives
                 FP_SUPPA[etype] += 1
-                # print("FP-WHIPPET", e2.to_csv())
+                if args.print:
+                    print("FP-SUPPA2", e2.to_csv(), file=sys.stderr)
 
     # print("PANTAS")
-    print("p-supp", "tool", "etype", "mindpsi", "mincov", "TP", "FN", "FP", "Prec", "Rec", "F1", sep=sep)
+    print(
+        "p-supp",
+        "tool",
+        "etype",
+        "mindpsi",
+        "mincov",
+        "TP",
+        "FN",
+        "FP",
+        "Prec",
+        "Rec",
+        "F1",
+        sep=sep,
+    )
     for etype in ETYPES:
         if etype not in args.events:
             continue
@@ -378,7 +373,7 @@ if __name__ == "__main__":
         help="Minimum dPSI for events",
         dest="min_dpsi",
         type=float,
-        default=0.02,
+        default=0.05,
     )
     parser.add_argument(
         "-t",
@@ -436,6 +431,13 @@ if __name__ == "__main__":
         nargs="+",
         required=False,
         default=["ES", "A3", "A5", "IR"],
+    )
+    parser.add_argument(
+        "-2",
+        dest="mode2",
+        help="(Default: False)",
+        action="store_true",
+        default=False,
     )
     args = parser.parse_args()
     main(args)

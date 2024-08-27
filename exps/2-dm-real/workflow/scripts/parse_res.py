@@ -86,7 +86,7 @@ def parse_pantas(path):
         if abs(e.dpsi) < FILTER:
             continue
         if e.etype == "IR":
-            e.dpsi = 1 - e.dpsi
+            e.dpsi = -e.dpsi # Pantas alternative isoform = rMATS canonical isoform
         event_pantas[e.etype].append(e)
     return event_pantas
 

@@ -24,24 +24,44 @@ def parse_pantas(fpath):
         if line.startswith("etype"):
             continue
         try:
-            etype, novel, chrom, _, strand, _, i1, i2, _, _, psi1, psi2, dpsi = line.strip(
-                "\n"
-            ).split(",")
+            etype, novel, chrom, _, strand, _, i1, i2, _, _, psi1, psi2, dpsi = (
+                line.strip("\n").split(",")
+            )
         except ValueError:
-            etype, novel, haplotype, chrom, _, strand, j1_name, j2_name, j3_name, j1_nodes, j2_nodes, j3_nodes, i1, i2, i3, w1, w2, psi1, psi2, dpsi = line.strip(
-                "\n"
-            ).split(",")
+            (
+                etype,
+                novel,
+                haplotype,
+                chrom,
+                _,
+                strand,
+                j1_name,
+                j2_name,
+                j3_name,
+                j1_nodes,
+                j2_nodes,
+                j3_nodes,
+                i1,
+                i2,
+                i3,
+                w1,
+                w2,
+                psi1,
+                psi2,
+                dpsi,
+            ) = line.strip("\n").split(",")
         if etype != "ES":
             continue
         dpsi = float(dpsi)
         s1, e1 = get_interval(i1)
         s2, e2 = get_interval(i2)
-        k = f"{chrom}:{e1+1}-{s2-1}"
         events[k] = (
             events[k] + [(-float(dpsi), novel)]
             if k in events
             else [(-float(dpsi), novel)]
         )
+    k = "chr20:58440907-58441083"
+    print(events[k])
     return events
 
 
@@ -163,11 +183,7 @@ def main(args):
 
     # Filtering and dataframe preparation
     print("Truth:", len(truth))
-    truth = {
-        k: v
-        for k, v in truth.items()
-        if abs(v) >= args.delta
-    }
+    truth = {k: v for k, v in truth.items() if abs(v) >= args.delta}
     print(f"Filtered truth with delta={args.delta}:", len(truth))
     df = []
     df_neg = []
@@ -255,6 +271,8 @@ def main(args):
     whippet_all = set(events["whippet"].keys())
     suppa2_all = set(events["SUPPA2"].keys())
 
+    print("No whippet:", len(pantas & rmats & suppa2))
+
     # Negative results
     print(
         "pantas",
@@ -312,7 +330,7 @@ def main(args):
         xticks.append(f"{t}\n(r={corr:.3f})")
 
     # Print events not found by pantas + Some other stuff
-    print((rmats | whippet | suppa2) - pantas)
+    print("MISSED:", (rmats | whippet | suppa2) - pantas)
     for k in (suppa2 | whippet | rmats) - pantas:
         if k in whippet:
             print(k, events["whippet"][k])

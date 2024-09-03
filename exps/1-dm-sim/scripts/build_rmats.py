@@ -426,10 +426,18 @@ def main(mode, rmats_prefix, min_pvalue):
     # truth, truth_w = parse_truth(truth_path, False)
 
     rmats = {x: set() for x in ETYPES}
-    rmats["ES"] = parse_rmats_se(rmats_prefix + "/SE.MATS.JC.txt", mode == "novel", min_pvalue)
-    rmats["A3"] = parse_rmats_a3(rmats_prefix + "/A3SS.MATS.JC.txt", mode == "novel", min_pvalue)
-    rmats["A5"] = parse_rmats_a5(rmats_prefix + "/A5SS.MATS.JC.txt", mode == "novel", min_pvalue)
-    rmats["IR"] = parse_rmats_ri(rmats_prefix + "/RI.MATS.JC.txt", mode == "novel", min_pvalue)
+    rmats["ES"] = parse_rmats_se(
+        rmats_prefix + "/SE.MATS.JC.txt", mode == "novel", min_pvalue
+    )
+    rmats["A3"] = parse_rmats_a3(
+        rmats_prefix + "/A3SS.MATS.JC.txt", mode == "novel", min_pvalue
+    )
+    rmats["A5"] = parse_rmats_a5(
+        rmats_prefix + "/A5SS.MATS.JC.txt", mode == "novel", min_pvalue
+    )
+    rmats["IR"] = parse_rmats_ri(
+        rmats_prefix + "/RI.MATS.JC.txt", mode == "novel", min_pvalue
+    )
 
     for etype in rmats:
         for e in rmats[etype]:
@@ -440,5 +448,5 @@ if __name__ == "__main__":
     mode = sys.argv[1]
     # truth_path = sys.argv[2]
     rmats_path = sys.argv[2]
-    min_pvalue = 10
+    min_pvalue = float(sys.argv[3])
     main(mode, rmats_path, min_pvalue)

@@ -14,15 +14,13 @@ def precision_recall_f1(tp: int, fn: int, fp: int) -> list[int]:
     return [prec, rec, f1]
 
 
-def is_good(e, DPSI_FILTER, MIN_EVENT_COV, novel=False):
+def is_good(e, DPSI_FILTER, MIN_EVENT_COV):
     if abs(e.dpsi) < DPSI_FILTER:
         return False
-    if not novel:
-        if any([c < MIN_EVENT_COV for c in e.rc_c1 + e.rc_c2]):
-            return False
+    if any([c < MIN_EVENT_COV for c in e.rc_c1 + e.rc_c2]):
+        return False
     else:
-        return e.min_event_cov >= MIN_EVENT_COV
-    return True
+        return True
 
 
 def main(args):
@@ -43,7 +41,7 @@ def main(args):
         e = eparser.EventTruth(
             etype, "truth", chrom, gene, strand, j1, j2, j3, w1, w2, psi1, psi2, dpsi
         )
-        if args.mode2 and not is_good(e, args.min_dpsi, args.min_cov, args.novel):
+        if args.mode2 and not is_good(e, args.min_dpsi, args.min_cov):
             continue
         event_truth[e.etype].append(e)
 
@@ -131,9 +129,7 @@ def main(args):
         if etype not in args.events:
             continue
         for e1 in event_truth[etype]:
-            if not args.mode2 and not is_good(
-                e1, args.min_dpsi, args.min_cov, args.novel
-            ):
+            if not args.mode2 and not is_good(e1, args.min_dpsi, args.min_cov):
                 continue
             str_event = e1.to_csv()
             eqsp = [
@@ -263,6 +259,7 @@ def main(args):
         "Prec",
         "Rec",
         "F1",
+        "TOT",
         sep=sep,
     )
     for etype in ETYPES:
@@ -278,6 +275,7 @@ def main(args):
             FN_PANTAS[etype],
             FP_PANTAS[etype],
             *precision_recall_f1(TP_PANTAS[etype], FN_PANTAS[etype], FP_PANTAS[etype]),
+            TP_PANTAS[etype] + FN_PANTAS[etype],
             sep=sep
         )
 
@@ -297,6 +295,7 @@ def main(args):
                 FN_RMATS[etype],
                 FP_RMATS[etype],
                 *precision_recall_f1(TP_RMATS[etype], FN_RMATS[etype], FP_RMATS[etype]),
+                TP_RMATS[etype] + FN_RMATS[etype],
                 sep=sep
             )
 
@@ -318,6 +317,7 @@ def main(args):
                 *precision_recall_f1(
                     TP_WHIPPET[etype], FN_WHIPPET[etype], FP_WHIPPET[etype]
                 ),
+                TP_WHIPPET[etype] + FN_WHIPPET[etype],
                 sep=sep
             )
     if args.s:
@@ -336,6 +336,7 @@ def main(args):
                 FN_SUPPA[etype],
                 FP_SUPPA[etype],
                 *precision_recall_f1(TP_SUPPA[etype], FN_SUPPA[etype], FP_SUPPA[etype]),
+                TP_SUPPA[etype] + FN_SUPPA[etype],
                 sep=sep
             )
 

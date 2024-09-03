@@ -46,5 +46,6 @@ rule build_suppa:
         csv=pjoin(ODIR, "{sample}", "SUPPA2-anno.csv"),
     shell:
         """
-        python3 scripts/build_suppa.py {input.calls} 100 > {output.csv}
+        python3 scripts/build_suppa.py {input.calls} 2 > {output.csv}
+        # 2 to not filter. Set to 0.05 otherwise
         """

@@ -49,59 +49,60 @@ include: "rules/whippet-anno.smk"
 include: "rules/whippet-novel.smk"
 
 
-# include: "rules/results.smk"
-
-
 rule run:
     input:
-        # to get truth file
-        expand(pjoin(ODIR, "{sample}", "truth.csv"), sample=samples),
+        ## to get truth file
+        #expand(pjoin(ODIR, "{sample}", "truth.csv"), sample=samples),
         # pantas
-        expand(
-            pjoin(ODIR, "{sample}", "anno", "pantas2", "quant-remap.w{w}.csv"),
-            w=[0, 1, 2, 3, 5, 10],
-            sample=samples,
-        ),
-        expand(
-            pjoin(ODIR, "{sample}", "novel", "pantas2", "quant-remap.w{w}.csv"),
-            w=[1, 2, 3, 5, 10],
-            sample=samples,
-        ),
-        # rmats
-        expand(pjoin(ODIR, "{sample}", "rMATS-anno.csv"), sample=samples),
-        expand(pjoin(ODIR, "{sample}", "rMATS-novel.csv"), sample=samples),
-        # suppa2
-        expand(pjoin(ODIR, "{sample}", "SUPPA2-anno.csv"), sample=samples),
-        # whippet
-        expand(pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff"), sample=samples),
+        #expand(
+        #    pjoin(ODIR, "{sample}", "anno", "pantas2", "quant-remap.w{w}.csv"),
+        #    w=[3, 5],
+        #    sample=samples,
+        #),
+        #expand(
+        #    pjoin(ODIR, "{sample}", "novel", "pantas2", "quant-remap.w{w}.csv"),
+        #    w=[3, 5],
+        #    sample=samples,
+        #),
+        ## rmats
+        #expand(pjoin(ODIR, "{sample}", "rMATS-anno.csv"), sample=samples),
+        #expand(pjoin(ODIR, "{sample}", "rMATS-novel.csv"), sample=samples),
+        ## suppa2
+        #expand(pjoin(ODIR, "{sample}", "SUPPA2-anno.csv"), sample=samples),
+        ## whippet
+        #expand(pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff"), sample=samples),
         # compare
-        expand(pjoin(ODIR, "{sample}", "compare-anno.csv"), sample=samples),
-        expand(pjoin(ODIR, "{sample}", "compare-novel.csv"), sample=samples),
+        expand(
+            pjoin(ODIR, "{sample}", "compare-anno.w{w}.csv"), sample=samples, w=[3, 5]
+        ),
+        expand(
+            pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"), sample=samples, w=[3, 5]
+        ),
 
 
 rule compare_all_anno:
     input:
         truth=pjoin(ODIR, "{sample}", "truth.csv"),
-        pantas=pjoin(ODIR, "{sample}", "anno", "pantas2", "quant-remap.w5.csv"),
+        pantas=pjoin(ODIR, "{sample}", "anno", "pantas2", "quant-remap.w{w}.csv"),
         rmats=pjoin(ODIR, "{sample}", "rMATS-anno.csv"),
         whippet=pjoin(ODIR, "{sample}", "anno", "whippet", "psi.diff"),
         suppa2=pjoin(ODIR, "{sample}", "SUPPA2-anno.csv"),
     output:
-        pjoin(ODIR, "{sample}", "compare-anno.csv"),
+        pjoin(ODIR, "{sample}", "compare-anno.w{w}.csv"),
     shell:
         """
-        for c in 0 1 3 5 10 20 ; do python3 ./scripts/cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} -s {input.suppa2} -d 0.05 -c $c -2 ; done > {output}
+        for c in 1 3 5 10 20 ; do python3 ./scripts/cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} -s {input.suppa2} -d 0.05 -c $c -2 ; done > {output}
         """
 
 
-rule compare_all_anno:
+rule compare_all_novel:
     input:
         truth=pjoin(ODIR, "{sample}", "truth.csv"),
-        pantas=pjoin(ODIR, "{sample}", "anno", "pantas2", "quant-remap.w5.csv"),
-        rmats=pjoin(ODIR, "{sample}", "rMATS-anno.csv"),
+        pantas=pjoin(ODIR, "{sample}", "novel", "pantas2", "quant-remap.w{w}.csv"),
+        rmats=pjoin(ODIR, "{sample}", "rMATS-novel.csv"),
     output:
-        pjoin(ODIR, "{sample}", "compare-novel.csv"),
+        pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"),
     shell:
         """
-        for c in 0 1 3 5 10 20 ; do python3 ./scripts/cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} -s {input.suppa2} --novel -d 0.05 -c $c -2 ; done > {output}
+        for c in 1 3 5 10 20 ; do python3 ./scripts/cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} --novel -d 0.05 -c $c -2 ; done > {output}
         """

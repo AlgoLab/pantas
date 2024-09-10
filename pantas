@@ -7,7 +7,15 @@ VERSION="1.0.0"
 
 REPO_ROOT="$(dirname $0)"
 
-USAGE=$''"${SCRIPT_NAME}"' [build|augment|call|quant|remap|version] -h'
+USAGE=$''"${SCRIPT_NAME}"' [build|augment|call|quant|remap|version] -h
+
+	build		build and annotate a spliced pangenome
+	augment		augment an annotated spliced pangenome using alignments information
+	call		call events from single replicate
+	quant		quantify events comparing conditions
+	remap		remap events to reference haplotype
+	version		print the version
+'
 
 BUILD_USAGE=$''"${SCRIPT_NAME}"' build <FA> <GTF> <VCF>
 
@@ -95,6 +103,9 @@ elif [ "$MODE" == "build" ]; then
 
 	if [ "${WD:0:1}" != "/" ]
 	then
+		FA=$(pwd)/$FA
+		GTF=$(pwd)/$GTF
+		VCF=$(pwd)/$VCF
 		WD=$(pwd)/$WD
 	fi
 	pushd $REPO_ROOT/build &> /dev/null
@@ -220,7 +231,7 @@ elif [ "$MODE" == "remap" ]; then
 	GTF=${@:$OPTIND+1:1}
 	python3 $REPO_ROOT/scripts/remap.py $min_intron_size $CSV $GTF
 else
-	echo $USAGE
+	(echo >&2 "${USAGE}")
 	exit 1
 fi
 

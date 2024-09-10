@@ -26,6 +26,9 @@ mamba activate pantas
 # Quantify events across conditions (provide the two conditions with comma-separated path to the events csv)
 ./pantas quant condition1-rep1.csv,condition1-rep2.csv,condition1-rep3.csv \
              condition2-rep1.csv,condition2-rep2.csv,condition2-rep3.csv > [quantification.csv]
+             
+# Remap quantification on the linear reference using the annotation
+./pantas remap -i [minimum intron size for a novel junction] [quantification.csv] [annotation.gtf] > [remap.csv]
 ```
 
 ### Event calling
@@ -45,10 +48,16 @@ python3 ./scripts/call.py --rp [spliced-pangenome.refpath] [sample.gfa] [annotat
 ### Input preparation
 The input of pantas are: an annotated spliced pangenome and the replicates aligned to this graph.
 
-To build and index an annotated spliced pangenome, we provide a snakemake pipeline (`index.smk`): 
+To build and index an annotated spliced pangenome, we provide a snakemake pipeline (`build/build.smk`): 
 ``` sh
-snakemake -s index.smk -c4 --config fa=/path/to/reference.fa gtf=/path/to/annotation.gtf vcf=/path/to/variants.vcf.gz wd=/path/to/out/dir
+snakemake -s build/build.smk -c4 --config fa=/path/to/reference.fa gtf=/path/to/annotation.gtf vcf=/path/to/variants.vcf.gz wd=/path/to/out/dir
 ```
+Build step could also be called directlt from `pantas`:
+
+``` sh
+./pantas build -t [threads] -o [/path/to/out/dir] [reference.fa] [annotation.gtf] [variants.vcf.gz]
+```
+
 The annotated spliced pangenome and the index are stored in the `wd` directory:
 ``` sh
 # Annotated spliced pangenome in GFA format:
@@ -61,25 +70,25 @@ spliced-pangenome.gcsa
 spliced-pangenome.gcsa.lcp
 ```
 
-To build/index a **reduced** annotated spliced pangenomes, i.e., a graph representing a panel of genes of interest:
-``` sh
-snakemake -s index-reduced.smk -c4 --config fa=/path/to/reference.fa gtf=/path/to/panel.gtf vcf=/path/to/variants.vcf.gz wd=/path/to/out/dir
-```
-The reduced annotated spliced pangenome and the index are stored in the `wd` directory:
-```
-# Annotated spliced pangenome in GFA format:
-spliced-pangenes.annotated.gfa
-# Compressed graph:
-spliced-pangenes.xg
-# Index:
-spliced-pangenes.dist         
-spliced-pangenes.gcsa
-spliced-pangenes.gcsa.lcp
-# Reduced reference paths:
-spliced-pangenes.refpath
-```
+<!-- To build/index a **reduced** annotated spliced pangenomes, i.e., a graph representing a panel of genes of interest: -->
+<!-- ``` sh -->
+<!-- snakemake -s index-reduced.smk -c4 --config fa=/path/to/reference.fa gtf=/path/to/panel.gtf vcf=/path/to/variants.vcf.gz wd=/path/to/out/dir -->
+<!-- ``` -->
+<!-- The reduced annotated spliced pangenome and the index are stored in the `wd` directory: -->
+<!-- ``` -->
+<!-- # Annotated spliced pangenome in GFA format: -->
+<!-- spliced-pangenes.annotated.gfa -->
+<!-- # Compressed graph: -->
+<!-- spliced-pangenes.xg -->
+<!-- # Index: -->
+<!-- spliced-pangenes.dist          -->
+<!-- spliced-pangenes.gcsa -->
+<!-- spliced-pangenes.gcsa.lcp -->
+<!-- # Reduced reference paths: -->
+<!-- spliced-pangenes.refpath -->
+<!-- ``` -->
 
-**Note:** using reduced annotated spliced pangenomes (when possible) is recommended since it hugely improves running times and RAM usage.
+<!-- **Note:** using reduced annotated spliced pangenomes (when possible) is recommended since it hugely improves running times and RAM usage. -->
 
 To map each replicate to the annotated spliced pangenome, we suggest to use `vg mpmap`:
 ``` sh
@@ -91,7 +100,7 @@ The `example` subdirectory contains example data that can be used to test pantas
 ``` sh
 # Prepare the graph
 # This should take ~1 minute
-snakemake -s index.smk -c4 --config fa=example/4.fa gtf=example/4.gtf vcf=example/4.vcf.gz wd=example/pantas-index
+snakemake -s build/build.smk -c4 --config fa=example/4.fa gtf=example/4.gtf vcf=example/4.vcf.gz wd=example/pantas-index
 
 # Align the RNA-Seq sample to the graph
 # This should take ~10 seconds
@@ -112,6 +121,10 @@ vg mpmap -x example/pantas-index/spliced-pangenome.xg \
 # Quantify the events across the two conditions (an an example here we are using the same file twice)
 # This should be immediate
 ./pantas quant example/reads.events.csv example/reads.events.csv > example/quant.csv
+
+# Remap step
+# This should be immediate
+./pantas remap -i 25 example/quant.csv example/4.gtf > example/remap.csv
 ```
 
 ## Custom output format
@@ -141,21 +154,39 @@ The differential quantification across conditions (output of `quant` mode of pan
 * chromosome
 * gene name
 * strand
-* junction1, on linear reference
-* junction2, on linear reference
-* junction3, on linear reference
+* junction1 (name on linear reference and node labels)
+* junction2 (name on linear reference and node labels)
+* junction3 (name on linear reference and node labels)
 * support for canonical isoform involved in the event (one value per condition, separated by /)
 * support for minor isoform involved in the event (one value per condition, separated by /)
 * PSI value for condition 1
 * PSI value for condition 2
 * ΔPSI
 
+#### Remapping
+The differential quantification across conditions remapped on the linear reference (output of `remap` mode of pantas) is stored in a CSV file:
+* event type
+* annotated/novel
+* refernce/haplotype
+* chromosome
+* gene name
+* strand
+* junction1 (name on linear reference, node labels, and position on linear reference)
+* junction2 (name on linear reference, node labels, and position on linear reference)
+* junction3 (name on linear reference, node labels, and position on linear reference)
+* support for canonical isoform involved in the event (one value per condition, separated by /)
+* support for minor isoform involved in the event (one value per condition, separated by /)
+* PSI value for condition 1
+* PSI value for condition 2
+* ΔPSI
+
+
 ## Experiments
 Experimental evaluation scripts can be found in the `./exps` subdirectory of this repository. We provide three snakemake pipelines which also contain more information on how to use pantas.
-* `./exps/dm-sim/` is the evaluation on simulated data from Drosophila Melanogaster (here we used an annotated spliced pangenome)
-* `./exps/dm-sim/` is the evaluation on real data from Drosophila Melanogaster using (here we used an annotated spliced pangenome)
-* `./exps/homo-real/` is the evaluation on real data from human (here we used a **reduced** annotated spliced pangenome)
-
+* `./exps/1-dm-sim/` is the evaluation on simulated data from Drosophila Melanogaster 
+* `./exps/2-dm-real/` is the evaluation on real data from Drosophila Melanogaster using 
+* `./exps/3-homo-real/` is the evaluation on real data from human
+Additional details can be found in the README files available in these subdirectories.
 
 ## Authors
 pantas is developed by [Simone Ciccolella](https://github.com/sciccolella), [Davide Cozzi](https://github.com/dlcgold), and [Luca Denti](https://github.com/ldenti).

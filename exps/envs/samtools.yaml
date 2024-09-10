@@ -1,6 +1,6 @@
-name: star
+name: samtools
 channels:
   - bioconda
+  - conda-forge
 dependencies:
-  - star
   - samtools

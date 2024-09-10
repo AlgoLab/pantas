@@ -1,5 +1,6 @@
 name: rmats
 channels:
+  - conda-forge
   - bioconda
 dependencies:
-  - rmats
+  - rmats=4.3

@@ -23,8 +23,11 @@ include: "rules/pantas.smk"
 include: "rules/results.smk"
 
 
+
 # ##### target rules #####
 rule all:
     input:
+        #pjoin(ODIR, "pantas", "index", "pantranscriptome.gcsa"),
+        #expand(pjoin(ODIR, "pantas", "quant-remap.w{w}.csv",w=Ws))
         pjoin(ODIR, "results", "bench.csv"),
         pjoin(ODIR, "results", "res.csv"),

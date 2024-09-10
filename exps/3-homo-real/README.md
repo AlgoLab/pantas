@@ -51,7 +51,8 @@ cat <(sed -e "s/^/POS\t/" truth-pos.hg38.bed) <(sed -e "s/^/NEG\t/" truth-neg.hg
 snakemake -pj 32 --use-conda [-n]
 
 # Analysis and plot, assuming WD to be the odir
-python3 ./workflow/scripts/compare.py truth.tsv $WD/pantas2/quant.w5.csv $WD/rMATS/SE.MATS.JC.txt $WD/whippet/psi.diff $WD/suppa2/OUT/DIFF.dpsi
+python3 ./workflow/scripts/compare.py data/truth.tsv $WD/pantas2/quant-remap.w3.csv $WD/rMATS/SE.MATS.JC.txt $WD/whippet/psi.diff $WD/suppa2/OUT/DIFF.dpsi [--strict]
+# --strict to filter events
 
 # Check if true events are annotated/novel
 python3 ./workflow/scripts/check_novel.py data/truth.tsv genes.gtf

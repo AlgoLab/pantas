@@ -78,11 +78,15 @@ def parse_pantas(path):
             continue
         line = line.strip()
         _e = line.split(",")
+        del _e[2]
+        del _e[5:11]
         e = eparser.EventPantas(*_e)
         if math.isnan(e.psi_c1) or math.isnan(e.psi_c2):
             continue
         if abs(e.dpsi) < FILTER:
             continue
+        if e.etype == "IR":
+            e.dpsi = -e.dpsi # Pantas alternative isoform = rMATS canonical isoform
         event_pantas[e.etype].append(e)
     return event_pantas
 
@@ -96,7 +100,9 @@ def parse_rmats(path):
             continue
         line = line.strip()
         _e = line.split(",")
-        e = eparser.EventPantas(*_e)
+     
+        #e = eparser.EventPantas(*_e)
+        e = eparser.EventRmats(*_e)
         if math.isnan(e.psi_c1) or math.isnan(e.psi_c2):
             continue
         if abs(e.dpsi) < FILTER:
@@ -109,6 +115,7 @@ def parse_rmats(path):
             if float(e.pv) < filt[e.etype][e][1]: 
                 filt[e.etype][e][1] = float(e.pv)
                 event_rmats[e.etype][filt[e][0]] = e
+        
     return event_rmats
 
 def parse_suppa(path):
@@ -120,7 +127,7 @@ def parse_suppa(path):
             continue
         line = line.strip()
         _e = line.split(",")
-        e = eparser.EventPantas(*_e)
+        e = eparser.EventRmats(*_e)
         e.dpsi = -e.dpsi
         if abs(e.dpsi) < FILTER:
             continue
@@ -195,7 +202,7 @@ def main(argv):
 
     pantas = {}
     for w in Ws:
-        pantas[w] = parse_pantas(f"{pantas_path}/quant.w{w}.csv")
+        pantas[w] = parse_pantas(f"{pantas_path}/quant-remap.w{w}.csv")
     rmats = parse_rmats(rmats_path)
     suppa = parse_suppa(suppa_path)
     whippet = parse_whippet(whippet_path)
@@ -225,6 +232,7 @@ def main(argv):
                 e_name = (
                     f"{event.etype}_{event.chrom}_{event.event_j[0]}_{event.event_j[1]}"
                 )
+                
                 if e_name in data.keys():
                     data[e_name][f"pantas_{w}"] = event.dpsi
                 else:
@@ -309,7 +317,7 @@ def main(argv):
             df_mask[col] = df_mask.apply(update_column, col_name=col, axis=1)
     df_mask.to_csv(f"{output}/res_mask.csv", index=False)
     df=df.dropna(how='any')
-    print(df)
+    #print(df)
     if len(Ws) == 1:
         fig = plt.figure(figsize=(13,8))
         gs = gridspec.GridSpec(2, 3)
@@ -550,10 +558,12 @@ def main(argv):
     plt.tight_layout()
     plt.savefig(f"{output}/corr_whippet_suppa.png")
     plt.clf()
-
+    
+    print(df)
     for e in ETYPES:
+        print(e)
         tmp_df = df[df["type"] == e]
-
+        #print(tmp_df)
         for w in Ws:
             p = f"pantas_{w}"
             g = sns.jointplot(
@@ -565,6 +575,7 @@ def main(argv):
                 xlim=(-1.05, 1.05),
                 ylim=(-1.05, 1.05),
             )
+           #print(tmp_df[p], tmp_df["rMATS"])
             corr, _ = pearsonr(tmp_df[p], tmp_df["rMATS"])
             corr = round(corr, 3)
             plt.text(s=f"Pearson correlation: {corr}", x=-0.3, y=-1)

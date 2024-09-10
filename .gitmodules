@@ -1,0 +1,12 @@
+[submodule "build/deps/gbwt"]
+	path = build/deps/gbwt
+	url = https://github.com/jltsiren/gbwt.git
+        ignore = dirty
+[submodule "build/deps/sdsl-lite"]
+	path = build/deps/sdsl-lite
+	url = https://github.com/vgteam/sdsl-lite.git
+        ignore = dirty
+[submodule "build/deps/libbdsg-easy"]
+	path = build/deps/libbdsg-easy
+	url = https://github.com/vgteam/libbdsg-easy.git
+        ignore = dirty

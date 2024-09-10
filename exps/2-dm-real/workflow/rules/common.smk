@@ -6,7 +6,7 @@ import gzip
 
 
 software_folder = config["software"]
-
+ENVS = pjoin(os.getcwd(), "..", "envs")
 ODIR = config["odir"]
 
 FA = config["fa"]
@@ -46,6 +46,6 @@ rule index_fa:
         FA
     output:
         FA + ".fai"
-    conda: "../envs/samtools.yaml"
+    conda: pjoin(ENVS, "samtools.yaml")
     shell:
         "samtools faidx {input}"

@@ -1,0 +1,6 @@
+name: vg
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - vg=1.58.0

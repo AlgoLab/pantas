@@ -182,13 +182,19 @@ def main(argv):
             rev = False
             # if score == 0:
             #    continue
+            nodes = []
             if path[0] == ">":
-                nodes = path.split(">")[1:]
+                for n in path.split(">")[1:]:
+                    if len(nodes) == 0 or nodes[-1] != n:
+                        nodes.append(n)
             else:
-                nodes = path.split("<")[1:]
+                for n in path.split("<")[1:]:
+                    if len(nodes) == 0 or nodes[-1] != n:
+                        nodes.append(n)
                 rev = True
                 # nodes.reverse()
             # print(nodes)
+            assert len(nodes) > 0
 
             # print(cigar_vals)
 

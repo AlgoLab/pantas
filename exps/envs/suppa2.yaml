@@ -2,4 +2,5 @@ name: suppa
 channels:
   - bioconda
 dependencies:
-  - salmon
+    - R
+    - suppa=2.3

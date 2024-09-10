@@ -146,7 +146,7 @@ The differential quantification across conditions (output of `quant` mode of pan
 The differential quantification across conditions remapped on the linear reference (output of `remap` mode of pantas) is stored in a CSV file:
 * event type
 * annotated/novel
-* refernce/haplotype
+* reference/haplotype (telling if event involves reference transcripts or haplotype transcripts)
 * chromosome
 * gene name
 * strand

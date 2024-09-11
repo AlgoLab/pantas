@@ -17,7 +17,7 @@ L = config["L"]
 S1 = config["s1"]
 S2 = config["s2"]
 
-Ws = [5]
+Ws = [3]
 p_value = 0.05
 min_dpsi = 0.05
 min_prob = 0.9

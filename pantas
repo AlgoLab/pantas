@@ -37,7 +37,7 @@ Arguments:
 CALL_USAGE=$''"${SCRIPT_NAME}"' call <GFA> <GTF>
 
 Arguments:
-    -w <INT>         Minimum read count for supporting junction (default: 1)
+    -w <INT>         Minimum read count for supporting junction (default: 3)
     -i <INT>         Intronic search window for novel events,
                      larger values reduce FP but increase time (default: 5)
     -e <STR>         Events to call (default: ES,SS,IR)
@@ -49,17 +49,17 @@ Arguments:
 QUANT_USAGE=$'Usage: '"${SCRIPT_NAME}"' quant <C1.R1> <C1.R2> <C1.Rx> <C2.R1> <C2.R2> <C2.Rx>
 
 Arguments:
-    -w <INT>         Minimum read count for all junctions (default: 0)
     -a               Report all events (not only those correctly quantified in both conditions)
     -h               Print this help and exit
 '
+#     -w <INT>         Minimum read count for all junctions (default: 0)
 
 REMAP_USAGE=$''"${SCRIPT_NAME}"' remap <GFA> <GTF>
 
 Arguments:
-    -i <INT>         Minimum intron size (default: 25)
     -h               Print this help and exit
 '
+#     -i <INT>         Minimum intron size (default: 25)
 
 MODE=$1
 shift # to "remove" subcommand for getopts

@@ -36,8 +36,8 @@ All modes print a help message if run with the `-h` argument. Here we provide th
 ./pantas call [sample.gfa] [annotation.gtf] > [sample-events.csv]
 
 # Quantify events across conditions (provide the two conditions with comma-separated path to the events csv)
-./pantas quant condition1-rep1.csv,condition1-rep2.csv,condition1-rep3.csv \
-             condition2-rep1.csv,condition2-rep2.csv,condition2-rep3.csv > [quantification.csv]
+./pantas quant [condition1-rep1.csv,condition1-rep2.csv,condition1-rep3.csv] \
+      [condition2-rep1.csv,condition2-rep2.csv,condition2-rep3.csv] > [quantification.csv]
              
 # Remap quantification on the linear reference using the annotation
 ./pantas remap [quantification.csv] [annotation.gtf] > [quantification.remap.csv]
@@ -161,10 +161,10 @@ The differential quantification across conditions remapped on the linear referen
 
 
 ## Experiments
-Experimental evaluation scripts can be found in the `./exps` subdirectory of this repository. We provide three snakemake pipelines which also contain more information on how to use pantas.
-* `./exps/1-dm-sim/` is the evaluation on simulated data from Drosophila Melanogaster 
-* `./exps/2-dm-real/` is the evaluation on real data from Drosophila Melanogaster
-* `./exps/3-homo-real/` is the evaluation on real data from human
+Experimental evaluation scripts can be found in the `./exps` subdirectory of this repository. We provide three snakemake pipelines to replicate the experiments descriped in the paper.
+* `./exps/1-dm-sim/` contains the instructions to replicate the evaluation on simulated data from Drosophila Melanogaster
+* `./exps/2-dm-real/` contains the instructions to replicate the evaluationon real data from Drosophila Melanogaster
+* `./exps/3-homo-real/` contains the instructions to replicate the evaluation on real data from human
 
 Additional details can be found in the README files available in these subdirectories.
 

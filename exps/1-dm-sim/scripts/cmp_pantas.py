@@ -15,8 +15,8 @@ def precision_recall_f1(tp: int, fn: int, fp: int) -> list[int]:
 
 
 def is_good(e, DPSI_FILTER, MIN_EVENT_COV):
-    if abs(e.dpsi) < DPSI_FILTER:
-        return False
+    # if abs(e.dpsi) < DPSI_FILTER:
+    #     return False
     if any([c < MIN_EVENT_COV for c in e.rc_c1 + e.rc_c2]):
         return False
     else:
@@ -25,6 +25,8 @@ def is_good(e, DPSI_FILTER, MIN_EVENT_COV):
 
 def main(args):
     sep = "\t" if args.tabs else ","
+
+    # Getting truth
     event_truth = {x: [] for x in ETYPES}
     for line in open(args.t, "r"):
         line = line.strip()
@@ -41,11 +43,9 @@ def main(args):
         e = eparser.EventTruth(
             etype, "truth", chrom, gene, strand, j1, j2, j3, w1, w2, psi1, psi2, dpsi
         )
-        if args.mode2 and not is_good(e, args.min_dpsi, args.min_cov):
+        if abs(e.dpsi) < args.min_dpsi:
             continue
         event_truth[e.etype].append(e)
-
-    # sys.exit()
 
     event_pantas = {x: [] for x in ETYPES}
     for line in open(args.p, "r"):
@@ -72,7 +72,7 @@ def main(args):
             e = eparser.EventRmats(*_e)
             if isnan(e.psi_c1) or isnan(e.psi_c2):
                 continue
-            if args.mode2 and abs(e.dpsi) < args.min_dpsi:
+            if abs(e.dpsi) < args.min_dpsi:
                 continue
             event_rmats[e.etype].append(e)
 
@@ -89,7 +89,7 @@ def main(args):
             e = eparser.EventWhippet(*_e, "anno")
             if isnan(e.psi_c1) or isnan(e.psi_c2):
                 continue
-            if args.mode2 and abs(e.dpsi) < args.min_dpsi:
+            if abs(e.dpsi) < args.min_dpsi:
                 continue
             event_whippet[e.etype].append(e)
 
@@ -104,7 +104,7 @@ def main(args):
             e = eparser.EventRmats(*_e)
             if isnan(e.dpsi):
                 continue
-            if args.mode2 and abs(e.dpsi) < args.min_dpsi:
+            if abs(e.dpsi) < args.min_dpsi:
                 continue
             event_suppa[e.etype].append(e)
 
@@ -129,8 +129,9 @@ def main(args):
         if etype not in args.events:
             continue
         for e1 in event_truth[etype]:
-            if not args.mode2 and not is_good(e1, args.min_dpsi, args.min_cov):
+            if not is_good(e1, args.min_dpsi, args.min_cov):
                 continue
+
             str_event = e1.to_csv()
             eqsp = [
                 x
@@ -202,9 +203,6 @@ def main(args):
         if etype not in args.events:
             continue
         for e2 in event_pantas[etype]:
-            if not args.mode2 and abs(e2.dpsi) < args.min_dpsi:
-                continue
-            # print(len(event_truth[etype]))
             eqs = [
                 x
                 for x in event_truth[etype]
@@ -217,8 +215,6 @@ def main(args):
                     print("FP-PANTAS", e2.to_csv(), file=sys.stderr)
 
         for e2 in event_rmats[etype]:
-            if not args.mode2 and abs(e2.dpsi) < args.min_dpsi:
-                continue
             eqs = [x for x in event_truth[etype] if eparser.eq_event(x, e2, args.novel)]
             if len(eqs) == 0:
                 # False positives
@@ -227,8 +223,6 @@ def main(args):
                     print("FP-RMATS", e2.to_csv())
 
         for e2 in event_whippet[etype]:
-            if not args.mode2 and abs(e2.dpsi) < args.min_dpsi:
-                continue
             eqs = [x for x in event_truth[etype] if eparser.eq_event(x, e2, args.novel)]
             if len(eqs) == 0:
                 # False positives
@@ -237,8 +231,6 @@ def main(args):
                     print("FP-WHIPPET", e2.to_csv(), file=sys.stderr)
 
         for e2 in event_suppa[etype]:
-            if not args.mode2 and abs(e2.dpsi) < args.min_dpsi:
-                continue
             eqs = [x for x in event_truth[etype] if eparser.eq_event(x, e2, args.novel)]
             if len(eqs) == 0:
                 # False positives
@@ -246,7 +238,6 @@ def main(args):
                 if args.print:
                     print("FP-SUPPA2", e2.to_csv(), file=sys.stderr)
 
-    # print("PANTAS")
     print(
         "p-supp",
         "tool",

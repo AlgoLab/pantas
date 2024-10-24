@@ -91,7 +91,7 @@ rule compare_all_anno:
         pjoin(ODIR, "{sample}", "compare-anno.w{w}.csv"),
     shell:
         """
-        for c in 1 3 5 10 20 ; do python3 ./scripts/cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} -s {input.suppa2} -d 0.05 -c $c -2 ; done > {output}
+        for c in 1 3 5 10 20 ; do python3 ./scripts/cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} -w {input.whippet} -s {input.suppa2} -d 0.05 -c $c ; done > {output}
         """
 
 
@@ -104,5 +104,5 @@ rule compare_all_novel:
         pjoin(ODIR, "{sample}", "compare-novel.w{w}.csv"),
     shell:
         """
-        for c in 1 3 5 10 20 ; do python3 ./scripts/cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} --novel -d 0.05 -c $c -2 ; done > {output}
+        for c in 1 3 5 10 20 ; do python3 ./scripts/cmp_pantas.py -t {input.truth} -p {input.pantas} -r {input.rmats} --novel -d 0.05 -c $c ; done > {output}
         """

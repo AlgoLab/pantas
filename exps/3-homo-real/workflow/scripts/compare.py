@@ -55,13 +55,12 @@ def parse_pantas(fpath):
         dpsi = float(dpsi)
         s1, e1 = get_interval(i1)
         s2, e2 = get_interval(i2)
+        k = f"{chrom}:{e1+1}-{s2-1}"
         events[k] = (
             events[k] + [(-float(dpsi), novel)]
             if k in events
             else [(-float(dpsi), novel)]
         )
-    k = "chr20:58440907-58441083"
-    print(events[k])
     return events
 
 

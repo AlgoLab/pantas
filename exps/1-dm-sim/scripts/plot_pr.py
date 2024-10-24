@@ -3,9 +3,9 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-sns.set()
+sns.set(font_scale=1.3)
 
-plt.rcParams.update({"font.size": 15})
+plt.rcParams.update({"font.size": 48})
 # sns.set_style("whitegrid")
 colors = [sns.color_palette("bright")[1]] + [
     sns.color_palette("dark")[i] for i in [0, 2, 6]
@@ -42,17 +42,16 @@ def main():
             print("," + str(truth[c][etype]), end="")
         print("")
 
-    df = pd.DataFrame(
-        data, columns=["Tool", "E.Type", "True Support (ω)", "Precision", "Recall"]
-    )
+    tsl = "True Support ($\mathcal{W}$)"
+    df = pd.DataFrame(data, columns=["Tool", "E.Type", tsl, "Precision", "Recall"])
 
-    fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(7, 7))
+    fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(11, 11))
     axes = axes.flatten()
     for ax, etype in zip(axes, ["ES", "IR", "A3", "A5"]):
         sns.lineplot(
             df[df["E.Type"] == etype],
-            x="Precision",
-            y="Recall",
+            y="Precision",
+            x="Recall",
             hue="Tool",
             palette=colors,
             legend=None,
@@ -62,14 +61,15 @@ def main():
             sort=False,
             ax=ax,
         )
-        if etype == "IR":
+        if etype == "ES":
             sns.lineplot(
                 df[df["E.Type"] == etype],
-                x="Precision",
-                y="Recall",
+                y="Precision",
+                x="Recall",
                 hue="Tool",
                 palette=colors,
-                style="True Support (ω)",
+                style=tsl,
+                # style_order=df[tsl].unique().tolist()[::-1],
                 # legend=None,
                 markers=True,
                 dashes=False,
@@ -79,11 +79,11 @@ def main():
         else:
             sns.lineplot(
                 df[df["E.Type"] == etype],
-                x="Precision",
-                y="Recall",
+                y="Precision",
+                x="Recall",
                 hue="Tool",
                 palette=colors,
-                style="True Support (ω)",
+                style=tsl,
                 legend=None,
                 markers=True,
                 dashes=False,
@@ -96,9 +96,10 @@ def main():
 
     # plt.tight_layout()
     plt.subplots_adjust(
-        bottom=0.07, right=0.99, top=0.95, left=0.05, wspace=0.03, hspace=0.1
+        bottom=0.07, right=0.99, top=0.95, left=0.07, wspace=0.07, hspace=0.1
     )
-    plt.show()  # savefig(fpath + ".png")
+    plt.savefig(fpath + ".png", dpi=300)
+    # plt.show()  # savefig(fpath + ".png")
 
 
 if __name__ == "__main__":

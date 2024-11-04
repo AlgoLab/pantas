@@ -22,7 +22,7 @@ p_value = 0.05
 min_dpsi = 0.05
 min_prob = 0.9
 relax = 0
-min_coverage = 5
+min_coverage = 3
 
 chroms = []
 for line in open(FA + ".fai"):

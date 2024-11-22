@@ -8,7 +8,7 @@ cd build/deps/sdsl-lite
 bash install.sh .
 
 cd ../gbwt
-bash install.sh .
+make
 
 cd ../libbdsg-easy
 make -j4

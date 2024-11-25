@@ -9,14 +9,14 @@ Alongside pantas, we provide a set of utilities to build and index a (annotated)
 ``` sh
 git clone https://github.com/AlgoLab/pantas.git
 
+cd pantas
+bash setup.sh
+# if setup ends properly, you should see the message "--- Everything done! ---"
+
 # Install dependencies (all available from bioconda)
 mamba create -c bioconda -c conda-forge -n pantas \
              python=3.10 biopython gffutils intervaltree bcftools samtools gffread vg=1.56 snakemake-minimal
 mamba activate pantas
-
-cd pantas
-bash setup.sh
-# if setup ends properly, you should see the message "--- Everything done! ---"
 ```
 
 ## pantas pipeline

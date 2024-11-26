@@ -19,6 +19,20 @@ mamba create -c bioconda -c conda-forge -n pantas \
 mamba activate pantas
 ```
 
+#### Docker
+Alternatively, we provide a Docker image you can build and use:
+```sh
+# from the root of this repository
+cd docker
+docker build -t pantas:latest .
+docker run -it pantas:latest bash
+# which pantas
+# which vg
+# pantas -h
+# vg --help
+```
+All commands required to run pantas (described below) can be directly run inside the container (both `pantas` and `vg` are already in the `$PATH` variable). You only need to [bind](https://docs.docker.com/engine/storage/bind-mounts/) (`-v`) the local directory containing your data to some directory inside the container.
+
 ## pantas pipeline
 All steps of pantas can be easily run using the `pantas` script.
 
@@ -105,6 +119,29 @@ vg mpmap -x example/pantas-index/pantranscriptome.xg \
 # Remap step
 ./pantas remap example/quant.csv example/4.gtf > example/quant-remap.csv
 # this should produce 205 events
+```
+
+#### Docker example
+For user convenience, here the commands that need to be used inside the docker image to test pantas on the example data (can be directly copied&pasted):
+```
+pantas build -t 4 -o ~/pantas/example/pantas-index ~/pantas/example/4.fa ~/pantas/example/4.gtf ~/pantas/example/4.vcf.gz
+
+vg index --progress --threads 4 --gcsa-out ~/pantas/example/pantas-index/pantranscriptome.gcsa \
+                                --dist-name ~/pantas/example/pantas-index/pantranscriptome.dist \
+                                ~/pantas/example/pantas-index/pantranscriptome.xg
+
+vg mpmap -x ~/pantas/example/pantas-index/pantranscriptome.xg \
+         -g ~/pantas/example/pantas-index/pantranscriptome.gcsa \
+         -d ~/pantas/example/pantas-index/pantranscriptome.dist \
+         -f ~/pantas/example/reads_1.fq -f ~/pantas/example/reads_2.fq -F GAF > ~/pantas/example/reads.gaf
+
+pantas augment ~/pantas/example/reads.gaf ~/pantas/example/pantas-index/pantranscriptome-annotated.gfa > ~/pantas/example/pantranscriptome-annotated-wreads.gfa
+
+pantas call -w 0 ~/pantas/example/pantranscriptome-annotated-wreads.gfa ~/pantas/example/4.gtf > ~/pantas/example/reads.events.csv
+
+pantas quant ~/pantas/example/reads.events.csv ~/pantas/example/reads.events.csv > ~/pantas/example/quant.csv
+
+pantas remap ~/pantas/example/quant.csv ~/pantas/example/4.gtf > ~/pantas/example/quant-remap.csv
 ```
 
 ## Custom output format

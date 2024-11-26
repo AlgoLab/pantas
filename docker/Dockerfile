@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libjansson-dev \
     make \
     wget \
+    most \
     && rm -rf /var/lib/apt/lists/*
 USER $MAMBA_USER
 

@@ -41,7 +41,7 @@ RUN make -j4
 WORKDIR  ../..
 RUN g++ -O3 -o annotate annotate.cpp -I./deps/gbwt/include -I./deps/sdsl-lite/include -I./deps/libbdsg-easy/include/ -L./deps/sdsl-lite/lib -L./deps/gbwt/lib/ -L./deps/libbdsg-easy/lib/ -lgbwt -lsdsl -fopenmp -lbdsg -lhandlegraph
 
-
+WORKDIR  ../..
 
 VOLUME ["/data"]
 #ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "pantas"]

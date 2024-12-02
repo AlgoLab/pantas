@@ -20,18 +20,18 @@ mamba activate pantas
 ```
 
 #### Docker
-Alternatively, we provide a Docker image you can build and use:
+Alternatively, we provide a Docker image you can build (should take 5/10 minutes) and use:
 ```sh
 # from the root of this repository
 cd docker
-docker build -t pantas:latest .
+docker build --build-arg USER=$(whoami) --build-arg UID=$(id -u) --build-arg GID=$(id -g) -t pantas:latest .
 docker run -it pantas:latest bash
 # which pantas
 # which vg
 # pantas -h
 # vg --help
 ```
-All commands required to run pantas (described below) can be directly run inside the container (both `pantas` and `vg` are already in the `$PATH` variable). You only need to [bind](https://docs.docker.com/engine/storage/bind-mounts/) (`-v`) the local directory containing your data to some directory inside the container.
+All commands required to run pantas (described below) can be directly run inside the container (both `pantas` and `vg` are already in the `$PATH` variable). You only need to [bind](https://docs.docker.com/engine/storage/bind-mounts/) (`-v`) the local directory containing your data to the `/data` directory inside the container.
 
 ## pantas pipeline
 All steps of pantas can be easily run using the `pantas` script.
@@ -124,24 +124,29 @@ vg mpmap -x example/pantas-index/pantranscriptome.xg \
 #### Docker example
 For user convenience, here the commands that need to be used inside the docker image to test pantas on the example data (can be directly copied&pasted):
 ```
-pantas build -t 4 -o ~/pantas/example/pantas-index ~/pantas/example/4.fa ~/pantas/example/4.gtf ~/pantas/example/4.vcf.gz
+# run the container (from the root of this repo) binding the example directory to the /data directory insider the container
+docker run -it -v "$PWD/example:/data" pantas:latest bash
 
-vg index --progress --threads 4 --gcsa-out ~/pantas/example/pantas-index/pantranscriptome.gcsa \
-                                --dist-name ~/pantas/example/pantas-index/pantranscriptome.dist \
-                                ~/pantas/example/pantas-index/pantranscriptome.xg
+# from inside the container, we can run pantas and vg
 
-vg mpmap -x ~/pantas/example/pantas-index/pantranscriptome.xg \
-         -g ~/pantas/example/pantas-index/pantranscriptome.gcsa \
-         -d ~/pantas/example/pantas-index/pantranscriptome.dist \
-         -f ~/pantas/example/reads_1.fq -f ~/pantas/example/reads_2.fq -F GAF > ~/pantas/example/reads.gaf
+pantas build -t 4 -o /data/pantas-index /data/4.fa /data/4.gtf /data/4.vcf.gz
 
-pantas augment ~/pantas/example/reads.gaf ~/pantas/example/pantas-index/pantranscriptome-annotated.gfa > ~/pantas/example/pantranscriptome-annotated-wreads.gfa
+vg index --progress --threads 4 --gcsa-out /data/pantas-index/pantranscriptome.gcsa \
+                                --dist-name /data/pantas-index/pantranscriptome.dist \
+                                /data/pantas-index/pantranscriptome.xg
 
-pantas call -w 0 ~/pantas/example/pantranscriptome-annotated-wreads.gfa ~/pantas/example/4.gtf > ~/pantas/example/reads.events.csv
+vg mpmap -x /data/pantas-index/pantranscriptome.xg \
+         -g /data/pantas-index/pantranscriptome.gcsa \
+         -d /data/pantas-index/pantranscriptome.dist \
+         -f /data/reads_1.fq -f /data/reads_2.fq -F GAF > /data/reads.gaf
 
-pantas quant ~/pantas/example/reads.events.csv ~/pantas/example/reads.events.csv > ~/pantas/example/quant.csv
+pantas augment /data/reads.gaf /data/pantas-index/pantranscriptome-annotated.gfa > /data/pantranscriptome-annotated-wreads.gfa
 
-pantas remap ~/pantas/example/quant.csv ~/pantas/example/4.gtf > ~/pantas/example/quant-remap.csv
+pantas call -w 0 /data/pantranscriptome-annotated-wreads.gfa /data/4.gtf > /data/reads.events.csv
+
+pantas quant /data/reads.events.csv /data/reads.events.csv > /data/quant.csv
+
+pantas remap /data/quant.csv /data/4.gtf > /data/quant-remap.csv
 ```
 
 ## Custom output format

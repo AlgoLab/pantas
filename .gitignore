@@ -1,7 +1,7 @@
 *~
 .snakemake/
 __pycache__/
-example/OUT/
+example/
 *.gaf
 .vscode
 build/annotate

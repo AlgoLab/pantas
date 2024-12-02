@@ -1,6 +1,13 @@
 FROM ghcr.io/mamba-org/micromamba:2.0.3
 
+ARG USER=testuser
+ARG UID=1000
+ARG GID=1000
+
 USER root
+RUN groupadd -g $GID -o $USER
+RUN useradd -m -u $UID -g $GID -o -s /bin/bash $USER
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -10,9 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     most \
     && rm -rf /var/lib/apt/lists/*
-USER $MAMBA_USER
+USER $USER
 
-COPY --chown=$MAMBA_USER:$MAMBA_USER pantas-mamba.yaml /tmp/env.yaml
+COPY --chown=$UID:$GID pantas-mamba.yaml /tmp/env.yaml
 RUN micromamba install -y -n base -f /tmp/env.yaml && \
     micromamba clean --all --yes
 
@@ -29,7 +36,6 @@ RUN chmod +x vg
 
 RUN git submodule update --init --recursive
 
-
 WORKDIR  build/deps/sdsl-lite
 RUN ./install.sh .
 
@@ -44,5 +50,11 @@ RUN g++ -O3 -o annotate annotate.cpp -I./deps/gbwt/include -I./deps/sdsl-lite/in
 
 WORKDIR  ../..
 
-VOLUME ["/data"]
+USER root
+RUN mkdir /data && chown -v $UID:$GID /data
+ENV DATA_DIR=/data
+
+USER $USER
+
+# VOLUME ["/data"]
 #ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "pantas"]

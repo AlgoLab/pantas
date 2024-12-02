@@ -31,7 +31,7 @@ docker run -it pantas:latest bash
 # pantas -h
 # vg --help
 ```
-All commands required to run pantas (described below) can be directly run inside the container (both `pantas` and `vg` are already in the `$PATH` variable). You only need to [bind](https://docs.docker.com/engine/storage/bind-mounts/) (`-v`) the local directory containing your data to the `/data` directory inside the container.
+All commands required to run pantas (described below) can be directly run inside the container (both `pantas` and `vg` are already in the `$PATH` variable). You only need to [bind](https://docs.docker.com/engine/storage/bind-mounts/) (`-v`) the local directory containing your data to the `/data` directory inside the container (see the [example](#docker-example)).
 
 ## pantas pipeline
 All steps of pantas can be easily run using the `pantas` script.

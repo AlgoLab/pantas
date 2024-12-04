@@ -24,14 +24,14 @@ Alternatively, we provide a Docker image you can build (should take 5/10 minutes
 ```sh
 # from the root of this repository
 cd docker
-docker build --build-arg USER=$(whoami) --build-arg UID=$(id -u) --build-arg GID=$(id -g) -t pantas:latest .
-docker run -it pantas:latest bash
+docker build -t pantas:latest .
+docker run -v ../example:/data:U -it pantas:latest /bin/bash
 # which pantas
 # which vg
 # pantas -h
 # vg --help
 ```
-All commands required to run pantas (described below) can be directly run inside the container (both `pantas` and `vg` are already in the `$PATH` variable). You only need to [bind](https://docs.docker.com/engine/storage/bind-mounts/) (`-v`) the local directory containing your data to the `/data` directory inside the container (see the [example](#docker-example)).
+All commands required to run pantas (described below) can be directly run inside the container (both `pantas` and `vg` are already in the `$PATH` variable). You only need to replace `../example` (which points to the [example](#docker-example)) with the path storing your data in the  [bind](https://docs.docker.com/engine/storage/bind-mounts/) (`-v`) part. 
 
 ## pantas pipeline
 All steps of pantas can be easily run using the `pantas` script.

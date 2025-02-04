@@ -20,18 +20,15 @@ mamba activate pantas
 ```
 
 #### Docker
-Alternatively, we provide a Docker image you can build (should take 5/10 minutes) and use:
+Alternatively, we provide a Docker image you can pull from Docker Hub or build yourself (should take 5/10 minutes):
 ```sh
-# from the root of this repository
-cd docker
-docker build -t pantas:latest .
-docker run -v ../example:/data:U -it pantas:latest /bin/bash
+docker run -v ../example:/data:U -it algolab/pantas:latest /bin/bash
 # which pantas
 # which vg
 # pantas -h
 # vg --help
 ```
-All commands required to run pantas (described below) can be directly run inside the container (both `pantas` and `vg` are already in the `$PATH` variable). You only need to replace `../example` (which points to the [example](#docker-example)) with the path storing your data in the  [bind](https://docs.docker.com/engine/storage/bind-mounts/) (`-v`) part. 
+All commands required to run pantas (described below) can be directly run inside the container (both `pantas` and `vg` are already in the `$PATH` variable). You only need to replace `../example` (which points to the [example](#docker-example)) with the path storing your data in the (`-v`) part  [bind](https://docs.docker.com/engine/storage/bind-mounts/) . 
 
 ## pantas pipeline
 All steps of pantas can be easily run using the `pantas` script.

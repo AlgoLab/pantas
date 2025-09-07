@@ -53,11 +53,7 @@ def main(args):
 
         if line[2] != "exon":
             continue
-        tidx = (
-            re.search('transcript_id "[A-Za-z0-9_]+";', line[-1])
-            .group(0)
-            .split('"')[-2]
-        )
+        tidx = re.search('transcript_id "([^"]+)"', line[-1]).group(1)
         if tidx in transcripts:
             s, e = int(line[3]), int(line[4])
             transcripts[tidx].append((s, e))

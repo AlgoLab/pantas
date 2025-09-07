@@ -203,14 +203,8 @@ def main(args):
             "pseudogene",  # FIXME: do we want all these?
         ]:
             # FIXME: we may need to add more chars to the regex
-            gidx = (
-                re.search('gene_id "[A-Za-z0-9_]+";', line[-1]).group(0).split('"')[-2]
-            )
-            tidx = (
-                re.search('transcript_id "[A-Za-z0-9_]+";', line[-1])
-                .group(0)
-                .split('"')[-2]
-            )
+            gidx = re.search('gene_id "([^"]+)"', line[-1]).group(1)
+            tidx = re.search('transcript_id "([^"]+)"', line[-1]).group(1)
             transcript2gene[tidx] = gidx
             genestrand[gidx] = line[6]
             genechr[gidx] = line[0]
